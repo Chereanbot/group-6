@@ -184,6 +184,70 @@ const menuItems = [
     ]
   },
   {
+    title: 'Kebele Management',
+    path: '/coordinator/kebele',
+    icon: HiOutlineOfficeBuilding,
+    submenu: [
+      { 
+        title: 'Kebele Directory', 
+        path: '/coordinator/kebele/directory',
+        icon: HiOutlineCollection
+      },
+      { 
+        title: 'Add New Kebele', 
+        path: '/coordinator/kebele/new',
+        icon: HiOutlinePlus
+      },
+      { 
+        title: 'Kebele Statistics', 
+        path: '/coordinator/kebele/statistics',
+        icon: HiOutlineChartBar
+      },
+      { 
+        title: 'Kebele Officials', 
+        path: '/coordinator/kebele/officials',
+        icon: HiOutlineUserGroup
+      }
+    ]
+  },
+  {
+    title: 'Reports',
+    path: '/coordinator/reports',
+    icon: HiOutlineChartBar,
+    submenu: [
+      { 
+        title: 'Case Analytics', 
+        path: '/coordinator/reports/case-analytics',
+        icon: HiOutlineChartBar
+      },
+      { 
+        title: 'Client Statistics', 
+        path: '/coordinator/reports/client-statistics',
+        icon: HiOutlineUserGroup
+      },
+      { 
+        title: 'Performance Metrics', 
+        path: '/coordinator/reports/performance',
+        icon: HiOutlineClipboardList
+      },
+      { 
+        title: 'Monthly Reports', 
+        path: '/coordinator/reports/monthly',
+        icon: HiOutlineDocumentText
+      },
+      { 
+        title: 'Custom Reports', 
+        path: '/coordinator/reports/custom',
+        icon: HiOutlineTemplate
+      },
+      {
+        title: 'Export Reports',
+        path: '/coordinator/reports/export',
+        icon: HiOutlineDocumentAdd
+      }
+    ]
+  },
+  {
     title: 'Communications',
     path: '/coordinator/communications',
     icon: HiOutlineChatAlt,
@@ -242,7 +306,7 @@ export default function CoordinatorSidebar() {
         {!collapsed && (
           <div className="hover:scale-105 transition-transform duration-200">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
-              DulaCMS
+              DulaS
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
               Legal Aid Center
@@ -346,32 +410,6 @@ export default function CoordinatorSidebar() {
           </div>
         ))}
       </nav>
-
-      {/* User Profile */}
-      {!collapsed && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t 
-          border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80
-          backdrop-filter backdrop-blur-sm">
-          <div className="flex items-center space-x-3 group hover:scale-[1.02] transition-transform duration-200">
-            <img
-              src="/default-avatar.png"
-              alt="Profile"
-              className="w-10 h-10 rounded-full ring-2 ring-primary-500 ring-offset-2 
-                dark:ring-offset-gray-800 transition-all duration-200
-                group-hover:ring-primary-400 group-hover:shadow-lg"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate
-                group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                Legal Aid Coordinator
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                Yirga Chafe Office
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 

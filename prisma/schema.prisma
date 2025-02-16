@@ -189,18 +189,23 @@ model NotificationPreference {
 }
 
 model Document {
-  id                     String                  @id @default(auto()) @map("_id") @db.ObjectId
-  userId                 String                  @db.ObjectId
-  user                   User                    @relation(fields: [userId], references: [id])
-  title                  String
-  type                   String
-  path                   String
-  size                   Int
-  mimeType               String
-  uploadedAt             DateTime                @default(now())
-  serviceDocuments       ServiceDocument[]
-  coordinatorDocuments   CoordinatorDocument[] // Updated relation
-  qualificationDocuments QualificationDocument[] // Updated relation
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  type        DocumentType
+  status      DocumentStatus @default(PENDING)
+  path        String
+  size        Int
+  mimeType    String
+  uploadedBy  String    @db.ObjectId
+  kebeleId    String
+  kebele      Kebele    @relation(fields: [kebeleId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([kebeleId])
+  @@index([type])
+  @@index([status])
 }
 
 enum OTPType {
@@ -2019,34 +2024,49 @@ model TeachingMetrics {
 }
 
 model KebeleManager {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  fullName    String
-  phone       String
-  email       String?
-  position    String
+  id             String   @id @default(cuid())
+  fullName       String
+  phone          String   @unique
+  email          String?  @unique
+  password       String
+  position       String
   officeLocation String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  kebele      Kebele   @relation(fields: [kebeleId], references: [id])
-  kebeleId    String   @unique @db.ObjectId
+  status         KebeleManagerStatus @default(ACTIVE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastLoginAt    DateTime?
+  kebeleId       String  @unique
+  kebele         Kebele  @relation(fields: [kebeleId], references: [id])
+}
+
+enum KebeleManagerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 model Kebele {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  kebeleNumber  String
+  id            String         @id @default(cuid())
+  kebeleNumber  String        @unique
   kebeleName    String
   population    Int?
   subCity       String?
   district      String?
-  mainOffice    String?
-  contactPhone  String?
+  mainOffice    String
+  contactPhone  String
   contactEmail  String?
   workingHours  String?
   services      String[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  status        KebeleStatus  @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   manager       KebeleManager?
   cases         Case[]
+}
+
+enum KebeleStatus {
+  ACTIVE
+  INACTIVE
 }
 
 // Backup System Models
@@ -2288,4 +2308,20 @@ model AgentChat {
   // Relations
   user      User       @relation(fields: [userId], references: [id])
   userId    String     @db.ObjectId
+}
+
+model KebeleMessage {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  status    String   @default("UNREAD")
+  priority  String   @default("NORMAL")
+  senderId  String   @db.ObjectId
+  kebeleId  String
+  kebele    Kebele   @relation(fields: [kebeleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kebeleId])
+  @@index([status])
 }

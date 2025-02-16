@@ -1,29 +1,39 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { CaseStatus, CaseType, Priority, CaseCategory, UserRoleEnum, Prisma } from '@prisma/client';
+import { CaseStatus, CaseType, Priority, CaseCategory, UserRoleEnum, Prisma, ActivityType, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// Define session user type
-interface SessionUser {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRoleEnum;
-  status: string;
-  isAdmin: boolean;
-  officeId?: string;
-}
-
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
     const formData = await request.formData();
-    
-    // Get coordinator info with proper type
-    const coordinator = session?.user as SessionUser | undefined;
-    
+    const clientPhone = formData.get('clientPhone') as string;
+    const clientName = formData.get('clientName') as string;
+
+    // First check if a user with this phone number exists
+    let clientUser = await prisma.user.findUnique({
+      where: {
+        phone: clientPhone
+      }
+    });
+
+    // Client relation configuration
+    const clientRelation = clientUser ? {
+      connect: {
+        id: clientUser.id
+      }
+    } : {
+      create: {
+        email: `${clientPhone.replace(/[^0-9]/g, '')}@dulas.temp`,
+        phone: clientPhone,
+        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10),
+        fullName: clientName,
+        userRole: UserRoleEnum.CLIENT,
+        status: 'ACTIVE'
+      }
+    };
+
     // Extract basic case information
     const caseData: Prisma.CaseCreateInput = {
       title: formData.get('caseDescription') as string,
@@ -33,8 +43,8 @@ export async function POST(request: Request) {
       category: (formData.get('caseCategory') as CaseCategory) || CaseCategory.OTHER,
 
       // Client Information
-      clientName: formData.get('clientName') as string,
-      clientPhone: formData.get('clientPhone') as string,
+      clientName: clientName,
+      clientPhone: clientPhone,
       clientAddress: formData.get('clientAddress') as string || '',
 
       // Location Details
@@ -56,23 +66,8 @@ export async function POST(request: Request) {
         ? new Date(formData.get('expectedResolutionDate') as string)
         : null,
 
-      // Set client relation if coordinator exists
-      ...(coordinator && {
-        client: {
-          connect: {
-            id: coordinator.id
-          }
-        }
-      }),
-
-      // Set office relation if available
-      ...(coordinator?.officeId && {
-        assignedOffice: {
-          connect: {
-            id: coordinator.officeId
-          }
-        }
-      })
+      // Set client relation
+      client: clientRelation
     };
 
     // Validate required fields
@@ -130,69 +125,33 @@ export async function POST(request: Request) {
         }
       });
 
-      // Handle document uploads if any
-      const documents = formData.getAll('documents');
-      if (documents.length > 0) {
-        for (const doc of documents) {
-          if (doc instanceof File) {
-            await tx.caseDocument.create({
-              data: {
-                caseId: case_.id,
-                title: doc.name,
-                path: '/temp/path',
-                size: doc.size,
-                mimeType: doc.type,
-                uploadedBy: coordinator?.id || 'system',
-                type: 'CASE_DOCUMENT'
-              }
-            });
-          }
-        }
-      }
-
-      // Create initial case activity
+      // Create initial activity
       await tx.caseActivity.create({
         data: {
           caseId: case_.id,
-          userId: coordinator?.id || 'system',
-          title: 'Case Created',
-          description: `Case created by ${coordinator?.name || 'anonymous'} from ${case_.assignedOffice?.name || 'unknown'} office`,
-          type: 'CREATION'
+          userId: case_.client.id,
+          title: "Case Created",
+          type: "CREATED",
+          description: `Case created for client ${case_.clientName}`
         }
       });
 
       return case_;
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Case created successfully',
-      data: newCase
-    });
-
+    return NextResponse.json({ success: true, data: newCase });
   } catch (error) {
     console.error('Error creating case:', error);
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to create case',
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const session = await getServerSession(authOptions);
-    const coordinator = session?.user as SessionUser;
-    
-    // Ensure coordinator has an office assigned
-    if (!coordinator?.officeId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Coordinator must be assigned to an office to view cases'
-      }, { status: 400 });
-    }
     
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -204,11 +163,7 @@ export async function GET(request: Request) {
     const endDate = searchParams.get('endDate');
 
     const where: Prisma.CaseWhereInput = {
-      // Filter by coordinator's office using proper relation
-      assignedOffice: coordinator?.officeId ? {
-        id: coordinator.officeId
-      } : undefined,
-      
+      // Add filters only if they are provided
       ...(status && { status }),
       ...(priority && { priority }),
       ...(type && { caseType: type }),
@@ -225,7 +180,11 @@ export async function GET(request: Request) {
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
-      })
+      }),
+      // Filter by office
+      officeId: {
+        not: null
+      }
     };
 
     const [total, cases] = await prisma.$transaction([
@@ -249,7 +208,13 @@ export async function GET(request: Request) {
               createdAt: 'desc'
             }
           },
-          assignedOffice: true,
+          assignedOffice: {
+            select: {
+              id: true,
+              name: true,
+              location: true
+            }
+          },
           client: {
             select: {
               id: true,
@@ -284,7 +249,6 @@ export async function GET(request: Request) {
     console.error('Error fetching cases:', error);
     return NextResponse.json({
       success: false,
-      message: 'Failed to fetch cases',
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 });
   }
