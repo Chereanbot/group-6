@@ -1,0 +1,19 @@
+.citation {
+  @apply inline-flex items-center rounded bg-muted px-2 py-1 text-sm;
+}
+
+.signature-block {
+  @apply border-t mt-8 pt-4;
+}
+
+.signature-block .signature-space {
+  @apply h-16 mb-2;
+}
+
+.signature-block .name {
+  @apply font-medium;
+}
+
+.signature-block .title {
+  @apply text-sm text-muted-foreground;
+} 

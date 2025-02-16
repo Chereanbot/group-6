@@ -1,0 +1,42 @@
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #0ea5e9;
+  --rdp-background-color: #e5e7eb;
+  --rdp-accent-color-dark: #0369a1;
+  --rdp-background-color-dark: #1f2937;
+  --rdp-outline: 2px solid var(--rdp-accent-color);
+  --rdp-outline-selected: 2px solid var(--rdp-accent-color);
+  margin: 1em;
+}
+
+.rdp-months {
+  display: flex;
+  justify-content: center;
+}
+
+.rdp-month {
+  background-color: var(--rdp-background-color);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
+.rdp-day_selected:hover {
+  background-color: var(--rdp-accent-color);
+  color: white;
+}
+
+.dark .rdp-day_selected,
+.dark .rdp-day_selected:focus-visible,
+.dark .rdp-day_selected:hover {
+  background-color: var(--rdp-accent-color-dark);
+}
+
+.rdp-day_today {
+  font-weight: bold;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: var(--rdp-background-color);
+} 

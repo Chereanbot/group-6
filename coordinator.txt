@@ -1,0 +1,30 @@
+- Case Management
+  - Case details view
+  - Document management
+  - Timeline tracking
+  - Court date management
+  - Case notes and updates
+
+- Client Communication
+  - Real-time messaging
+  - SMS notifications
+  - Call scheduling
+  - Document sharing
+
+- Calendar Management
+  - Court appearances
+  - Client meetings
+  - Case deadlines
+
+- Document Generation
+  - Legal document templates
+  - Court filing preparation
+  - Client agreements
+
+  @auth @prisma @src @login @login @middleware please give me when it is frist time users it should be create here account and it should be get the client 
+
+..remeber the it can register on this websitr only clients.
+coordintors should be login in this website when the admin is add the coordinators from here dashboard ... it should get pn here admimin given email or admin given passwords, ..
+that means when admin is create accounts for one coordinator for assigned offices it should be get on his offices only ,,,,,
+
+and for the lawyers is ... when the admin is create for the lawyer interface it should be get on his page 

@@ -1,0 +1,52 @@
+Please give me the structure for my projects ... 
+ 
+ My project is DU LEGAL AID SERVICE
+{LACMS}
+ 
+As we know above the title ... now day in dilla they have no developed system or existing system for the legal aid survice.... 
+ 
+Please give me ... i will give my project idea then you give some features and structures, functionalities, and platform enviroment ... by what i can do frontend and backend., user authenitication , and by which data base i can use for my system .... 
+ 
+Okay my idea is THE FOLLOWING 
+1, ADMIN IS Law school.  
+2, Five Office 
+3, Lawyer 
+4, coordinator 
+5, clients
+6, SUPER ADMIN FOR ME
+
+Okay now i will give you there some functionality after that you have to add more functionality and more idea 
+ 
+ 
+So 
+1 Admin functionality is:-  
+A, assign lawyers for each office  remember the admin assign lawyer i...the cases from coordinator it don't solve and the cases is so hard it going to admin and the admin   is assign fir that cases Lawyer.... 
+B, MANGE OFGICES, USERS, LAWYERS, REPORTS , GIVE APPOINTMENTS FOR THE LAWYER,  .... and add more ideas  needed for the admin ...
+C, if the  some clients buy the lawyers ... and if it wanna be buy the laywers ,,, it fullfill the forms and it must be full fill and it checked by coordinator and the coordinator report to reports to admin and buy lawyers
+d, manage all lawyers ,,, it get manage all operations
+2, office operations 
+A, assign  coordinator under his office,  
+B, see cases, if the cases is so simple they finish that cases, give appointment for the client....and add more needed idea for that  
+C, check the cases...ongoing, and see all stats, foe the clients,,,
+D, manage all coordinators, 
+E, management all cases and all clients
+3, coordinator operations  
+A,  case register, case type identify, and finish client case information, in this case:- the cases is.. so simple  it give the cases for under he doing and report for his office otherwise he report for the admin and the admin assign lawyers for that cases....... please add more needed ideas and functionality 
+ D, check the registerded clients it needed legal aid service and registered by payment,,, the coordinator sends the admin ..
+
+4 Lawyer opertations 
+A, lawyer operation from admin he take the cases and he related to cases family ..... and he finish those cases... 
+ B, send real time sms or real-time call for his own clients... or messages
+ 5, clients operations ... register and .... please give me for the court case {/ask please give me  full needed for the legal aid service forms and for payments service system }
+6, Super admin is control all systems...
+Please add more operations for the lawyer dependent on my idea
+
+
+
+
+the lawyers assigne by admin for each cases that means if  from the clients or from the coordintors if it have .. more complex cases or it is doen't solve by the coordinators ... it should be report for the admins and admins are assign lawyers for that cases .... it going to finish that cases ...
+
+methods for the assign lawyers ...frist this project ideas for the dilla univeersity ... so the lawyers should be teachers
+1, the frist it register all lawyers no the that including here workload and here specializations ... for the frst time 
+
+if the lawyers it doesn't more worlkloads it and it check his speciatiuoties if thos two are so match it should be assign ..for the cases ... when it is assign that cases it should be assigned or disable ...after 1 monthon,, 

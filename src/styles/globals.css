@@ -1,0 +1,549 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'react-datepicker/dist/react-datepicker.css';
+@import 'react-day-picker/dist/style.css';
+@import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #daa4a4;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-geist-sans), Arial, 
+  sans-serif;
+}
+
+@layer components {
+  /* Sidebar Styles */
+  .sidebar {
+    @apply fixed top-0 left-0 h-full bg-white dark:bg-gray-800 
+      border-r border-gray-200 dark:border-gray-700 shadow-lg
+      transition-all duration-300 ease-in-out z-20
+      md:block hidden;
+  }
+
+  .sidebar-collapsed {
+    @apply w-20;
+  }
+
+  .sidebar-expanded {
+    @apply w-64;
+  }
+
+  .sidebar-item {
+    @apply flex items-center space-x-3 px-4 py-3 rounded-lg
+      cursor-pointer transition-all duration-200
+      hover:bg-gray-100 dark:hover:bg-gray-700
+      text-gray-700 dark:text-gray-200;
+  }
+
+  .sidebar-item.active {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800/30;
+  }
+
+  /* Mobile Footer Navigation */
+  .mobile-footer-nav {
+    @apply fixed bottom-0 left-0 right-0 
+      bg-white dark:bg-gray-800 
+      border-t border-gray-200 dark:border-gray-700
+      shadow-lg z-50
+      flex md:hidden
+      h-16;
+  }
+
+  .mobile-nav-container {
+    @apply w-full max-w-lg mx-auto 
+      flex justify-between items-center px-2;
+  }
+
+  .mobile-nav-item {
+    @apply flex flex-col items-center justify-center p-1
+      text-gray-600 dark:text-gray-400
+      hover:text-primary-500 dark:hover:text-primary-400
+      relative transition-colors duration-200
+      min-w-[4rem];
+  }
+
+  .mobile-nav-item.active {
+    @apply text-primary-500 dark:text-primary-400;
+  }
+
+  .mobile-nav-item.active::after {
+    content: '';
+    @apply absolute -bottom-1 left-1/2 transform -translate-x-1/2
+      w-1 h-1 rounded-full
+      bg-primary-500 dark:bg-primary-400;
+  }
+
+  .mobile-nav-icon {
+    @apply w-6 h-6 mb-0.5;
+  }
+
+  .mobile-nav-text {
+    @apply text-xs font-medium;
+  }
+
+  /* Add padding to main content area on mobile */
+  .main-content {
+    @apply md:ml-64
+      pb-16 md:pb-0;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@layer utilities {
+  .sidebar-enter {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .mobile-nav-enter {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary)) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary));
+    border-radius: 20px;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--primary));
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Mobile Panel Styles */
+.mobile-panel {
+  @apply fixed bottom-0 left-0 right-0 
+    bg-white dark:bg-gray-800 
+    rounded-t-2xl p-4 
+    transform transition-transform duration-300 ease-out
+    shadow-lg;
+}
+
+.mobile-panel-backdrop {
+  @apply fixed inset-0 bg-black/50 
+    transition-opacity duration-300;
+}
+
+.mobile-panel-option {
+  @apply w-full flex items-center space-x-4 p-4 rounded-lg
+    bg-gray-50 dark:bg-gray-700/50 
+    hover:bg-gray-100 dark:hover:bg-gray-700 
+    transition-colors;
+}
+
+.mobile-panel-header {
+  @apply flex justify-between items-center mb-4
+    border-b border-gray-200 dark:border-gray-700 pb-2;
+}
+
+/* Service Selection Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-animation {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+/* Card Hover Effects */
+.service-card {
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+/* Selection Animation */
+.service-selected {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .7; }
+}
+
+/* Add to your existing mobile panel styles */
+.mobile-panel-option {
+  @apply relative overflow-hidden;
+}
+
+.mobile-panel-option::after {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-transparent 
+    via-white/10 to-transparent opacity-0 transition-opacity;
+}
+
+.mobile-panel-option:active::after {
+  @apply opacity-100;
+}
+
+/* Smooth scrolling for the panel */
+.mobile-panel {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for the panel */
+.mobile-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mobile-panel::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.mobile-panel::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+/* Animation for panel items */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.mobile-panel-item-enter {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Mobile Footer Animations */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.mobile-footer-enter {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Quick Action Button Pulse */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-500), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--color-primary-500), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-500), 0);
+  }
+}
+
+.quick-action-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Tab Indicator Animation */
+.tab-indicator {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Active Tab Scale */
+.tab-active {
+  transform: translateY(-4px);
+}
+
+/* Add these styles */
+.main-content {
+  margin-left: 280px; /* Adjust based on your sidebar width */
+  width: calc(100% - 280px);
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* Calendar styles */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #0ea5e9;
+  --rdp-background-color: #e5e7eb;
+  --rdp-accent-color-dark: #0369a1;
+  --rdp-background-color-dark: #1f2937;
+  --rdp-outline: 2px solid var(--rdp-accent-color);
+  --rdp-outline-selected: 2px solid var(--rdp-accent-color);
+  margin: 1em;
+}
+
+.rdp-months {
+  display: flex;
+  justify-content: center;
+}
+
+.rdp-month {
+  background-color: var(--rdp-background-color);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
+.rdp-day_selected:hover {
+  background-color: var(--rdp-accent-color);
+  color: white;
+}
+
+.dark .rdp-day_selected,
+.dark .rdp-day_selected:focus-visible,
+.dark .rdp-day_selected:hover {
+  background-color: var(--rdp-accent-color-dark);
+}
+
+.rdp-day_today {
+  font-weight: bold;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: var(--rdp-background-color);
+}
+
+/* Add these styles to handle chat widget positioning */
+.main-content {
+  padding-bottom: 80px; /* Add space for chat widget */
+}
+
+/* Style overrides for Tawk.to widget */
+#tawk-tooltip {
+  z-index: 60 !important; /* Ensure tooltip doesn't overlap modals */
+}
+
+.tawk-min-container {
+  z-index: 50 !important; /* Ensure minimized chat doesn't overlap other elements */
+}
+
+/* Dark mode transitions */
+.dark-mode-transition {
+  transition: background-color 0.3s ease-in-out,
+              border-color 0.3s ease-in-out,
+              color 0.3s ease-in-out;
+}
+
+/* Message bubbles */
+.message-bubble {
+  @apply rounded-lg p-4 max-w-[70%] break-words;
+}
+
+.message-bubble-sent {
+  @apply bg-blue-500 text-white ml-auto;
+}
+
+.message-bubble-received {
+  @apply bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100;
+}
+
+/* Custom scrollbar for dark mode */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(55 65 81);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background-color: rgb(17 24 39);
+}
+
+/* Input and textarea dark mode */
+.dark input,
+.dark textarea {
+  @apply bg-gray-800 border-gray-700 text-gray-100;
+}
+
+/* Button hover effects */
+.button-hover-effect {
+  @apply transform transition-transform duration-200 hover:scale-105;
+}
+
+/* Message status indicators */
+.message-status {
+  @apply flex items-center space-x-1 text-xs;
+}
+
+.dark .message-status {
+  @apply text-gray-400;
+}
+
+/* Attachment previews */
+.attachment-preview {
+  @apply rounded-lg border p-2 mt-2;
+}
+
+.dark .attachment-preview {
+  @apply border-gray-700 bg-gray-800;
+}
+
+/* Message composer toolbar */
+.composer-toolbar {
+  @apply flex items-center space-x-2 p-2 rounded-t-lg border-b;
+}
+
+.dark .composer-toolbar {
+  @apply border-gray-700 bg-gray-800;
+}
+
+/* Message type badges */
+.message-type-badge {
+  @apply px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.dark .message-type-badge {
+  @apply bg-gray-700 text-gray-300;
+}
+
+
