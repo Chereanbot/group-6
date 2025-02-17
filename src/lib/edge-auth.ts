@@ -1,32 +1,50 @@
-import { authConfig } from '@/config/auth.config';
+import { jwtVerify } from 'jose';
+import { UserRoleEnum } from '@prisma/client';
 
-export async function verifyAuthToken(token: string) {
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key'
+);
+
+export interface JWTPayload {
+  id: string;
+  email: string;
+  role: string;
+  isAdmin: boolean;
+  coordinatorId?: string;
+  officeId?: string;
+  iat?: number;
+  exp?: number;
+}
+
+export async function verifyAuth(token: string): Promise<{ 
+  isAuthenticated: boolean; 
+  payload?: JWTPayload 
+}> {
   try {
-    const response = await fetch(`${authConfig.baseUrl}/api/auth/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      return { isAuthenticated: false, user: null };
-    }
-
-    const data = await response.json();
-
-    if (!data.isAuthenticated || !data.user) {
-      return { isAuthenticated: false, user: null };
+    const { payload } = await jwtVerify(token, secret);
+    
+    // Validate required fields
+    if (!payload.id || !payload.email || !payload.role) {
+      return { isAuthenticated: false };
     }
 
     return {
       isAuthenticated: true,
-      user: data.user
+      payload: {
+        id: payload.id as string,
+        email: payload.email as string,
+        role: payload.role as string,
+        isAdmin: payload.isAdmin as boolean,
+        coordinatorId: payload.coordinatorId as string | undefined,
+        officeId: payload.officeId as string | undefined,
+        iat: payload.iat,
+        exp: payload.exp
+      }
     };
   } catch (error) {
-    console.error('Token verification error:', error);
-    return { isAuthenticated: false, user: null };
+    console.error('Token verification failed:', error);
+    return {
+      isAuthenticated: false
+    };
   }
 } 

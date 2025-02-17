@@ -1,25 +1,36 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { verify } from 'jsonwebtoken';
 import { headers } from 'next/headers';
 import { UserRoleEnum } from '@prisma/client';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
+    const headersList = headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - No session found' },
-        { status: 403 }
+        { success: false, message: 'Authentication required' },
+        { status: 200 }
       );
     }
+
+    // Verify JWT token
+    const decoded = verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+      id: string;
+      email: string;
+      role: string;
+      coordinatorId?: string;
+    };
 
     // Find user and check role
     const user = await prisma.user.findUnique({
       where: { 
-        email: session.user.email,
+        id: decoded.id,
       },
       select: {
         id: true,
@@ -38,22 +49,22 @@ export async function GET() {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
+        { success: false, message: 'User not found' },
+        { status: 200 }
       );
     }
 
-    if (user.userRole !== UserRoleEnum.COORDINATOR) {
+    if (user.userRole !== 'COORDINATOR') {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - Not a coordinator' },
-        { status: 403 }
+        { success: false, message: 'Unauthorized - Not a coordinator' },
+        { status: 200 }
       );
     }
 
     if (!user.coordinatorProfile) {
       return NextResponse.json(
-        { success: false, error: 'Coordinator profile not found' },
-        { status: 404 }
+        { success: false, message: 'Coordinator profile not found' },
+        { status: 200 }
       );
     }
 
@@ -77,8 +88,8 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching coordinator profile:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
+      { success: false, message: 'Failed to fetch profile' },
+      { status: 200 }
     );
   }
 }

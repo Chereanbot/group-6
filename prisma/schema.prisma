@@ -81,6 +81,7 @@ model User {
   agentChats        AgentChat[]
   clientAppointments      Appointment[] @relation("ClientAppointments")
   coordinatorAppointments Appointment[] @relation("CoordinatorAppointments")
+  clientProfile ClientProfile?
 
   @@index([email, phone, username])
 }
@@ -484,13 +485,14 @@ model Office {
   lawyers      LawyerProfile[]
   resources    Resource[]
   performances OfficePerformance[]
-  templates    Template[]          // Add this relation field
+  templates    Template[]
   capacity     Int                 @default(0)
   contactEmail String?
   contactPhone String?
   address      String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+  clients      ClientProfile[]
 
   @@index([status])
 }
@@ -762,10 +764,15 @@ enum CaseStatus {
 }
 
 enum CaseType {
-  SIMPLE
-  MODERATE
-  COMPLEX
-  VERY_COMPLEX
+  CIVIL
+  CRIMINAL
+  FAMILY
+  PROPERTY
+  LABOR
+  COMMERCIAL
+  CONSTITUTIONAL
+  ADMINISTRATIVE
+  OTHER
 }
 
 enum AssignmentStatus {
@@ -2375,4 +2382,54 @@ model KebeleMessage {
 
   @@index([kebeleId])
   @@index([status])
+}
+
+model ClientProfile {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id])
+  userId          String    @unique @db.ObjectId
+  
+  // Personal Information
+  age             Int
+  sex             Gender
+  phone           String
+  numberOfFamily  Int
+  healthStatus    HealthStatus
+  
+  // Location Details
+  region          String
+  zone            String
+  wereda          String
+  kebele          String
+  houseNumber     String?
+  
+  // Case Information
+  caseType        CaseType
+  caseCategory    CaseCategory
+  
+  // Office Assignment
+  assignedOffice  Office     @relation(fields: [officeId], references: [id])
+  officeId        String     @db.ObjectId
+  
+  // Additional Details
+  guidelines      String[]
+  notes           String?
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([officeId])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum HealthStatus {
+  HEALTHY
+  DISABLED
+  CHRONIC_ILLNESS
+  OTHER
 }

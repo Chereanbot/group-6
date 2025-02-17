@@ -34,11 +34,11 @@ async function getLawyerDashboardData(lawyerId: string) {
         include: {
           client: true,
           activities: {
-            orderBy: { creat vedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
             take: 1
           },
           documents: {
-            orderBy: { uploadedAt: 'desc' },
+                orderBy: { createdAt: 'desc' },
             take: 5
           },
           notes: {
@@ -66,9 +66,9 @@ async function getLawyerDashboardData(lawyerId: string) {
           client: true,
           Appointment: {
             where: {
-              scheduledFor: { gte: new Date() }
+              date: { gte: new Date() }
             },
-            orderBy: { scheduledFor: 'asc' },
+            orderBy: { date: 'asc' },
             take: 5
           },
           communications: {
@@ -91,7 +91,7 @@ async function getLawyerDashboardData(lawyerId: string) {
         take: 10
       },
       documents: {
-        orderBy: { uploadedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 5
       }
     }

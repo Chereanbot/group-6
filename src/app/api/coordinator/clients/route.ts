@@ -3,115 +3,76 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { UserStatus, UserRoleEnum } from '@prisma/client';
+import { Gender, HealthStatus } from '@/types/client';
+import { CaseType, CaseCategory } from '@/types/case';
+import { headers } from 'next/headers';
+import { verifyAuth } from '@/lib/edge-auth';
 
 // GET - Fetch clients with pagination and filters
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') as UserStatus;
-    const sortBy = searchParams.get('sortBy') || 'createdAt';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    const { isAuthenticated, payload } = await verifyAuth(token);
 
-    // Get coordinator's office
-    const coordinator = await prisma.coordinator.findFirst({
-      where: {
-        user: {
-          email: session.user.email
-        }
-      },
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    // Get coordinator's office ID
+    const coordinator = await prisma.user.findUnique({
+      where: { id: payload.id },
       include: {
-        office: true
+        coordinatorProfile: true
       }
     });
 
-    if (!coordinator || !coordinator.office) {
-      return NextResponse.json({ success: false, error: 'Coordinator office not found' }, { status: 404 });
+    if (!coordinator || !coordinator.coordinatorProfile) {
+      return NextResponse.json(
+        { success: false, message: 'Coordinator profile not found' },
+        { status: 404 }
+      );
     }
 
-    const where = {
-      userRole: UserRoleEnum.CLIENT,
-      office: {
-        id: coordinator.office.id
+    // Fetch clients from the coordinator's office
+    const clients = await prisma.user.findMany({
+      where: {
+        userRole: UserRoleEnum.CLIENT,
+        clientProfile: {
+          officeId: coordinator.coordinatorProfile.officeId
+        }
       },
-      ...(status && { status }),
-      ...(search && {
-        OR: [
-          { fullName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } }
-        ]
-      })
-    };
-
-    const [total, clients] = await prisma.$transaction([
-      prisma.user.count({ where }),
-      prisma.user.findMany({
-        where,
-        include: {
-          cases: {
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              priority: true,
-              createdAt: true
-            }
-          },
-          appointments: {
-            select: {
-              id: true,
-              title: true,
-              date: true,
-              status: true
-            },
-            where: {
-              date: {
-                gte: new Date()
-              }
-            }
-          },
-          documents: {
-            select: {
-              id: true,
-              title: true,
-              type: true,
-              status: true
-            }
-          }
-        },
-        orderBy: {
-          [sortBy]: sortOrder
-        },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+      include: {
+        clientProfile: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      data: {
-        clients,
-        pagination: {
-          total,
-          pages: Math.ceil(total / limit),
-          page,
-          limit
-        }
-      }
+      data: clients
     });
 
   } catch (error) {
     console.error('Error fetching clients:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch clients' },
+      { success: false, message: 'Failed to fetch clients' },
       { status: 500 }
     );
   }
@@ -120,74 +81,203 @@ export async function GET(request: Request) {
 // POST - Register new client
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
 
-    const data = await request.json();
-    const { fullName, email, phone, address, idNumber, emergencyContact, preferredLanguage } = data;
-
-    // Validate required fields
-    if (!fullName || !phone) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Name and phone are required' },
-        { status: 400 }
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
       );
     }
 
-    // Get coordinator's office
-    const coordinator = await prisma.coordinator.findFirst({
-      where: {
-        user: {
-          email: session.user.email
-        }
-      },
-      include: {
-        office: true
-      }
-    });
+    const { isAuthenticated, payload } = await verifyAuth(token);
 
-    if (!coordinator || !coordinator.office) {
+    if (!isAuthenticated || !payload) {
       return NextResponse.json(
-        { success: false, error: 'Coordinator office not found' },
-        { status: 404 }
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    const data = await request.json();
+    const { 
+      fullName, 
+      age, 
+      sex, 
+      numberOfFamily, 
+      healthStatus, 
+      phones, 
+      region, 
+      zone, 
+      wereda, 
+      kebele, 
+      houseNumber, 
+      caseType, 
+      caseCategory, 
+      officeId,
+      guidelines,
+      notes 
+    } = data;
+
+    // Validate required fields
+    if (!fullName || !phones || phones.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'Name and at least one phone number are required' },
+        { status: 400 }
       );
     }
 
     // Check if phone number already exists
     const existingUser = await prisma.user.findFirst({
-      where: { phone }
+      where: { 
+        phone: { in: phones }
+      }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { success: false, error: 'Phone number already registered' },
+        { success: false, message: 'Phone number already registered' },
         { status: 400 }
       );
     }
 
-    // Create new client
-    const client = await prisma.user.create({
-      data: {
-        fullName,
-        email,
-        phone,
-        userRole: UserRoleEnum.CLIENT,
-        status: UserStatus.ACTIVE,
-        password: Math.random().toString(36).slice(-8), // Generate random password
-        profile: {
-          create: {
-            address,
-            idNumber,
-            emergencyContact,
-            preferredLanguage,
-            officeId: coordinator.office.id
-          }
+    // Generate temporary email and password
+    const tempEmail = `${fullName.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@temp.com`;
+    const tempPassword = Math.random().toString(36).slice(-8);
+
+    // Create new client with profile
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user first
+      const user = await tx.user.create({
+        data: {
+          fullName,
+          email: tempEmail,
+          phone: phones[0],
+          password: tempPassword,
+          userRole: UserRoleEnum.CLIENT,
+          status: UserStatus.ACTIVE
         }
-      },
+      });
+
+      // Create client profile
+      const clientProfile = await tx.clientProfile.create({
+        data: {
+          userId: user.id,
+          age: Number(age),
+          sex: sex as Gender,
+          phone: phones[0],
+          numberOfFamily: Number(numberOfFamily),
+          healthStatus: healthStatus as HealthStatus,
+          region,
+          zone,
+          wereda,
+          kebele,
+          houseNumber,
+          caseType: caseType as CaseType,
+          caseCategory: caseCategory as CaseCategory,
+          officeId,
+          guidelines,
+          notes
+        }
+      });
+
+      return {
+        ...user,
+        clientProfile
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error creating client:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to create client' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update client status or information
+export async function PATCH(request: Request) {
+  try {
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, payload } = await verifyAuth(token);
+
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    const data = await request.json();
+    const { id, status, ...updateData } = data;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Client ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update client information
+    const updatedClient = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(status && { status: status as UserStatus }),
+        ...(updateData.fullName && { fullName: updateData.fullName }),
+        ...(updateData.phone && { phone: updateData.phone })
+      }
+    });
+
+    // Update client profile if needed
+    if (updateData.clientProfile) {
+      await prisma.clientProfile.update({
+        where: { userId: id },
+        data: {
+          ...(updateData.clientProfile.age && { age: Number(updateData.clientProfile.age) }),
+          ...(updateData.clientProfile.sex && { sex: updateData.clientProfile.sex as Gender }),
+          ...(updateData.clientProfile.phone && { phone: updateData.clientProfile.phone }),
+          ...(updateData.clientProfile.numberOfFamily && { numberOfFamily: Number(updateData.clientProfile.numberOfFamily) }),
+          ...(updateData.clientProfile.healthStatus && { healthStatus: updateData.clientProfile.healthStatus as HealthStatus }),
+          ...(updateData.clientProfile.region && { region: updateData.clientProfile.region }),
+          ...(updateData.clientProfile.zone && { zone: updateData.clientProfile.zone }),
+          ...(updateData.clientProfile.wereda && { wereda: updateData.clientProfile.wereda }),
+          ...(updateData.clientProfile.kebele && { kebele: updateData.clientProfile.kebele }),
+          ...(updateData.clientProfile.houseNumber && { houseNumber: updateData.clientProfile.houseNumber }),
+          ...(updateData.clientProfile.caseType && { caseType: updateData.clientProfile.caseType as CaseType }),
+          ...(updateData.clientProfile.caseCategory && { caseCategory: updateData.clientProfile.caseCategory as CaseCategory }),
+          ...(updateData.clientProfile.guidelines && { guidelines: updateData.clientProfile.guidelines }),
+          ...(updateData.clientProfile.notes && { notes: updateData.clientProfile.notes })
+        }
+      });
+    }
+
+    // Get updated client with profile
+    const client = await prisma.user.findUnique({
+      where: { id },
       include: {
-        profile: true
+        clientProfile: true
       }
     });
 
@@ -197,61 +287,68 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error creating client:', error);
+    console.error('Error updating client:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create client' },
+      { success: false, message: 'Failed to update client' },
       { status: 500 }
     );
   }
 }
 
-// PATCH - Update client information
-export async function PATCH(request: Request) {
+// DELETE - Remove a client
+export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const data = await request.json();
-    const { id, ...updateData } = data;
+    const { isAuthenticated, payload } = await verifyAuth(token);
 
-    if (!id) {
+    if (!isAuthenticated || !payload) {
       return NextResponse.json(
-        { success: false, error: 'Client ID is required' },
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get('id');
+
+    if (!clientId) {
+      return NextResponse.json(
+        { success: false, message: 'Client ID is required' },
         { status: 400 }
       );
     }
 
-    const updatedClient = await prisma.user.update({
-      where: { id },
-      data: {
-        ...updateData,
-        profile: updateData.profile ? {
-          update: updateData.profile
-        } : undefined
-      },
-      include: {
-        profile: true,
-        cases: {
-          select: {
-            id: true,
-            title: true,
-            status: true
-          }
-        }
-      }
+    // Delete client profile first (due to foreign key constraint)
+    await prisma.clientProfile.delete({
+      where: { userId: clientId }
+    });
+
+    // Then delete the user
+    await prisma.user.delete({
+      where: { id: clientId }
     });
 
     return NextResponse.json({
       success: true,
-      data: updatedClient
+      message: 'Client deleted successfully'
     });
 
   } catch (error) {
-    console.error('Error updating client:', error);
+    console.error('Error deleting client:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update client' },
+      { success: false, message: 'Failed to delete client' },
       { status: 500 }
     );
   }

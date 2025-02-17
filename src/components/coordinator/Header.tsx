@@ -211,7 +211,7 @@ export default function Header() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">coordinator@legalaid.com</p>
                   </div>
                   
-                  <Link href="/coordinator/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <Link href="/coordinator/profiles" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <User className="h-4 w-4 inline-block mr-2" />
                     My Profile
                   </Link>

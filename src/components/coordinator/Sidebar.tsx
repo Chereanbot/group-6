@@ -109,6 +109,11 @@ const menuItems = [
     path: '/coordinator/clients',
     icon: HiOutlineUserGroup,
     submenu: [
+      {
+        title: 'Client List',
+        path: '/coordinator/clients',
+        icon: HiOutlineUserGroup
+      },
       { 
         title: 'Client Registration', 
         path: '/coordinator/clients/register',
@@ -139,26 +144,11 @@ const menuItems = [
     icon: HiOutlineDocumentText,
     submenu: [
       { 
-        title: 'Upload Documents', 
-        path: '/coordinator/documents/upload',
+        title: 'Document Listas', 
+        path: '/coordinator/documents/',
         icon: HiOutlinePlus
       },
-      { 
-        title: 'Document Library', 
-        path: '/coordinator/documents/library',
-        icon: HiOutlineLibrary
-      },
-      { 
-        title: 'Legal Templates', 
-        path: '/coordinator/documents/templates',
-        icon: HiOutlineDocumentAdd
-      },
-      { 
-        title: 'Pending Review', 
-        path: '/coordinator/documents/review',
-        icon: HiOutlineClipboard,
-        badge: '8'
-      }
+
     ]
   },
   {

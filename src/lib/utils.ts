@@ -16,4 +16,12 @@ export function formatFileSize(bytes: number): string {
   }
   
   return `${size.toFixed(1)} ${units[unitIndex]}`;
+}
+
+export function formatDate(date: string | Date) {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 } 
