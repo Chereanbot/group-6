@@ -1,27 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import MainNavbar from './components/MainNavbar';
+import SecondaryNavbar from './components/SecondaryNavbar';
+import AnimatedSection from './components/AnimatedSection';
 import {
-  HiOutlineScale,
-  HiOutlineShieldCheck,
-  HiOutlineChatAlt2,
-  HiOutlineDocumentText,
-  HiOutlineUserGroup,
-  HiOutlineChevronRight,
-  HiOutlineLightningBolt,
-  HiOutlineMenu,
-  HiOutlineX,
+  HiScale as HiOutlineScale,
+  HiShieldCheck as HiOutlineShieldCheck,
+  HiChatAlt2 as HiOutlineChatAlt2,
+  HiDocumentText as HiOutlineDocumentText,
+  HiUserGroup as HiOutlineUserGroup,
+  HiLightningBolt as HiOutlineLightningBolt,
   HiOutlineHome,
   HiOutlineInformationCircle,
   HiOutlineBookOpen,
-  HiOutlineClipboardList,
   HiOutlineStar,
   HiOutlinePhone,
-  HiOutlineMailOpen,
-  HiOutlineLocationMarker,
-  HiOutlineChevronLeft
+  HiOutlineX,
+  HiOutlineMenu,
+  HiMail as HiOutlineMailOpen,
+  HiLocationMarker as HiOutlineLocationMarker,
+  HiChevronLeft as HiOutlineChevronLeft,
+  HiChevronRight as HiOutlineChevronRight
 } from 'react-icons/hi';
 
 const Navbar = () => {
@@ -32,10 +34,11 @@ const Navbar = () => {
     { title: 'About', href: '/about', icon: <HiOutlineInformationCircle className="w-5 h-5" /> },
     { title: 'Services', href: '/services', icon: <HiOutlineScale className="w-5 h-5" /> },
     { title: 'Documents', href: '/documents', icon: <HiOutlineDocumentText className="w-5 h-5" /> },
-    { tittle: 'Programmes', href: '/programmes', icon: <HiOutlineInformationCircle className='w-5 h-5'/>},
+    { title: 'Programmes', href: '/programmes', icon: <HiOutlineInformationCircle className='w-5 h-5'/>},
     { title: 'Rules & Regulations', href: '/rules', icon: <HiOutlineBookOpen className="w-5 h-5" /> },
     { title: 'Feedback', href: '/feedback', icon: <HiOutlineStar className="w-5 h-5" /> },
-    { title: 'Contact', href: '/contact', icon: <HiOutlinePhone className="w-5 h-5" /> }
+    { title: 'Contact', href: '/contact', icon: <HiOutlinePhone className="w-5 h-5" /> },
+    { title: 'Login', href: '/login', icon: <HiOutlinePhone className="w-5 h-5" /> }
   ];
 
   return (
@@ -425,7 +428,7 @@ const Footer = () => {
           viewport={{ once: true }}
         >
           <p className="text-sm text-gray-300">
-            © {new Date().getFullYear()} Dilla University Legal Aid Service. All rights reserved.
+            &copy; {new Date().getFullYear()} Dilla University Legal Aid Service. All rights reserved.
           </p>
         </motion.div>
       </div>
@@ -1212,21 +1215,20 @@ const CTASection = () => {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      <Navbar />
-      <div className="pt-16">
+    <main className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="relative">
+        <MainNavbar />
+        <SecondaryNavbar />
+      </div>
+      <div className="pt-32">
         <HeroSection />
-        <ParallaxSection />
         <FeaturesSection />
         <ServicesSection />
         <TestimonialsSection />
-        <StatsSection />
-        <FAQSection />
-        <NewsSection />
-        <CTASection />
         <PartnersSection />
-        <Footer />
+        <FAQSection />
+        <CTASection />
       </div>
-    </div>
+    </main>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import {
   HiOutlineCamera,
   HiOutlineOfficeBuilding,
@@ -31,7 +32,8 @@ interface CoordinatorProfile {
 }
 
 export default function CoordinatorProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<CoordinatorProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,22 +45,57 @@ export default function CoordinatorProfilePage() {
   });
 
   useEffect(() => {
-    loadProfile();
-  }, [session]);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+
+    if (status === 'authenticated') {
+      loadProfile();
+    }
+  }, [status, session]);
 
   const loadProfile = async () => {
     try {
-      const response = await fetch('/api/coordinator/profile');
+      const response = await fetch('/api/coordinator/profile', {
+        headers: {
+          'Content-Type': 'application/json',
+          // Include session token in request
+          Authorization: `Bearer ${session?.user?.id}`
+        }
+      });
+      
       const data = await response.json();
       
       if (data.success) {
-        setProfile(data.profile);
-        setFormData({
-          phone: data.profile.user.phone,
-          type: data.profile.coordinator.type,
-          officeId: data.profile.coordinator.office.id,
-          officeName: data.profile.coordinator.office.name
+        setProfile({
+          user: {
+            id: data.data.user.id,
+            email: data.data.user.email,
+            phone: data.data.user.phone || '',
+            userRole: data.data.user.userRole || 'COORDINATOR',
+            avatar: data.data.user.avatar || ''
+          },
+          coordinator: {
+            id: data.data.id,
+            type: data.data.type || 'PERMANENT',
+            office: {
+              id: data.data.office.id,
+              name: data.data.office.name
+            }
+          }
         });
+        setFormData({
+          phone: data.data.user.phone || '',
+          type: data.data.type || 'PERMANENT',
+          officeId: data.data.office.id,
+          officeName: data.data.office.name
+        });
+      } else {
+        toast.error(data.error || 'Failed to load profile');
+        if (data.error === 'Unauthorized - No session found') {
+          router.push('/login');
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);

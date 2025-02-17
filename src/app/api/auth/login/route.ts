@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const validatedData = loginSchema.parse(body);
     const { email, password } = validatedData;
 
-    // Find user
+    // Find user with coordinator profile if exists
     const user = await prisma.user.findUnique({
       where: { email },
       select: {
@@ -20,7 +20,12 @@ export async function POST(request: Request) {
         fullName: true,
         userRole: true,
         status: true,
-        isAdmin: true
+        isAdmin: true,
+        coordinatorProfile: {
+          include: {
+            office: true
+          }
+        }
       }
     });
 
@@ -48,6 +53,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // For coordinators, check if they have a coordinator profile
+    if (user.userRole === UserRoleEnum.COORDINATOR && !user.coordinatorProfile) {
+      return NextResponse.json(
+        { error: 'Coordinator profile not found' },
+        { status: 403 }
+      );
+    }
+
     // Create session
     const session = await prisma.session.create({
       data: {
@@ -67,7 +80,8 @@ export async function POST(request: Request) {
       fullName: user.fullName,
       userRole: user.userRole,
       status: user.status,
-      isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN
+      isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN,
+      coordinatorProfile: user.userRole === UserRoleEnum.COORDINATOR ? user.coordinatorProfile : undefined
     };
 
     return NextResponse.json({

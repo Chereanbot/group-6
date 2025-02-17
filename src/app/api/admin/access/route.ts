@@ -1,22 +1,52 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth';
+import { UserRoleEnum } from '@/types/security.types';
+
+async function validateAdminAccess(token: string | null) {
+  if (!token) {
+    return false;
+  }
+
+  try {
+    // Find user by token
+    const session = await prisma.session.findFirst({
+      where: {
+        token: token,
+        active: true,
+        expiresAt: {
+          gt: new Date()
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            userRole: true,
+            isAdmin: true
+          }
+        }
+      }
+    });
+
+    if (!session?.user) {
+      return false;
+    }
+
+    return session.user.isAdmin && 
+      [UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN].includes(session.user.userRole as UserRoleEnum);
+  } catch (error) {
+    console.error('Error validating admin access:', error);
+    return false;
+  }
+}
 
 export async function GET(request: Request) {
   try {
-    // Get the token from the authorization header
-    const token = request.headers.get('authorization')?.split(' ')[1];
-    
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No token provided' },
-        { status: 401 }
-      );
-    }
+    const token = request.headers.get('authorization')?.split(' ')[1] || null;
+    const isAuthorized = await validateAdminAccess(token);
 
-    // Verify the token and check if user is admin
-    const authResult = await verifyAuth(request);
-    if (!authResult.isAuthenticated || authResult.user?.role !== 'ADMIN') {
+    if (!isAuthorized) {
       return NextResponse.json(
         { error: 'Unauthorized access' },
         { status: 403 }
@@ -69,21 +99,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const token = request.headers.get('authorization')?.split(' ')[1] || null;
+    const isAuthorized = await validateAdminAccess(token);
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-
-    if (!user?.isAdmin) {
+    if (!isAuthorized) {
       return NextResponse.json(
-        { error: 'Forbidden' },
+        { error: 'Unauthorized access' },
         { status: 403 }
       );
     }
@@ -93,6 +114,44 @@ export async function POST(request: Request) {
     if (data.type === 'ASSIGN_PERMISSION') {
       const { roleId, permissionId } = data;
       
+      // Validate inputs
+      if (!roleId || !permissionId) {
+        return NextResponse.json(
+          { error: 'Missing required fields' },
+          { status: 400 }
+        );
+      }
+
+      // Check if role and permission exist
+      const [role, permission] = await Promise.all([
+        prisma.role.findUnique({ where: { id: roleId } }),
+        prisma.permission.findUnique({ where: { id: permissionId } })
+      ]);
+
+      if (!role || !permission) {
+        return NextResponse.json(
+          { error: 'Role or permission not found' },
+          { status: 404 }
+        );
+      }
+
+      // Check if permission is already assigned
+      const existingAssignment = await prisma.rolePermission.findUnique({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId
+          }
+        }
+      });
+
+      if (existingAssignment) {
+        return NextResponse.json(
+          { error: 'Permission already assigned to role' },
+          { status: 400 }
+        );
+      }
+
       await prisma.rolePermission.create({
         data: {
           roleId,
@@ -102,6 +161,31 @@ export async function POST(request: Request) {
     } else if (data.type === 'REMOVE_PERMISSION') {
       const { roleId, permissionId } = data;
       
+      // Validate inputs
+      if (!roleId || !permissionId) {
+        return NextResponse.json(
+          { error: 'Missing required fields' },
+          { status: 400 }
+        );
+      }
+
+      // Check if assignment exists
+      const existingAssignment = await prisma.rolePermission.findUnique({
+        where: {
+          roleId_permissionId: {
+            roleId,
+            permissionId
+          }
+        }
+      });
+
+      if (!existingAssignment) {
+        return NextResponse.json(
+          { error: 'Permission not assigned to role' },
+          { status: 404 }
+        );
+      }
+
       await prisma.rolePermission.delete({
         where: {
           roleId_permissionId: {
@@ -110,6 +194,11 @@ export async function POST(request: Request) {
           }
         }
       });
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid operation type' },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ success: true });

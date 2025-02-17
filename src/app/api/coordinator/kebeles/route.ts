@@ -1,15 +1,36 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { verifyAuth } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
+    const authResult = await verifyAuth(token);
+
+    if (!authResult.isAuthenticated) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
+
     const kebeles = await prisma.kebele.findMany({
       include: {
         manager: true
       }
     });
 
-    return NextResponse.json(kebeles);
+    return NextResponse.json(kebeles || []);
   } catch (error) {
     console.error('Error fetching kebeles:', error);
     return NextResponse.json(

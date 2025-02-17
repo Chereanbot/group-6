@@ -36,12 +36,18 @@ export default function KebeleDirectory() {
 
   const fetchKebeles = async () => {
     try {
-      const response = await fetch('/api/coordinator/kebeles');
+      const response = await fetch('/api/coordinator/kebeles', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch kebeles');
+      }
       const data = await response.json();
       setKebeles(data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching kebeles:', error);
+      setKebeles([]); // Initialize with empty array on error
+    } finally {
       setLoading(false);
     }
   };

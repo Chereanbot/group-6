@@ -12,7 +12,7 @@ import {
   HiOutlineX
 } from 'react-icons/hi';
 import { ReviewItem } from './ReviewItem';
-import { Timeline } from './Timeline';
+import Timeline from './Timeline';
 
 interface PreviewCaseProps {
   formData: {
@@ -36,6 +36,9 @@ interface PreviewCaseProps {
     documents: File[];
     officeId: string;
     status: string;
+    coordinatorId?: string;
+    coordinatorName?: string;
+    officeName?: string;
     activities?: Array<{
       id: string;
       type: string;
@@ -54,187 +57,174 @@ interface PreviewCaseProps {
   onClose: () => void;
 }
 
-export const PreviewCase: React.FC<PreviewCaseProps> = ({ formData, onClose }) => {
+export function PreviewCase({ formData, onClose }: PreviewCaseProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="bg-white rounded-lg shadow-xl p-6 max-h-[90vh] overflow-y-auto"
+      exit={{ opacity: 0, y: 20 }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4"
     >
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Case Preview</h2>
-        <button
-          onClick={onClose}
-          className="btn btn-ghost btn-circle"
-        >
-          <HiOutlineX className="h-6 w-6" />
-        </button>
-      </div>
-
-      <div className="space-y-6">
-        {/* Client Information */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Client Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ReviewItem
-              label="Client Name"
-              value={formData.clientName}
-              icon={<HiOutlineUser className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Phone Number"
-              value={formData.clientPhone}
-              icon={<HiOutlinePhone className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Email"
-              value={formData.clientEmail}
-              icon={<HiOutlineMail className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Address"
-              value={formData.clientAddress}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-          </div>
+      <motion.div
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.9 }}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative"
+      >
+        <div className="sticky top-0 bg-white dark:bg-gray-800 p-6 border-b dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Case Preview</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          >
+            <HiOutlineX className="h-6 w-6" />
+          </button>
         </div>
 
-        {/* Case Details */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Case Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ReviewItem
-              label="Case Type"
-              value={formData.caseType}
-              icon={<HiOutlineDocumentText className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Case Category"
-              value={formData.caseCategory}
-              icon={<HiOutlineTag className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Priority"
-              value={formData.priority}
-              icon={<HiOutlineTag className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Expected Resolution"
-              value={formData.expectedResolutionDate}
-              icon={<HiOutlineCalendar className="h-5 w-5" />}
-            />
-          </div>
-          <div className="mt-4">
-            <ReviewItem
-              label="Case Description"
-              value={formData.caseDescription}
-              icon={<HiOutlineDocumentText className="h-5 w-5" />}
-            />
-          </div>
-        </div>
-
-        {/* Location Details */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Location Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ReviewItem
-              label="Region"
-              value={formData.region}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Zone"
-              value={formData.zone}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Wereda"
-              value={formData.wereda}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="Kebele"
-              value={formData.kebele}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-            <ReviewItem
-              label="House Number"
-              value={formData.houseNumber}
-              icon={<HiOutlineLocationMarker className="h-5 w-5" />}
-            />
-          </div>
-        </div>
-
-        {/* Additional Details */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Additional Details</h3>
+        <div className="p-6 space-y-8">
+          {/* Client Information */}
           <div className="space-y-4">
-            <ReviewItem
-              label="Client Request"
-              value={formData.clientRequest}
-              icon={<HiOutlineDocumentText className="h-5 w-5" />}
-            />
-            {formData.tags.length > 0 && (
-              <div className="flex items-start space-x-3 p-4 bg-base-200 rounded-lg">
-                <div className="flex-shrink-0 mt-1">
-                  <HiOutlineTag className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Tags</h4>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {formData.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="bg-primary text-white px-2 py-1 rounded text-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <HiOutlineUser className="h-5 w-5 mr-2" />
+              Client Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                <p className="text-gray-900 dark:text-white">{formData.clientName || 'N/A'}</p>
               </div>
-            )}
-            {formData.documents.length > 0 && (
-              <div className="flex items-start space-x-3 p-4 bg-base-200 rounded-lg">
-                <div className="flex-shrink-0 mt-1">
-                  <HiOutlineDocumentText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500">Documents</h4>
-                  <div className="mt-1">
-                    {formData.documents.map((doc, index) => (
-                      <p key={index} className="text-base">
-                        {doc.name}
-                      </p>
-                    ))}
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
+                <p className="text-gray-900 dark:text-white">{formData.clientPhone || 'N/A'}</p>
               </div>
-            )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                <p className="text-gray-900 dark:text-white">{formData.clientEmail || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
+                <p className="text-gray-900 dark:text-white">{formData.clientAddress || 'N/A'}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Case Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <HiOutlineDocumentText className="h-5 w-5 mr-2" />
+              Case Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Type</label>
+                <p className="text-gray-900 dark:text-white">{formData.caseType || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Priority</label>
+                <p className="text-gray-900 dark:text-white">{formData.priority || 'N/A'}</p>
+              </div>
+              <div className="col-span-2 space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</label>
+                <p className="text-gray-900 dark:text-white">{formData.caseDescription || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Location Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <HiOutlineLocationMarker className="h-5 w-5 mr-2" />
+              Location Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Region</label>
+                <p className="text-gray-900 dark:text-white">{formData.region || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Zone</label>
+                <p className="text-gray-900 dark:text-white">{formData.zone || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Wereda</label>
+                <p className="text-gray-900 dark:text-white">{formData.wereda || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Kebele</label>
+                <p className="text-gray-900 dark:text-white">{formData.kebele || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Office Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <HiOutlineOfficeBuilding className="h-5 w-5 mr-2" />
+              Office Information
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Office Name</label>
+                <p className="text-gray-900 dark:text-white">{formData.officeName || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Coordinator</label>
+                <p className="text-gray-900 dark:text-white">{formData.coordinatorName || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Office ID</label>
+                <p className="text-gray-900 dark:text-white">{formData.officeId || 'N/A'}</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+                <p className="text-gray-900 dark:text-white">{formData.status || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Documents */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <HiOutlineDocumentText className="h-5 w-5 mr-2" />
+              Documents
+            </h3>
+            <div className="space-y-2">
+              {formData.documents.length > 0 ? (
+                <ul className="space-y-2">
+                  {formData.documents.map((doc, index) => (
+                    <li key={index} className="flex items-center text-gray-900 dark:text-white">
+                      <HiOutlineDocumentText className="h-5 w-5 mr-2 text-gray-500" />
+                      {doc.name}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">No documents attached</p>
+              )}
+            </div>
+          </div>
+
+          {/* Tags */}
+          {formData.tags && formData.tags.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <HiOutlineTag className="h-5 w-5 mr-2" />
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {formData.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Office Assignment */}
-        {formData.officeId && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Office Assignment</h3>
-            <ReviewItem
-              label="Assigned Office"
-              value={formData.officeId}
-              icon={<HiOutlineOfficeBuilding className="h-5 w-5" />}
-            />
-          </div>
-        )}
-
-        {/* Timeline Section */}
-        {formData.activities && formData.activities.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-4">Case Timeline</h3>
-            <Timeline activities={formData.activities} />
-          </div>
-        )}
-      </div>
+      </motion.div>
     </motion.div>
   );
-}; 
+} 

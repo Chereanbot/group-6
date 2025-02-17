@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { UserRoleEnum, UserStatus } from '@prisma/client';
+import { UserRoleEnum, UserStatus } from '@/types/security.types';
 import { User, ApiResponse } from '@/types';
 import EditUserModal from './EditUserModal';
 import SendSMSModal from './SendSMSModal';
@@ -842,6 +842,7 @@ export default function UserTable({ users: initialUsers, onRefresh = () => {} }:
                               <option value="SUPER_ADMIN">Super Admin</option>
                               <option value="ADMIN">Admin</option>
                               <option value="LAWYER">Lawyer</option>
+                              <option value="COORDINATOR">Coordinator</option>
                               <option value="CLIENT">Client</option>
                             </select>
                           </div>
@@ -849,7 +850,7 @@ export default function UserTable({ users: initialUsers, onRefresh = () => {} }:
                           <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
                           <button
-                            onClick={() => handleStatusChange(user.id, 'ACTIVE')}
+                            onClick={() => handleStatusChange(user.id, UserStatus.ACTIVE)}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                           >
                             <HiOutlineCheck className="w-4 h-4 mr-2" />
@@ -857,7 +858,7 @@ export default function UserTable({ users: initialUsers, onRefresh = () => {} }:
                           </button>
                           
                           <button
-                            onClick={() => handleStatusChange(user.id, 'SUSPENDED')}
+                            onClick={() => handleStatusChange(user.id, UserStatus.SUSPENDED)}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                           >
                             <HiOutlineClock className="w-4 h-4 mr-2" />
@@ -865,7 +866,7 @@ export default function UserTable({ users: initialUsers, onRefresh = () => {} }:
                           </button>
                           
                           <button
-                            onClick={() => handleStatusChange(user.id, 'BANNED')}
+                            onClick={() => handleStatusChange(user.id, UserStatus.BANNED)}
                             className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                           >
                             <HiOutlineBan className="w-4 h-4 mr-2" />

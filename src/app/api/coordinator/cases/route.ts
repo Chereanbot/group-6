@@ -7,100 +7,116 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const clientPhone = formData.get('clientPhone') as string;
-    const clientName = formData.get('clientName') as string;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 403 }
+      );
+    }
 
-    // First check if a user with this phone number exists
-    let clientUser = await prisma.user.findUnique({
-      where: {
-        phone: clientPhone
-      }
-    });
-
-    // Client relation configuration
-    const clientRelation = clientUser ? {
-      connect: {
-        id: clientUser.id
-      }
-    } : {
-      create: {
-        email: `${clientPhone.replace(/[^0-9]/g, '')}@dulas.temp`,
-        phone: clientPhone,
-        password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10),
-        fullName: clientName,
-        userRole: UserRoleEnum.CLIENT,
-        status: 'ACTIVE'
-      }
-    };
-
-    // Extract basic case information
-    const caseData: Prisma.CaseCreateInput = {
-      title: formData.get('caseDescription') as string,
-      description: formData.get('caseDescription') as string,
-      status: CaseStatus.ACTIVE,
-      priority: (formData.get('priority') as Priority) || Priority.MEDIUM,
-      category: (formData.get('caseCategory') as CaseCategory) || CaseCategory.OTHER,
-
-      // Client Information
-      clientName: clientName,
-      clientPhone: clientPhone,
-      clientAddress: formData.get('clientAddress') as string || '',
-
-      // Location Details
-      region: formData.get('region') as string || '',
-      zone: formData.get('zone') as string || '',
-      wereda: formData.get('wereda') as string,
-      kebele: formData.get('kebele') as string,
-      houseNumber: formData.get('houseNumber') as string || '',
-
-      // Request & Response
-      clientRequest: formData.get('clientRequest') as string,
-      requestDetails: JSON.parse(formData.get('requestDetails') as string || '{}'),
-      
-      // Tags
-      tags: JSON.parse(formData.get('tags') as string || '[]'),
-
-      // Expected resolution
-      expectedResolutionDate: formData.get('expectedResolutionDate') 
-        ? new Date(formData.get('expectedResolutionDate') as string)
-        : null,
-
-      // Set client relation
-      client: clientRelation
-    };
-
+    const data = await request.json();
+    
     // Validate required fields
-    const requiredFields = {
-      clientName: caseData.clientName,
-      clientPhone: caseData.clientPhone,
-      wereda: caseData.wereda,
-      kebele: caseData.kebele,
-      clientRequest: caseData.clientRequest
-    };
+    const requiredFields = [
+      'clientName',
+      'clientPhone',
+      'caseType',
+      'caseDescription',
+      'coordinatorId',
+      'officeId'
+    ];
 
-    const missingFields = Object.entries(requiredFields)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key);
-
+    const missingFields = requiredFields.filter(field => !data[field]);
     if (missingFields.length > 0) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Missing required fields', 
-          fields: missingFields 
+          error: `Missing required fields: ${missingFields.join(', ')}` 
         },
         { status: 400 }
       );
     }
 
-    // Create case in transaction
-    const newCase = await prisma.$transaction(async (tx) => {
+    // Create or update case in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Check if user exists by phone number
+      let user = await tx.user.findFirst({
+        where: { phone: data.clientPhone }
+      });
+
+      // Create user if doesn't exist
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            fullName: data.clientName,
+            phone: data.clientPhone,
+            email: data.clientEmail || null,
+            password: Math.random().toString(36).slice(-8), // Generate random password
+            userRole: UserRoleEnum.CLIENT,
+            status: 'ACTIVE'
+          }
+        });
+      }
+
       // Create the case
-      const case_ = await tx.case.create({
-        data: caseData,
+      const newCase = await tx.case.create({
+        data: {
+          title: data.caseDescription,
+          description: data.caseDescription,
+          status: CaseStatus.ACTIVE,
+          priority: data.priority || Priority.MEDIUM,
+          category: data.category as CaseCategory || CaseCategory.OTHER,
+          
+          // Client Information
+          clientName: data.clientName,
+          clientPhone: data.clientPhone,
+          clientAddress: data.clientAddress || '',
+          
+          // Location Details
+          region: data.region || '',
+          zone: data.zone || '',
+          wereda: data.wereda,
+          kebele: data.kebele,
+          houseNumber: data.houseNumber || '',
+          
+          // Request & Response
+          clientRequest: data.clientRequest,
+          requestDetails: data.requestDetails || {},
+          
+          // Relations
+          client: {
+            connect: {
+              id: user.id
+            }
+          },
+          assignedOffice: {
+            connect: {
+              id: data.officeId
+            }
+          },
+
+          // Create initial activity
+          activities: {
+            create: {
+              title: "Case Created",
+              type: "CREATED",
+              description: `Case created for client ${data.clientName}`,
+              userId: user.id
+            }
+          }
+        },
         include: {
-          documents: true,
+          client: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              userRole: true
+            }
+          },
+          assignedOffice: true,
           activities: {
             include: {
               user: {
@@ -112,34 +128,18 @@ export async function POST(request: Request) {
                 }
               }
             }
-          },
-          assignedOffice: true,
-          client: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-              userRole: true
-            }
           }
         }
       });
 
-      // Create initial activity
-      await tx.caseActivity.create({
-        data: {
-          caseId: case_.id,
-          userId: case_.client.id,
-          title: "Case Created",
-          type: "CREATED",
-          description: `Case created for client ${case_.clientName}`
-        }
-      });
-
-      return case_;
+      return newCase;
     });
 
-    return NextResponse.json({ success: true, data: newCase });
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+
   } catch (error) {
     console.error('Error creating case:', error);
     return NextResponse.json(

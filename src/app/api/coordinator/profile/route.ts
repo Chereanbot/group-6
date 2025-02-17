@@ -1,78 +1,83 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { UserRoleEnum } from '@prisma/client';
 
 export async function GET() {
   try {
-    const headersList = headers();
-    const userId = headersList.get('x-user-id');
+    const session = await getServerSession(authOptions);
     
-    if (!userId) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
-        { status: 401 }
+        { success: false, error: 'Unauthorized - No session found' },
+        { status: 403 }
       );
     }
 
-    const coordinator = await prisma.coordinator.findFirst({
-      where: {
-        userId: userId
+    // Find user and check role
+    const user = await prisma.user.findUnique({
+      where: { 
+        email: session.user.email,
       },
-      include: {
-        user: {
-          select: {
-            fullName: true,
-            email: true,
-            phone: true,
-            userRole: true
-          }
-        },
-        office: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            type: true,
-            status: true,
-            contactEmail: true,
-            contactPhone: true,
-            address: true,
-            capacity: true
-          }
-        },
-        qualifications: {
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        userRole: true,
+        status: true,
+        coordinatorProfile: {
           include: {
-            documents: {
-              include: {
-                document: true
-              }
-            }
-          }
-        },
-        documents: {
-          include: {
-            document: true
+            office: true
           }
         }
       }
     });
 
-    if (!coordinator) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Coordinator not found' },
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Not a coordinator' },
+        { status: 403 }
+      );
+    }
+
+    if (!user.coordinatorProfile) {
+      return NextResponse.json(
+        { success: false, error: 'Coordinator profile not found' },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      profile: coordinator
+      data: {
+        id: user.coordinatorProfile.id,
+        type: user.coordinatorProfile.type,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone,
+          userRole: user.userRole
+        },
+        office: user.coordinatorProfile.office,
+        specialties: user.coordinatorProfile.specialties || []
+      }
     });
 
   } catch (error) {
     console.error('Error fetching coordinator profile:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch profile' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -80,12 +85,11 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const headersList = headers();
-    const userId = headersList.get('x-user-id');
+    const session = await getServerSession(authOptions);
     
-    if (!userId) {
+    if (!session?.user?.email) {
       return NextResponse.json(
-        { success: false, error: 'Not authenticated' },
+        { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
@@ -94,10 +98,13 @@ export async function PATCH(request: Request) {
 
     const coordinator = await prisma.coordinator.findFirst({
       where: {
-        userId: userId
+        user: {
+          email: session.user.email
+        }
       },
       include: {
-        user: true
+        user: true,
+        office: true
       }
     });
 
@@ -126,51 +133,25 @@ export async function PATCH(request: Request) {
       include: {
         user: {
           select: {
+            id: true,
             fullName: true,
             email: true,
-            phone: true,
-            userRole: true
+            phone: true
           }
         },
-        office: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
-            type: true,
-            status: true,
-            contactEmail: true,
-            contactPhone: true,
-            address: true,
-            capacity: true
-          }
-        },
-        qualifications: {
-          include: {
-            documents: {
-              include: {
-                document: true
-              }
-            }
-          }
-        },
-        documents: {
-          include: {
-            document: true
-          }
-        }
+        office: true
       }
     });
 
     return NextResponse.json({
       success: true,
-      profile: updatedCoordinator
+      data: updatedCoordinator
     });
 
   } catch (error) {
     console.error('Error updating coordinator profile:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update profile' },
+      { success: false, error: error.message },
       { status: 500 }
     );
   }

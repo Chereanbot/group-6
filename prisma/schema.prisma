@@ -79,6 +79,8 @@ model User {
   backups      Backup[]
   agentNotifications AgentNotification[]
   agentChats        AgentChat[]
+  clientAppointments      Appointment[] @relation("ClientAppointments")
+  coordinatorAppointments Appointment[] @relation("CoordinatorAppointments")
 
   @@index([email, phone, username])
 }
@@ -188,8 +190,34 @@ model NotificationPreference {
   @@unique([userId, type])
 }
 
+enum DocumentType {
+  IDENTIFICATION
+  RESIDENCE_PROOF
+  BIRTH_CERTIFICATE
+  MARRIAGE_CERTIFICATE
+  DEATH_CERTIFICATE
+  PROPERTY_DEED
+  TAX_DOCUMENT
+  BUSINESS_LICENSE
+  PERMIT
+  CONTRACT
+  LEGAL_NOTICE
+  COMPLAINT
+  APPLICATION
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+  EXPIRED
+  ACTIVE
+}
+
 model Document {
-  id          String    @id @default(cuid())
+  id          String    @id @default(cuid()) @map("_id")
   title       String
   description String?
   type        DocumentType
@@ -198,14 +226,19 @@ model Document {
   size        Int
   mimeType    String
   uploadedBy  String    @db.ObjectId
+  user        User      @relation(fields: [uploadedBy], references: [id])
   kebeleId    String
   kebele      Kebele    @relation(fields: [kebeleId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Add reverse relations
+  serviceDocuments     ServiceDocument[]
+  coordinatorDocuments CoordinatorDocument[]
+  qualificationDocs    QualificationDocument[]
+
   @@index([kebeleId])
-  @@index([type])
-  @@index([status])
+  @@index([uploadedBy])
 }
 
 enum OTPType {
@@ -987,18 +1020,33 @@ model Communication {
 }
 
 model Appointment {
-  id               String         @id @default(auto()) @map("_id") @db.ObjectId
-  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
-  serviceRequestId String         @db.ObjectId
-  type             String
-  scheduledFor     DateTime
-  duration         Int // in minutes
-  location         String?
-  status           String
-  notes            String?
-  reminderSent     Boolean        @default(false)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  client           User        @relation("ClientAppointments", fields: [clientId], references: [id])
+  clientId         String      @db.ObjectId
+  coordinator      User        @relation("CoordinatorAppointments", fields: [coordinatorId], references: [id])
+  coordinatorId    String      @db.ObjectId
+  scheduledTime    DateTime
+  duration         Int         // Duration in minutes
+  purpose         String
+  priority        String      @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  caseType        String      // Type of legal case
+  caseDetails     String?     // Additional case details
+  venue           String?     // Court or meeting venue
+  requiredDocuments String[]  // List of required documents
+  status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  notes           String?
+  reminderType    String[]    @default(["EMAIL"]) // EMAIL, SMS, WHATSAPP
+  reminderTiming  Int[]       @default([24, 1]) // Hours before appointment
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  serviceRequest  ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  serviceRequestId String?    @db.ObjectId
+
+  @@index([clientId])
+  @@index([coordinatorId])
+  @@index([serviceRequestId])
+  @@index([scheduledTime])
+  @@index([status])
 }
 
 enum NotificationPriority {
@@ -2024,7 +2072,7 @@ model TeachingMetrics {
 }
 
 model KebeleManager {
-  id             String   @id @default(cuid())
+  id             String   @id @default(cuid()) @map("_id")
   fullName       String
   phone          String   @unique
   email          String?  @unique
@@ -2046,7 +2094,7 @@ enum KebeleManagerStatus {
 }
 
 model Kebele {
-  id            String         @id @default(cuid())
+  id            String         @id @default(cuid()) @map("_id")
   kebeleNumber  String        @unique
   kebeleName    String
   population    Int?
@@ -2062,6 +2110,9 @@ model Kebele {
   updatedAt     DateTime      @updatedAt
   manager       KebeleManager?
   cases         Case[]
+  // Add reverse relations
+  documents     Document[]
+  messages      KebeleMessage[]
 }
 
 enum KebeleStatus {
@@ -2311,7 +2362,7 @@ model AgentChat {
 }
 
 model KebeleMessage {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   title     String
   content   String
   status    String   @default("UNREAD")

@@ -1,7 +1,7 @@
 import { authConfig } from '@/config/auth.config';
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from './prisma';
-import { UserRoleEnum } from '@prisma/client';
+import { UserRoleEnum, UserStatus } from '@prisma/client';
 import { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
@@ -27,9 +27,11 @@ export const authOptions: AuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { 
+            email: credentials.email,
+            status: UserStatus.ACTIVE
+          },
           include: {
-            lawyerProfile: true,
             coordinatorProfile: {
               include: {
                 office: true
@@ -48,12 +50,18 @@ export const authOptions: AuthOptions = {
           throw new Error('Invalid credentials');
         }
 
+        // For coordinators, check if they have a coordinator profile
+        if (user.userRole === UserRoleEnum.COORDINATOR && !user.coordinatorProfile) {
+          throw new Error('Coordinator profile not found');
+        }
+
         return {
           id: user.id,
           email: user.email,
           name: user.fullName,
           userRole: user.userRole,
-          isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN
+          isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN,
+          coordinatorProfile: user.coordinatorProfile
         };
       }
     })
@@ -68,6 +76,10 @@ export const authOptions: AuthOptions = {
         token.id = user.id;
         token.role = user.userRole;
         token.isAdmin = user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN;
+        if (user.coordinatorProfile) {
+          token.coordinatorId = user.coordinatorProfile.id;
+          token.officeId = user.coordinatorProfile.office?.id;
+        }
       }
       return token;
     },
@@ -80,7 +92,12 @@ export const authOptions: AuthOptions = {
             email: true,
             userRole: true,
             status: true,
-            fullName: true
+            fullName: true,
+            coordinatorProfile: {
+              include: {
+                office: true
+              }
+            }
           }
         });
 
@@ -91,7 +108,8 @@ export const authOptions: AuthOptions = {
             role: user.userRole,
             status: user.status,
             name: user.fullName,
-            isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN
+            isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN,
+            coordinatorProfile: user.coordinatorProfile
           };
         }
       }
