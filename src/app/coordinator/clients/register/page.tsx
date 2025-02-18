@@ -741,7 +741,7 @@ export default function ClientRegistrationPage() {
                           min="0"
                           placeholder="Enter number of family members"
                         />
-                      </div>
+        </div>
 
                       <div className="space-y-4">
                         <Label className="text-slate-700 dark:text-slate-300">Phone Numbers</Label>

@@ -1,295 +1,331 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { headers } from 'next/headers';
+import { verifyAuth } from '@/lib/edge-auth';
+import { Prisma } from '@prisma/client';
 
-export async function GET() {
+// GET /api/coordinator/clients/appointments
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const headersList = await headers();
+    const authHeader = await headersList.get('authorization');
+    const cookies = await headersList.get('cookie');
+    
+    const token = authHeader?.split(' ')[1] || 
+                 cookies?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, payload } = await verifyAuth(token);
+
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    // Get coordinator's office
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: payload.id },
+      include: { office: true }
+    });
+
+    if (!coordinator) {
+      return NextResponse.json(
+        { success: false, message: 'Coordinator not found' },
+        { status: 404 }
+      );
     }
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        coordinatorId: session.user.id,
+        coordinator: {
+          id: coordinator.id
+        }
       },
       include: {
-        client: true,
+        client: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            clientProfile: {
+              select: {
+                region: true,
+                zone: true,
+                wereda: true,
+                kebele: true,
+                caseType: true,
+                caseCategory: true
+              }
+            }
+          }
+        },
+        coordinator: true
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        scheduledTime: 'asc'
+      }
     });
 
-    // Ensure we're returning an array
-    if (!Array.isArray(appointments)) {
-      console.error('Appointments is not an array:', appointments);
-      return NextResponse.json([]);
-    }
-
-    return NextResponse.json(appointments);
+    return NextResponse.json({
+      success: true,
+      data: appointments.map(apt => ({
+        id: apt.id,
+        title: apt.purpose,
+        start: apt.scheduledTime.toISOString(),
+        end: new Date(new Date(apt.scheduledTime).getTime() + apt.duration * 60000).toISOString(),
+        client: {
+          id: apt.client.id,
+          name: apt.client.fullName,
+          fullName: apt.client.fullName,
+          email: apt.client.email,
+          phone: apt.client.phone,
+          clientProfile: apt.client.clientProfile
+        },
+        scheduledTime: apt.scheduledTime.toISOString(),
+        duration: apt.duration,
+        purpose: apt.purpose,
+        status: apt.status,
+        notes: apt.notes,
+        caseType: apt.caseType,
+        venue: apt.venue,
+        priority: apt.priority
+      }))
+    });
   } catch (error) {
-    console.error('Failed to fetch appointments:', error);
-    return NextResponse.json([], { status: 500 }); // Return empty array on error
+    console.error('Error fetching appointments:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch appointments' },
+      { status: 500 }
+    );
   }
 }
 
+// POST /api/coordinator/clients/appointments
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const headersList = await headers();
+    const token = await headersList.get('authorization')?.split(' ')[1] || 
+                 await headersList.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, payload } = await verifyAuth(token);
+
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: payload.id }
+    });
+
+    if (!coordinator) {
+      return NextResponse.json(
+        { success: false, message: 'Coordinator not found' },
+        { status: 404 }
+      );
     }
 
     const body = await request.json();
-    const {
-      clientId,
-      scheduledTime,
-      duration,
-      purpose,
-      priority = 'MEDIUM',
-      caseType,
-      caseDetails,
-      venue,
-      requiredDocuments = [],
-      status = 'SCHEDULED',
-      notes,
-      serviceRequestId,
-      reminderType = ['EMAIL'],
-      reminderTiming = [24, 1],
-    } = body;
+    const { clientId, scheduledTime, duration, purpose, status, notes, caseType, venue, priority } = body;
 
-    // Validate required fields
-    if (!clientId || !scheduledTime || !duration || !purpose || !caseType) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Check for scheduling conflicts
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        AND: [
-          { status: 'SCHEDULED' },
-          {
-            OR: [
-              {
-                AND: [
-                  { coordinatorId: session.user.id },
-                  {
-                    scheduledTime: {
-                      gte: new Date(scheduledTime),
-                      lt: new Date(new Date(scheduledTime).getTime() + duration * 60000),
-                    },
-                  },
-                ],
-              },
-              {
-                AND: [
-                  { clientId: clientId },
-                  {
-                    scheduledTime: {
-                      gte: new Date(scheduledTime),
-                      lt: new Date(new Date(scheduledTime).getTime() + duration * 60000),
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-    if (conflictingAppointment) {
-      return NextResponse.json(
-        { error: 'Time slot conflicts with existing appointment' },
-        { status: 400 }
-      );
-    }
-
+    // Create appointment with coordinator connection
     const appointment = await prisma.appointment.create({
       data: {
-        clientId,
-        coordinatorId: session.user.id,
+        client: {
+          connect: { id: clientId }
+        },
+        coordinator: {
+          connect: { id: coordinator.id }
+        },
         scheduledTime: new Date(scheduledTime),
         duration,
         purpose,
-        priority,
-        caseType,
-        caseDetails,
-        venue,
-        requiredDocuments,
         status,
         notes,
-        serviceRequestId,
-        reminderType,
-        reminderTiming,
+        caseType,
+        venue,
+        priority
       },
+      include: {
+        client: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            clientProfile: {
+              select: {
+                region: true,
+                zone: true,
+                wereda: true,
+                kebele: true,
+                caseType: true,
+                caseCategory: true
+              }
+            }
+          }
+        }
+      }
     });
 
-    // Create notification for client
-    await prisma.notification.create({
+    return NextResponse.json({
+      success: true,
       data: {
-        userId: clientId,
-        title: 'New Appointment Scheduled',
-        message: `New appointment scheduled for ${new Date(scheduledTime).toLocaleString()}`,
-        type: 'APPOINTMENT',
-        priority: priority === 'HIGH' || priority === 'URGENT' ? 'HIGH' : 'NORMAL',
-      },
+        id: appointment.id,
+        title: appointment.purpose,
+        start: appointment.scheduledTime.toISOString(),
+        end: new Date(new Date(appointment.scheduledTime).getTime() + appointment.duration * 60000).toISOString(),
+        client: {
+          id: appointment.client.id,
+          name: appointment.client.fullName,
+          fullName: appointment.client.fullName,
+          email: appointment.client.email,
+          phone: appointment.client.phone,
+          clientProfile: appointment.client.clientProfile
+        },
+        scheduledTime: appointment.scheduledTime.toISOString(),
+        duration: appointment.duration,
+        purpose: appointment.purpose,
+        status: appointment.status,
+        notes: appointment.notes,
+        caseType: appointment.caseType,
+        venue: appointment.venue,
+        priority: appointment.priority
+      }
     });
-
-    return NextResponse.json(appointment);
   } catch (error) {
-    console.error('Failed to create appointment:', error);
+    console.error('Error creating appointment:', error);
     return NextResponse.json(
-      { error: 'Failed to create appointment' },
+      { success: false, message: 'Failed to create appointment', error: error.message },
       { status: 500 }
     );
   }
 }
 
-export async function PUT(request: Request) {
+// PATCH /api/coordinator/clients/appointments
+export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    const headersList = headers();
+    const authHeader = (await headersList).get('authorization') ?? '';
+    const cookies = (await headersList).get('cookie') ?? '';
+    const token = authHeader.split(' ')[1] || 
+                 cookies.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const body = await request.json();
-    const {
-      id,
-      scheduledTime,
-      duration,
-      purpose,
-      priority,
-      caseType,
-      caseDetails,
-      venue,
-      requiredDocuments,
-      status,
-      notes,
-      serviceRequestId,
-      reminderType,
-      reminderTiming,
-    } = body;
+    const { isAuthenticated, payload } = await verifyAuth(token);
+
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    const data = await request.json();
+    const { id, status, notes } = data;
 
     if (!id) {
       return NextResponse.json(
-        { error: 'Appointment ID is required' },
+        { success: false, message: 'Appointment ID is required' },
         { status: 400 }
       );
     }
 
-    // Check for scheduling conflicts if time is being updated
-    if (scheduledTime && duration) {
-      const conflictingAppointment = await prisma.appointment.findFirst({
-        where: {
-          AND: [
-            { id: { not: id } },
-            { status: 'SCHEDULED' },
-            { coordinatorId: session.user.id },
-            {
-              scheduledTime: {
-                gte: new Date(scheduledTime),
-                lt: new Date(new Date(scheduledTime).getTime() + duration * 60000),
-              },
-            },
-          ],
-        },
-      });
+    // Get coordinator
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: payload.id }
+    });
 
-      if (conflictingAppointment) {
-        return NextResponse.json(
-          { error: 'Time slot conflicts with existing appointment' },
-          { status: 400 }
-        );
-      }
+    if (!coordinator) {
+      return NextResponse.json(
+        { success: false, message: 'Coordinator not found' },
+        { status: 404 }
+      );
     }
 
-    const updateData: any = {
-      scheduledTime: scheduledTime ? new Date(scheduledTime) : undefined,
-      duration,
-      purpose,
-      priority,
-      caseType,
-      caseDetails,
-      venue,
-      requiredDocuments,
-      status,
-      notes,
-      serviceRequestId,
-      reminderType,
-      reminderTiming,
-    };
+    // Check if appointment exists and belongs to coordinator
+    const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+        id,
+        coordinatorId: coordinator.id
+      }
+    });
 
+    if (!existingAppointment) {
+      return NextResponse.json(
+        { success: false, message: 'Appointment not found or not authorized' },
+        { status: 404 }
+      );
+    }
+
+    // Update appointment
     const appointment = await prisma.appointment.update({
       where: { id },
-      data: updateData,
-    });
-
-    // Create notification for status updates
-    if (status) {
-      await prisma.notification.create({
-        data: {
-          userId: appointment.clientId,
-          title: 'Appointment Status Updated',
-          message: `Your appointment status has been updated to ${status}`,
-          type: 'APPOINTMENT',
-          priority: priority === 'HIGH' || priority === 'URGENT' ? 'HIGH' : 'NORMAL',
-        },
-      });
-    }
-
-    return NextResponse.json(appointment);
-  } catch (error) {
-    console.error('Failed to update appointment:', error);
-    return NextResponse.json(
-      { error: 'Failed to update appointment' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Appointment ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const appointment = await prisma.appointment.delete({
-      where: { id },
-    });
-
-    // Create cancellation notification
-    await prisma.notification.create({
       data: {
-        userId: appointment.clientId,
-        title: 'Appointment Cancelled',
-        message: `Your appointment scheduled for ${appointment.scheduledTime.toLocaleString()} has been cancelled`,
-        type: 'APPOINTMENT',
-        priority: 'HIGH',
+        status,
+        notes: notes || undefined
       },
+      include: {
+        client: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            clientProfile: {
+              select: {
+                region: true,
+                zone: true,
+                wereda: true,
+                kebele: true,
+                caseType: true,
+                caseCategory: true
+              }
+            }
+          }
+        },
+        coordinator: true
+      }
     });
 
-    return NextResponse.json({ message: 'Appointment deleted successfully' });
+    return NextResponse.json({
+      success: true,
+      data: appointment
+    });
   } catch (error) {
-    console.error('Failed to delete appointment:', error);
+    console.error('Error updating appointment:', error);
     return NextResponse.json(
-      { error: 'Failed to delete appointment' },
+      { success: false, message: 'Failed to update appointment' },
       { status: 500 }
     );
   }

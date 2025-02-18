@@ -205,9 +205,14 @@ const menuItems = [
     path: '/coordinator/reports',
     icon: HiOutlineChartBar,
     submenu: [
+      {
+        title: 'Reports',
+        path: '/coordinator/reports',
+        icon: HiOutlineChartBar
+      },
       { 
-        title: 'Case Analytics', 
-        path: '/coordinator/reports/case-analytics',
+        title: 'Reports Generator', 
+        path: '/coordinator/reports/generator',
         icon: HiOutlineChartBar
       },
       { 

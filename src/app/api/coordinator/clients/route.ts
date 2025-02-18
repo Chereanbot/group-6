@@ -352,4 +352,188 @@ export async function DELETE(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// GET /api/coordinator/clients
+export async function GET_coordinator() {
+  try {
+    // Get the current session
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Fetch clients associated with the current coordinator
+    const clients = await prisma.client.findMany({
+      where: {
+        coordinator: {
+          email: session.user.email
+        }
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        caseType: true,
+        status: true,
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      clients
+    });
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch clients' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/coordinator/clients
+export async function POST_coordinator(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const data = await req.json();
+    
+    // Create new client
+    const client = await prisma.client.create({
+      data: {
+        ...data,
+        coordinator: {
+          connect: {
+            email: session.user.email
+          }
+        }
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        caseType: true,
+        status: true,
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      client
+    });
+  } catch (error) {
+    console.error('Error creating client:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to create client' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/coordinator/clients
+export async function PUT_coordinator(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Client ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const data = await req.json();
+
+    // Update client
+    const client = await prisma.client.update({
+      where: {
+        id,
+        coordinator: {
+          email: session.user.email
+        }
+      },
+      data,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        updatedAt: true,
+        caseType: true,
+        status: true,
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      client
+    });
+  } catch (error) {
+    console.error('Error updating client:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update client' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/coordinator/clients
+export async function DELETE_coordinator(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Client ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Delete client
+    await prisma.client.delete({
+      where: {
+        id,
+        coordinator: {
+          email: session.user.email
+        }
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Client deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete client' },
+      { status: 500 }
+    );
+  }
 } 

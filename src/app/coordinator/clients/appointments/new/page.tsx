@@ -2,378 +2,452 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
-import {
-  HiOutlineCalendar,
-  HiOutlineClock,
-  HiOutlineUser,
-  HiOutlinePhone,
-  HiOutlineMail,
-  HiOutlineDocumentText,
-  HiOutlineOfficeBuilding,
-  HiOutlineLocationMarker,
-  HiArrowLeft,
-} from 'react-icons/hi';
+import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, Search, Loader2, Phone, Mail, MapPin, FileText } from 'lucide-react';
 
 interface Client {
   id: string;
   fullName: string;
   email: string;
   phone: string;
+  profile: {
+    age: number;
+    sex: string;
+    region: string;
+    zone: string;
+    wereda: string;
+    kebele: string;
+    caseType: string;
+    caseCategory: string;
+  };
 }
 
-interface ServiceRequest {
-  id: string;
-  title: string;
-  status: string;
-}
+const caseTypes = [
+  { value: 'CONSULTATION', label: 'Consultation' },
+  { value: 'DOCUMENT_REVIEW', label: 'Document Review' },
+  { value: 'CASE_DISCUSSION', label: 'Case Discussion' },
+  { value: 'FOLLOW_UP', label: 'Follow-up' },
+  { value: 'OTHER', label: 'Other' }
+];
+
+const priorities = [
+  { value: 'LOW', label: 'Low Priority', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' },
+  { value: 'MEDIUM', label: 'Medium Priority', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
+  { value: 'HIGH', label: 'High Priority', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' },
+  { value: 'URGENT', label: 'Urgent', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' }
+];
 
 export default function NewAppointment() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [caseTypeFilter, setCaseTypeFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [formData, setFormData] = useState({
     clientId: '',
     scheduledTime: '',
     duration: 30,
     purpose: '',
     caseType: '',
-    caseDetails: '',
     venue: '',
-    requiredDocuments: '',
     priority: 'MEDIUM',
-    status: 'SCHEDULED',
     notes: '',
-    serviceRequestId: '',
-    reminderType: ['EMAIL', 'SMS'],
-    reminderTiming: [24, 1],
   });
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [searchTerm, caseTypeFilter, page]);
 
   const fetchClients = async () => {
     try {
-      const response = await fetch('/api/coordinator/clients');
-      const data = await response.json();
-      if (data.success) {
-        setClients(data.data.clients);
+      setIsLoading(true);
+      const response = await fetch(
+        `/api/coordinator/clients/appointments/clients?search=${searchTerm}&caseType=${caseTypeFilter}&page=${page}`,
+        {
+          credentials: 'include'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
       }
-    } catch (error) {
-      console.error('Failed to fetch clients:', error);
-      toast.error('Failed to load clients');
-    }
-  };
 
-  const fetchClientServiceRequests = async (clientId: string) => {
-    try {
-      const response = await fetch(`/api/coordinator/clients/${clientId}/service-requests`);
       const data = await response.json();
+
       if (data.success) {
-        setServiceRequests(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch service requests:', error);
-    }
-  };
-
-  const handleClientSelect = (clientId: string) => {
-    const client = clients.find(c => c.id === clientId);
-    setSelectedClient(client || null);
-    setFormData(prev => ({ ...prev, clientId }));
-    if (clientId) {
-      fetchClientServiceRequests(clientId);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/coordinator/clients/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Appointment created successfully');
-        router.push('/coordinator/clients/appointments');
+        setClients(data.clients);
+        setTotalPages(data.pagination.totalPages);
       } else {
-        throw new Error(data.error || 'Failed to create appointment');
+        throw new Error(data.message || 'Failed to fetch clients');
       }
     } catch (error) {
-      console.error('Failed to create appointment:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create appointment');
+      console.error('Error fetching clients:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to fetch clients',
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-          >
-            <HiArrowLeft className="h-5 w-5 mr-2" />
-            Back to Appointments
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">
-            Schedule New Appointment
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Fill in the details below to schedule a new appointment with a client
-          </p>
-        </div>
+  const handleClientSelect = (client: Client) => {
+    setSelectedClient(client);
+    setFormData(prev => ({ ...prev, clientId: client.id }));
+  };
 
-        <motion.form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.clientId || !formData.scheduledTime || !formData.caseType) {
+      toast({
+        title: "Error",
+        description: 'Please fill in all required fields',
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Add retry logic for transient errors
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const response = await fetch('/api/coordinator/clients/appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(formData),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            // Check if it's a transient error
+            if (response.status === 503 || 
+                (data.message && data.message.toLowerCase().includes('connection')) ||
+                response.status === 500) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                // Wait before retrying (exponential backoff)
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                continue;
+              }
+            }
+            throw new Error(data.message || 'Failed to create appointment');
+          }
+
+          toast({
+            title: "Success",
+            description: 'Appointment created successfully',
+            variant: "default",
+            className: "bg-green-500 text-white"
+          });
+          router.push('/coordinator/clients/appointments');
+          return;
+        } catch (retryError) {
+          if (retryCount === maxRetries - 1) {
+            throw retryError;
+          }
+          retryCount++;
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+      }
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error 
+          ? error.message 
+          : 'Failed to create appointment. Please try again.',
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 p-6 transition-colors duration-300">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6"
+          className="flex items-center justify-between"
         >
-          {/* Client Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Select Client
-            </label>
-            <div className="relative">
-              <HiOutlineUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <select
-                value={formData.clientId}
-                onChange={(e) => handleClientSelect(e.target.value)}
-                className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                  focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                required
-              >
-                <option value="">Select a client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.fullName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Appointments
+          </Button>
+        </motion.div>
 
-          {/* Client Info Display */}
-          {selectedClient && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <HiOutlineMail className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">{selectedClient.email}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <HiOutlinePhone className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">{selectedClient.phone}</span>
-              </div>
-            </div>
-          )}
+        <Card className="border-indigo-100 dark:border-indigo-800/50 shadow-lg shadow-indigo-100/20 dark:shadow-indigo-900/20 backdrop-blur-sm bg-white/80 dark:bg-slate-900/80">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">
+              Schedule New Appointment
+            </CardTitle>
+            <CardDescription>
+              Fill in the details below to schedule a new appointment
+            </CardDescription>
+          </CardHeader>
 
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Date and Time
-              </label>
-              <div className="relative">
-                <HiOutlineCalendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="datetime-local"
-                  value={formData.scheduledTime}
-                  onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
-                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                />
-              </div>
-            </div>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Client Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Select Client</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                      <Input
+                        type="search"
+                        placeholder="Search clients..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-[200px] border-slate-200 dark:border-slate-700"
+                      />
+                    </div>
+                    <Select value={caseTypeFilter} onValueChange={setCaseTypeFilter}>
+                      <SelectTrigger className="w-[180px] border-slate-200 dark:border-slate-700">
+                        <SelectValue placeholder="Filter by case type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Cases</SelectItem>
+                        {caseTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Duration (minutes)
-              </label>
-              <div className="relative">
-                <HiOutlineClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
-                  min="15"
-                  step="15"
-                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                />
+                <ScrollArea className="h-[200px] border rounded-lg border-slate-200 dark:border-slate-700 p-4">
+                  <div className="space-y-2">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                    ) : clients.length > 0 ? (
+                      clients.map((client) => (
+                        <div
+                          key={client.id}
+                          onClick={() => handleClientSelect(client)}
+                          className={cn(
+                            "p-4 rounded-lg cursor-pointer transition-all duration-200",
+                            selectedClient?.id === client.id
+                              ? "bg-indigo-50 dark:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-transparent",
+                            "border"
+                          )}
+                        >
+                          <div className="flex items-start gap-4">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${client.fullName}`} />
+                              <AvatarFallback>
+                                {client.fullName.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {client.fullName}
+                                </h4>
+                                <Badge variant="outline" className="bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400">
+                                  {client.profile.caseType}
+                                </Badge>
+                              </div>
+                              <div className="mt-1 text-sm text-slate-500 dark:text-slate-400 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Phone className="w-4 h-4" />
+                                  <span>{client.phone}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-4 h-4" />
+                                  <span>{client.email}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="w-4 h-4" />
+                                  <span>{client.profile.region}, {client.profile.zone}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-32 text-slate-500 dark:text-slate-400">
+                        <FileText className="w-8 h-8 mb-2" />
+                        <p>No clients found</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
-            </div>
-          </div>
 
-          {/* Purpose and Case Type */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Purpose
-              </label>
-              <div className="relative">
-                <HiOutlineDocumentText className="absolute left-3 top-3 text-gray-400 h-5 w-5" />
-                <textarea
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  rows={3}
-                  required
-                />
+              {/* Appointment Details */}
+              <div className="space-y-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date and Time</Label>
+                    <Input
+                      type="datetime-local"
+                      value={formData.scheduledTime}
+                      onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
+                      required
+                      min={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                      className="border-slate-200 dark:border-slate-700"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Duration (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={formData.duration}
+                      onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                      min="15"
+                      step="15"
+                      required
+                      className="border-slate-200 dark:border-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Case Type</Label>
+                    <Select
+                      value={formData.caseType}
+                      onValueChange={(value) => setFormData({ ...formData, caseType: value })}
+                    >
+                      <SelectTrigger className="border-slate-200 dark:border-slate-700">
+                        <SelectValue placeholder="Select case type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caseTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Priority</Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                    >
+                      <SelectTrigger className="border-slate-200 dark:border-slate-700">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {priorities.map((priority) => (
+                          <SelectItem key={priority.value} value={priority.value}>
+                            <span className="flex items-center gap-2">
+                              <Badge variant="outline" className={priority.color}>
+                                {priority.label}
+                              </Badge>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Venue</Label>
+                  <Input
+                    value={formData.venue}
+                    onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                    placeholder="Enter appointment venue"
+                    className="border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Purpose</Label>
+                  <Textarea
+                    value={formData.purpose}
+                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                    placeholder="Enter appointment purpose"
+                    className="min-h-[100px] border-slate-200 dark:border-slate-700"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Additional Notes</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Add any additional notes"
+                    className="min-h-[100px] border-slate-200 dark:border-slate-700"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Case Type
-              </label>
-              <div className="relative">
-                <HiOutlineDocumentText className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <select
-                  value={formData.caseType}
-                  onChange={(e) => setFormData({ ...formData, caseType: e.target.value })}
-                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
+              <div className="flex justify-end gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={isSubmitting}
+                  className="border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
                 >
-                  <option value="">Select case type</option>
-                  <option value="CONSULTATION">Consultation</option>
-                  <option value="DOCUMENT_REVIEW">Document Review</option>
-                  <option value="CASE_DISCUSSION">Case Discussion</option>
-                  <option value="FOLLOW_UP">Follow-up</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Venue and Priority */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Venue
-              </label>
-              <div className="relative">
-                <HiOutlineLocationMarker className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={formData.venue}
-                  onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                  className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Enter meeting venue"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Priority
-              </label>
-              <div className="relative">
-                <select
-                  value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  className="block w-full pl-4 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                    focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !formData.clientId}
+                  className={cn(
+                    "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg hover:shadow-indigo-500/25 transition-all duration-300",
+                    (isSubmitting || !formData.clientId) && "opacity-50 cursor-not-allowed"
+                  )}
                 >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Appointment'
+                  )}
+                </Button>
               </div>
-            </div>
-          </div>
-
-          {/* Required Documents */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Required Documents
-            </label>
-            <div className="relative">
-              <HiOutlineDocumentText className="absolute left-3 top-3 text-gray-400 h-5 w-5" />
-              <textarea
-                value={formData.requiredDocuments}
-                onChange={(e) => setFormData({ ...formData, requiredDocuments: e.target.value })}
-                className="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                  focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                rows={3}
-                placeholder="List any documents the client should bring"
-              />
-            </div>
-          </div>
-
-          {/* Additional Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Additional Notes
-            </label>
-            <div className="relative">
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="block w-full pl-4 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                  focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400
-                  bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                rows={3}
-                placeholder="Any additional notes or instructions"
-              />
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700
-                transition-colors duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600
-                transition-colors duration-200 flex items-center space-x-2"
-            >
-              {isLoading ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-                  <span>Creating...</span>
-                </>
-              ) : (
-                <span>Create Appointment</span>
-              )}
-            </button>
-          </div>
-        </motion.form>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -128,12 +128,12 @@ export async function POST(request: Request) {
       const result = await prisma.$transaction(async (tx) => {
         // Create user first
         const user = await tx.user.create({
-          data: {
-            fullName,
-            phone: phones[0],
-            email: tempEmail,
-            password: tempPassword,
-            userRole: UserRoleEnum.CLIENT,
+        data: {
+          fullName,
+          phone: phones[0],
+          email: tempEmail,
+          password: tempPassword,
+          userRole: UserRoleEnum.CLIENT,
             status: UserStatus.ACTIVE
           }
         });
@@ -142,16 +142,16 @@ export async function POST(request: Request) {
         const clientProfile = await tx.ClientProfile.create({
           data: {
             userId: user.id,
-            age: Number(age),
-            sex: sex as Gender,
-            phone: phones[0],
-            numberOfFamily: Number(numberOfFamily),
-            healthStatus: healthStatus as HealthStatus,
-            region,
-            zone,
-            wereda,
-            kebele,
-            houseNumber,
+              age: Number(age),
+              sex: sex as Gender,
+              phone: phones[0],
+              numberOfFamily: Number(numberOfFamily),
+              healthStatus: healthStatus as HealthStatus,
+              region,
+              zone,
+              wereda,
+              kebele,
+              houseNumber,
             caseType,
             caseCategory,
             officeId: coordinator.officeId
@@ -278,10 +278,10 @@ export async function GET(request: Request) {
       where: { userId: payload.id },
       include: {
         office: {
-          select: {
-            id: true,
-            name: true,
-            location: true,
+      select: {
+        id: true,
+        name: true,
+        location: true,
             type: true,
             status: true
           }
