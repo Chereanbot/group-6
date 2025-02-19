@@ -274,9 +274,25 @@ const menuItems: MenuItem[] = [
     title: 'Reports',
     icon: HiOutlineDocumentReport,
     submenu: [
-      { title: 'Statistics', path: '/admin/reports/statistics', icon: HiOutlineClipboardList, description: 'View statistics reports' },
-      { title: 'Performance', path: '/admin/reports/performance', icon: HiOutlineClipboardList, description: 'View performance reports' },
-      { title: 'Financial', path: '/admin/reports/financial', icon: HiOutlineClipboardList, description: 'View financial reports' }
+      { 
+        title: 'Dashboard', 
+        path: '/admin/reports/dashboard',
+        icon: HiOutlineChartPie,
+        description: 'Overview of all report metrics and analytics'
+      },
+   
+      { 
+        title: 'Shared Reports', 
+        path: '/admin/reports/shared',
+        icon: HiOutlinePaperAirplane,
+        description: 'View and manage shared reports'
+      },
+      { 
+        title: 'Report Settings', 
+        path: '/admin/reports/settings',
+        icon: HiOutlineCog,
+        description: 'Configure report generation settings'
+      }
     ]
   },
   {

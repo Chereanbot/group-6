@@ -1315,36 +1315,46 @@ model AuditLog {
 
 // Message Model
 model Message {
-  id          String          @id @default(auto()) @map("_id") @db.ObjectId
-  subject     String?
-  content     String?
-  text        String?         // For chat messages
-  senderId    String          @db.ObjectId
-  recipientId String?         @db.ObjectId // Optional for group chats
-  chatId      String?         @db.ObjectId
-  threadId    String?         @db.ObjectId
-  isRead      Boolean         @default(false)
-  isStarred   Boolean         @default(false)
-  isArchived  Boolean         @default(false)
-  priority    MessagePriority @default(MEDIUM)
-  category    MessageCategory @default(GENERAL)
-  status      MessageStatus   @default(SENT)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // Relations
-  sender        User                  @relation("SentMessages", fields: [senderId], references: [id])
-  recipient     User?                 @relation("ReceivedMessages", fields: [recipientId], references: [id])
-  chat          Chat?                 @relation(fields: [chatId], references: [id])
-  thread        MessageThread?        @relation(fields: [threadId], references: [id])
-  attachments   Attachment[]
-  reactions     MessageReaction[]
-  notifications MessageNotification[]
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  text            String
+  senderId        String          @db.ObjectId
+  sender          User            @relation("SentMessages", fields: [senderId], references: [id])
+  recipientId     String?         @db.ObjectId
+  recipient       User?           @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  chatId          String          @db.ObjectId
+  chat            Chat            @relation(fields: [chatId], references: [id])
+  status          MessageStatus   @default(SENT)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  isForwarded     Boolean         @default(false)
+  originalMessageId String?       @db.ObjectId
+  attachments     Attachment[]
+  reactions       MessageReaction[]
+  notifications   MessageNotification[]
+  thread          MessageThread?  @relation(fields: [threadId], references: [id])
+  threadId        String?         @db.ObjectId
 
   @@index([senderId])
   @@index([recipientId])
   @@index([chatId])
   @@index([threadId])
+}
+
+model Attachment {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  url           String
+  name          String
+  type          String
+  size          Int
+  publicId      String
+  resourceType  String
+  format        String
+  messageId     String    @db.ObjectId
+  message       Message   @relation(fields: [messageId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([messageId])
 }
 
 // Message Thread Model
@@ -1376,22 +1386,6 @@ model ThreadParticipant {
   @@unique([threadId, userId])
   @@index([threadId])
   @@index([userId])
-}
-
-// Message Attachment Model
-model Attachment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  messageId String   @db.ObjectId
-  name      String
-  type      String
-  size      Int
-  url       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  @@index([messageId])
 }
 
 // Message Reaction Model
@@ -1853,11 +1847,15 @@ enum TemplateStatus {
 }
 
 model Chat {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  messages     Message[]
-  participants UserChat[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  participants  UserChat[]
+  messages      Message[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  isArchived    Boolean         @default(false)
+
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model UserChat {

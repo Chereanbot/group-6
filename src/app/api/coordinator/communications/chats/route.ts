@@ -88,4 +88,80 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: Request) {
+  try {
+    // Authenticate user
+    const session = await getServerSession(authOptions);
+    let userId = session?.user?.id;
+
+    if (!userId) {
+      const token = request.headers.get('cookie')?.split(';')
+        .find(c => c.trim().startsWith('auth-token='))
+        ?.split('=')[1];
+
+      if (token) {
+        const authResult = await verifyAuth(token);
+        if (authResult.isAuthenticated && authResult.user) {
+          userId = authResult.user.id;
+        }
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { participantId } = await request.json();
+
+    // Create new chat
+    const chat = await prisma.chat.create({
+      data: {
+        participants: {
+          create: [
+            {
+              userId: userId,
+              unreadCount: 0
+            },
+            {
+              userId: participantId,
+              unreadCount: 0
+            }
+          ]
+        }
+      },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                userRole: true,
+                isOnline: true,
+                lastSeen: true,
+                status: true,
+                coordinatorProfile: {
+                  include: {
+                    office: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(chat);
+
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    return NextResponse.json(
+      { error: 'Failed to create chat' },
+      { status: 500 }
+    );
+  }
 } 
