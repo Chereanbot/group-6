@@ -58,26 +58,7 @@ const menuItems: MenuItem[] = [
   {
     title: 'Messages',
     icon: HiOutlineChatAlt2,
-    submenu: [
-      {
-        title: 'Lawyer Messages',
-        path: '/admin/messages/lawyer',
-        icon: HiOutlineUserGroup,
-        description: 'View received messages'
-      },
-      {
-        title: 'Client Messages',
-        path: '/admin/messages/client',
-        icon: HiOutlineUserGroup,
-        description: 'View sent messages'
-      },
-      {
-        title: 'Coordinator Messages',
-        path: '/admin/messages/coordinator',
-        icon: HiOutlineUserGroup,
-        description: 'View archived messages'
-      }
-    ]
+    path: '/admin/messages'
   },
   {
     title: 'User Management',

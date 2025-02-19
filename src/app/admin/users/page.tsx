@@ -86,7 +86,9 @@ export default function AdminUsersPage() {
       setError(null);
 
       // Load users
-      const usersResponse = await userService.getAllUsers();
+      const usersResponse = await userService.getAllUsers({
+        role: selectedRole === 'all' ? 'CLIENT' : selectedRole.toUpperCase()
+      });
       setUsers(usersResponse.data);
 
       // Load stats separately
@@ -128,6 +130,13 @@ export default function AdminUsersPage() {
       }
     }
   }, [user, authLoading, router]);
+
+  // Add effect to reload when role changes
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [selectedRole]);
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);

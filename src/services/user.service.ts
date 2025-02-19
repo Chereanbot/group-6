@@ -135,9 +135,12 @@ class UserService {
   async getAllUsers(params = {}) {
     try {
       const headers = this.getAuthHeaders();
-      const queryString = new URLSearchParams(params).toString();
+      const queryParams = new URLSearchParams({
+        role: 'CLIENT', // Default to CLIENT role if not specified
+        ...params
+      });
       
-      const response = await fetch(`/api/users${queryString ? `?${queryString}` : ''}`, {
+      const response = await fetch(`/api/users?${queryParams.toString()}`, {
         headers,
         credentials: 'include'
       });

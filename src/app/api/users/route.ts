@@ -2,70 +2,98 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { hash } from 'bcryptjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { UserRoleEnum } from '@prisma/client';
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.split(' ')[1];
-
-    const authResult = await verifyAuth(token || '');
-
-    if (!authResult.isAuthenticated || !authResult.user) {
+    // Get token from Authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Unauthorized access' },
+        { success: false, error: 'Missing or invalid authorization header' },
         { status: 401 }
       );
     }
 
+    const token = authHeader.split(' ')[1];
+    
+    // Verify the token and get user session
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || !authResult.user) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
     if (!authResult.user.isAdmin) {
       return NextResponse.json(
-        { error: 'Insufficient permissions' },
+        { success: false, error: 'Unauthorized: Admin access required' },
         { status: 403 }
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const role = searchParams.get('role') as UserRoleEnum;
+    const search = searchParams.get('search') || '';
+
+    if (!role || !Object.values(UserRoleEnum).includes(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid role parameter' },
+        { status: 400 }
+      );
+    }
+
     const users = await prisma.user.findMany({
+      where: {
+        userRole: role,
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } }
+        ]
+      },
       select: {
         id: true,
-        email: true,
         fullName: true,
-        phone: true,
+        email: true,
         userRole: true,
-        status: true,
-        emailVerified: true,
-        phoneVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        password: true,
-        isAdmin: true
+        isOnline: true,
+        lastSeen: true,
+        lawyerProfile: role === 'LAWYER' ? {
+          select: {
+            specializations: true,
+            experience: true
+          }
+        } : undefined,
+        coordinatorProfile: role === 'COORDINATOR' ? {
+          select: {
+            office: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        } : undefined
       },
       orderBy: {
-        createdAt: 'desc'
+        fullName: 'asc'
       }
     });
 
-    const formattedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      phone: user.phone,
-      userRole: user.userRole,
-      status: user.status,
-      emailVerified: user.emailVerified,
-      phoneVerified: user.phoneVerified,
-      createdAt: user.createdAt,
-      password: user.password
-    }));
-
-    return NextResponse.json({
-      success: true,
-      users: formattedUsers
-    });
-
+    return NextResponse.json({ success: true, users });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { 
+        success: false, 
+        error: 'Failed to fetch users',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
       { status: 500 }
     );
   }

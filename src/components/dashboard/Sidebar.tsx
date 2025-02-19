@@ -45,62 +45,31 @@ const sidebarItems: SidebarItem[] = [
     icon: <HiOutlineHome className="w-6 h-6" />,
     path: '/client/dashboard'
   },
-  {
-    title: 'Payments',
-    icon: <HiOutlineCreditCard className="w-6 h-6" />,
-    path: '/client/payments',
-    subItems: [
-      { 
-        title: 'Make Payment', 
-        path: '/client/payments/new',
-        icon: <HiOutlineCash className="w-5 h-5" />
-      },
-      { 
-        title: 'Payment History', 
-        path: '/client/payments/history',
-        icon: <HiOutlineCollection className="w-5 h-5" />
-      },
-      { 
-        title: 'Invoices', 
-        path: '/client/payments/invoices',
-        icon: <HiOutlineDocument className="w-5 h-5" />
-      },
-      { 
-        title: 'Payment Methods', 
-        path: '/client/payments/methods',
-        icon: <HiOutlineCreditCard className="w-5 h-5" />
-      },
-      { 
-        title: 'Subscriptions', 
-        path: '/client/payments/subscriptions',
-        icon: <HiOutlineRefresh className="w-5 h-5" />
-      }
-    ]
-  },
+ 
   {
     title: 'Registration',
     icon: <HiOutlineDocumentText className="w-6 h-6" />,
     path: '/client/registration',
     subItems: [
       { 
-        title: 'Personal Information', 
-        path: '/client/registration/personal',
+        title: 'Service Selection', 
+        path: '/client/registration/service-selection',
+        icon: <HiOutlineUserCircle className="w-5 h-5" />
+      },
+      {
+        title: 'Personal Information',
+        path: '/client/registration/',
         icon: <HiOutlineUserCircle className="w-5 h-5" />
       },
       { 
-        title: 'Case Details', 
-        path: '/client/registration/case',
-        icon: <HiOutlineClipboardCheck className="w-5 h-5" />
+        title: 'Payment Options', 
+        path: '/client/registration/payment',
+        icon: <HiOutlineCreditCard className="w-5 h-5" />
       },
       { 
         title: 'Document Upload', 
         path: '/client/registration/documents',
         icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
-      },
-      { 
-        title: 'Payment Processing', 
-        path: '/client/registration/payment',
-        icon: <HiOutlineCreditCard className="w-5 h-5" />
       }
     ]
   },
@@ -609,7 +578,7 @@ const Sidebar = () => {
             <Link href="/client/dashboard" className="flex items-center space-x-2">
               <img src="/logo.png" alt="Logo" className="w-8 h-8" />
               <span className="font-bold text-xl bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
-                DulaCMS
+                Dulas
               </span>
             </Link>
           )}
