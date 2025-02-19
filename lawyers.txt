@@ -1,7 +1,7 @@
 Please give me the structure for my projects ... 
  
  My project is DU LEGAL AID SERVICE
-{LACMS}
+{DU LAS}
  
 As we know above the title ... now day in dilla they have no developed system or existing system for the legal aid survice.... 
  
