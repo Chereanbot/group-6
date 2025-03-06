@@ -49,29 +49,65 @@ export default function KebeleStatistics() {
 
   const fetchStatistics = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await fetch('/api/coordinator/kebeles/statistics');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch statistics: ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       setStats(data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching statistics:', error);
-      setError('Failed to load statistics');
+      setError(error instanceof Error ? error.message : 'Failed to load statistics');
+    } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-t-4 border-primary-500 border-solid rounded-full animate-spin"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+            Kebele Statistics
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Loading statistics...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 animate-pulse">
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-8 mb-4"></div>
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-red-500">{error}</div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-400">Error Loading Statistics</h2>
+          <p className="text-red-600 dark:text-red-300">{error}</p>
+          <button 
+            onClick={fetchStatistics}
+            className="mt-4 px-4 py-2 bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -117,7 +153,7 @@ export default function KebeleStatistics() {
             <div className="flex items-center justify-between mb-4">
               <HiOutlineUsers className="w-8 h-8 text-green-500" />
               <span className="text-3xl font-bold text-gray-800 dark:text-white">
-                {stats.totalPopulation.toLocaleString()}
+                {(stats?.totalPopulation || 0).toLocaleString()}
               </span>
             </div>
             <h3 className="text-gray-600 dark:text-gray-400">Total Population</h3>
@@ -130,7 +166,7 @@ export default function KebeleStatistics() {
             <div className="flex items-center justify-between mb-4">
               <HiOutlineScale className="w-8 h-8 text-blue-500" />
               <span className="text-3xl font-bold text-gray-800 dark:text-white">
-                {stats.averagePopulation.toLocaleString()}
+                {(stats?.averagePopulation || 0).toLocaleString()}
               </span>
             </div>
             <h3 className="text-gray-600 dark:text-gray-400">Average Population</h3>

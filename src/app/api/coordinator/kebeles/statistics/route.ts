@@ -3,19 +3,41 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // Get all kebeles with their cases
+    // Get all kebeles with their cases, selecting only needed fields
     const kebeles = await prisma.kebele.findMany({
-      include: {
-        cases: true
+      select: {
+        id: true,
+        kebeleNumber: true,
+        kebeleName: true,
+        population: true,
+        district: true,
+        services: true,
+        cases: {
+          select: {
+            category: true
+          }
+        }
       }
     });
 
+    if (!kebeles || kebeles.length === 0) {
+      return NextResponse.json({
+        totalKebeles: 0,
+        totalPopulation: 0,
+        averagePopulation: 0,
+        totalCases: 0,
+        populationByDistrict: [],
+        casesByType: [],
+        serviceDistribution: []
+      });
+    }
+
     // Calculate total population and average
     const totalPopulation = kebeles.reduce((sum, kebele) => sum + (kebele.population || 0), 0);
-    const averagePopulation = Math.round(totalPopulation / kebeles.length);
+    const averagePopulation = kebeles.length > 0 ? Math.round(totalPopulation / kebeles.length) : 0;
 
     // Calculate total cases
-    const totalCases = kebeles.reduce((sum, kebele) => sum + kebele.cases.length, 0);
+    const totalCases = kebeles.reduce((sum, kebele) => sum + (kebele.cases?.length || 0), 0);
 
     // Group population by district
     const populationByDistrict = kebeles.reduce((acc, kebele) => {
@@ -35,13 +57,14 @@ export async function GET() {
 
     // Count cases by type
     const casesByType = kebeles.reduce((acc, kebele) => {
-      kebele.cases.forEach(case_ => {
-        const type = case_.category;
-        const existing = acc.find(item => item.type === type);
-        if (existing) {
-          existing.count++;
-        } else {
-          acc.push({ type, count: 1 });
+      kebele.cases?.forEach(case_ => {
+        if (case_?.category) {
+          const existing = acc.find(item => item.type === case_.category);
+          if (existing) {
+            existing.count++;
+          } else {
+            acc.push({ type: case_.category, count: 1 });
+          }
         }
       });
       return acc;
@@ -50,11 +73,13 @@ export async function GET() {
     // Count service distribution
     const serviceDistribution = kebeles.reduce((acc, kebele) => {
       kebele.services?.forEach(service => {
-        const existing = acc.find(item => item.service === service);
-        if (existing) {
-          existing.count++;
-        } else {
-          acc.push({ service, count: 1 });
+        if (service) {
+          const existing = acc.find(item => item.service === service);
+          if (existing) {
+            existing.count++;
+          } else {
+            acc.push({ service, count: 1 });
+          }
         }
       });
       return acc;

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 import { verifyAuth } from '@/lib/edge-auth';
 import { Prisma } from '@prisma/client';
+import { sendSMS, formatAppointmentMessage } from '@/lib/infobip';
 
 // GET /api/coordinator/clients/appointments
 export async function GET(request: Request) {
@@ -47,9 +48,7 @@ export async function GET(request: Request) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        coordinator: {
-          id: coordinator.id
-        }
+        coordinatorId: payload.id
       },
       include: {
         client: {
@@ -70,37 +69,61 @@ export async function GET(request: Request) {
             }
           }
         },
-        coordinator: true
+        coordinator: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true
+          }
+        }
       },
-      orderBy: {
-        scheduledTime: 'asc'
-      }
+      orderBy: [
+        {
+          scheduledTime: 'asc'
+        },
+        {
+          status: 'asc'
+        }
+      ]
     });
+
+    // Transform the appointments data for the response
+    const formattedAppointments = appointments.map(apt => ({
+      id: apt.id,
+      title: apt.purpose,
+      start: apt.scheduledTime.toISOString(),
+      end: new Date(new Date(apt.scheduledTime).getTime() + apt.duration * 60000).toISOString(),
+      client: {
+        id: apt.client.id,
+        name: apt.client.fullName,
+        fullName: apt.client.fullName,
+        email: apt.client.email,
+        phone: apt.client.phone,
+        clientProfile: apt.client.clientProfile
+      },
+      coordinator: {
+        id: apt.coordinator.id,
+        name: apt.coordinator.fullName,
+        email: apt.coordinator.email,
+        phone: apt.coordinator.phone
+      },
+      scheduledTime: apt.scheduledTime.toISOString(),
+      duration: apt.duration,
+      purpose: apt.purpose,
+      status: apt.status,
+      notes: apt.notes,
+      caseType: apt.caseType,
+      venue: apt.venue,
+      priority: apt.priority,
+      requiredDocuments: apt.requiredDocuments,
+      reminderType: apt.reminderType,
+      reminderTiming: apt.reminderTiming
+    }));
 
     return NextResponse.json({
       success: true,
-      data: appointments.map(apt => ({
-        id: apt.id,
-        title: apt.purpose,
-        start: apt.scheduledTime.toISOString(),
-        end: new Date(new Date(apt.scheduledTime).getTime() + apt.duration * 60000).toISOString(),
-        client: {
-          id: apt.client.id,
-          name: apt.client.fullName,
-          fullName: apt.client.fullName,
-          email: apt.client.email,
-          phone: apt.client.phone,
-          clientProfile: apt.client.clientProfile
-        },
-        scheduledTime: apt.scheduledTime.toISOString(),
-        duration: apt.duration,
-        purpose: apt.purpose,
-        status: apt.status,
-        notes: apt.notes,
-        caseType: apt.caseType,
-        venue: apt.venue,
-        priority: apt.priority
-      }))
+      data: formattedAppointments
     });
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -150,14 +173,30 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { clientId, scheduledTime, duration, purpose, status, notes, caseType, venue, priority } = body;
 
-    // Create appointment with coordinator connection
+    // Get client details for SMS notification
+    const client = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: {
+        phone: true,
+        fullName: true
+      }
+    });
+
+    if (!client?.phone) {
+      return NextResponse.json(
+        { success: false, message: 'Client phone number not found' },
+        { status: 400 }
+      );
+    }
+
+    // Create appointment
     const appointment = await prisma.appointment.create({
       data: {
         client: {
           connect: { id: clientId }
         },
         coordinator: {
-          connect: { id: coordinator.id }
+          connect: { id: coordinator.userId }
         },
         scheduledTime: new Date(scheduledTime),
         duration,
@@ -189,6 +228,16 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // Send SMS notification
+    const message = formatAppointmentMessage({
+      scheduledTime,
+      purpose,
+      venue,
+      duration
+    });
+
+    await sendSMS(client.phone, message);
 
     return NextResponse.json({
       success: true,

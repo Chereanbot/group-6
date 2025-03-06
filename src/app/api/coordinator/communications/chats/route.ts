@@ -52,35 +52,25 @@ export async function GET(request: Request) {
                     userRole: true,
                     isOnline: true,
                     lastSeen: true,
-                    status: true,
-                    coordinatorProfile: {
-                      include: {
-                        office: true
-                      }
-                    }
+                    status: true
                   }
                 }
               }
             }
           }
         }
-      },
-      orderBy: {
-        updatedAt: 'desc'
       }
     });
 
     // Transform the data to match the expected format
-    const chats = userChats.map(userChat => ({
+    const transformedChats = userChats.map(userChat => ({
       id: userChat.chatId,
+      user: userChat.chat.participants.find(p => p.userId !== userId)?.user,
       unreadCount: userChat.unreadCount,
-      isStarred: userChat.isStarred,
-      lastMessage: userChat.chat.messages[0] || null,
-      user: userChat.chat.participants.find(p => p.userId !== userId)?.user
+      lastMessage: userChat.chat.messages[0] || null
     }));
 
-    return NextResponse.json(chats);
-
+    return NextResponse.json(transformedChats);
   } catch (error) {
     console.error('Error fetching chats:', error);
     return NextResponse.json(
@@ -92,7 +82,6 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    // Authenticate user
     const session = await getServerSession(authOptions);
     let userId = session?.user?.id;
 
@@ -114,6 +103,13 @@ export async function POST(request: Request) {
     }
 
     const { participantId } = await request.json();
+
+    if (!participantId) {
+      return NextResponse.json(
+        { error: 'Participant ID is required' },
+        { status: 400 }
+      );
+    }
 
     // Create new chat
     const chat = await prisma.chat.create({
@@ -142,12 +138,7 @@ export async function POST(request: Request) {
                 userRole: true,
                 isOnline: true,
                 lastSeen: true,
-                status: true,
-                coordinatorProfile: {
-                  include: {
-                    office: true
-                  }
-                }
+                status: true
               }
             }
           }
@@ -155,8 +146,16 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json(chat);
+    // Transform the response to match the expected format
+    const otherParticipant = chat.participants.find(p => p.userId !== userId);
+    const transformedChat = {
+      id: chat.id,
+      user: otherParticipant?.user,
+      unreadCount: 0,
+      lastMessage: null
+    };
 
+    return NextResponse.json(transformedChat);
   } catch (error) {
     console.error('Error creating chat:', error);
     return NextResponse.json(

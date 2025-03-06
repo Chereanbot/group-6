@@ -130,6 +130,12 @@ const menuItems = [
         icon: HiOutlineCalendar,
         badge: '3'
       },
+      {
+        title: 'Appointment List',
+        path: '/coordinator/clients/appointment-list',
+        icon: HiOutlineCalendar,
+        badge: '3'
+      },
       { 
         title: 'Legal Aid Requests', 
         path: '/coordinator/clients/requests',

@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 import { verifyAuth } from '@/lib/edge-auth';
+import { NotificationType, NotificationStatus, Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
-    const headersList = headers();
-    const token = headersList.get('authorization')?.split(' ')[1] || 
-                 headersList.get('cookie')?.split('; ')
+    const headersList = await headers();
+    const authHeader = headersList.get('authorization') ?? '';
+    const cookies = headersList.get('cookie') ?? '';
+    
+    const token = authHeader.split(' ')[1] || 
+                 cookies.split('; ')
                  .find(row => row.startsWith('auth-token='))
                  ?.split('=')[1];
 
@@ -27,41 +31,59 @@ export async function POST(request: Request) {
       );
     }
 
-    const { appointmentId, clientId, message, type } = await request.json();
+    const body = await request.json();
+    const { appointmentId, message, title } = body;
 
-    // Get coordinator
-    const coordinator = await prisma.coordinator.findUnique({
-      where: { userId: payload.id },
-      include: { office: true }
+    // Get the appointment and client details
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        client: true,
+      },
     });
 
-    if (!coordinator) {
+    if (!appointment) {
       return NextResponse.json(
-        { success: false, message: 'Coordinator not found' },
+        { success: false, message: 'Appointment not found' },
         { status: 404 }
       );
     }
 
-    // Create notification
-    const notification = await prisma.notification.create({
-      data: {
-        type,
-        message,
-        appointmentId,
-        userId: clientId,
-        senderId: coordinator.userId,
-        status: 'UNREAD'
-      }
-    });
+    if (!appointment.client.phone) {
+      return NextResponse.json(
+        { success: false, message: 'Client phone number not found' },
+        { status: 400 }
+      );
+    }
 
-    // TODO: Implement real-time notification using WebSocket or similar
-    // For now, we'll just return the created notification
+    // Create notification record
+    const notificationData: Prisma.NotificationCreateInput = {
+      type: NotificationType.APPOINTMENT,
+      title: title || 'Appointment Notification',
+      message,
+      status: NotificationStatus.UNREAD,
+      user: {
+        connect: { id: appointment.clientId }
+      },
+      case: appointment.serviceRequestId ? {
+        connect: { id: appointment.serviceRequestId }
+      } : undefined,
+      metadata: {
+        appointmentId,
+        scheduledTime: appointment.scheduledTime.toISOString(),
+        purpose: appointment.purpose,
+        venue: appointment.venue
+      }
+    };
+
+    const notification = await prisma.notification.create({
+      data: notificationData
+    });
 
     return NextResponse.json({
       success: true,
       data: notification
     });
-
   } catch (error) {
     console.error('Error sending notification:', error);
     return NextResponse.json(
@@ -73,9 +95,12 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const headersList = headers();
-    const token = headersList.get('authorization')?.split(' ')[1] || 
-                 headersList.get('cookie')?.split('; ')
+    const headersList = await headers();
+    const authHeader = headersList.get('authorization') ?? '';
+    const cookies = headersList.get('cookie') ?? '';
+    
+    const token = authHeader.split(' ')[1] || 
+                 cookies.split('; ')
                  .find(row => row.startsWith('auth-token='))
                  ?.split('=')[1];
 
@@ -98,19 +123,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const appointmentId = searchParams.get('appointmentId');
 
+    if (!appointmentId) {
+      return NextResponse.json(
+        { success: false, message: 'Appointment ID is required' },
+        { status: 400 }
+      );
+    }
+
     // Get notifications for the appointment
     const notifications = await prisma.notification.findMany({
       where: {
-        appointmentId
+        type: NotificationType.APPOINTMENT,
+        metadata: {
+          equals: {
+            appointmentId
+          }
+        }
       },
       include: {
-        sender: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true
-          }
-        },
         user: {
           select: {
             id: true,
@@ -140,9 +170,12 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const headersList = headers();
-    const token = headersList.get('authorization')?.split(' ')[1] || 
-                 headersList.get('cookie')?.split('; ')
+    const headersList = await headers();
+    const authHeader = headersList.get('authorization') ?? '';
+    const cookies = headersList.get('cookie') ?? '';
+    
+    const token = authHeader.split(' ')[1] || 
+                 cookies.split('; ')
                  .find(row => row.startsWith('auth-token='))
                  ?.split('=')[1];
 
@@ -163,6 +196,13 @@ export async function PATCH(request: Request) {
     }
 
     const { id, status } = await request.json();
+
+    if (!Object.values(NotificationStatus).includes(status)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid notification status' },
+        { status: 400 }
+      );
+    }
 
     // Update notification status
     const notification = await prisma.notification.update({

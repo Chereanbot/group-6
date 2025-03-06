@@ -1,0 +1,24 @@
+---
+description: client rolesor the 401requste
+globs: 
+alwaysApply: true
+---
+ try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, user } = await verifyAuth(token);
+
+    if (!isAuthenticated || user.userRole !== UserRoleEnum.CLIENT) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }

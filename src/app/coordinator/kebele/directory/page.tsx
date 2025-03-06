@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { HiOutlineSearch, HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlinePhone, HiOutlineMail } from 'react-icons/hi';
+import { useRouter } from 'next/navigation';
+import { HiOutlineSearch, HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlinePhone, HiOutlineMail, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 interface Kebele {
   id: string;
@@ -25,6 +27,7 @@ interface Kebele {
 }
 
 export default function KebeleDirectory() {
+  const router = useRouter();
   const [kebeles, setKebeles] = useState<Kebele[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,53 @@ export default function KebeleDirectory() {
     } catch (error) {
       console.error('Error fetching kebeles:', error);
       setKebeles([]); // Initialize with empty array on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (kebele: Kebele) => {
+    router.push(`/coordinator/kebele/edit/${kebele.id}`);
+  };
+
+  const handleDelete = async (kebele: Kebele) => {
+    if (!window.confirm(`Are you sure you want to delete ${kebele.kebeleName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/coordinator/kebeles/${kebele.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete kebele');
+      }
+
+      toast.success(data.message || 'Kebele deleted successfully');
+      
+      // Remove the deleted kebele from the state
+      setKebeles(prevKebeles => prevKebeles.filter(k => k.id !== kebele.id));
+      
+      // Close the modal if the deleted kebele was being viewed
+      if (selectedKebele?.id === kebele.id) {
+        setSelectedKebele(null);
+      }
+
+      // Refresh the list to ensure sync with server
+      await fetchKebeles();
+    } catch (error) {
+      console.error('Error deleting kebele:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete kebele', {
+        duration: 5000
+      });
     } finally {
       setLoading(false);
     }
@@ -129,13 +179,29 @@ export default function KebeleDirectory() {
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex space-x-2">
                   <button
                     onClick={() => setSelectedKebele(kebele)}
-                    className="w-full px-4 py-2 bg-primary-500 hover:bg-primary-600 
+                    className="flex-1 px-4 py-2 bg-primary-500 hover:bg-primary-600 
                       text-white rounded-lg transition-colors duration-200"
                   >
                     View Details
+                  </button>
+                  <button
+                    onClick={() => handleEdit(kebele)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 
+                      dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg 
+                      transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <HiOutlinePencil className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(kebele)}
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 
+                      dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-lg 
+                      transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <HiOutlineTrash className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -165,52 +231,80 @@ export default function KebeleDirectory() {
                 </button>
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300">Location</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Sub City: {selectedKebele.subCity || 'N/A'}<br />
-                      District: {selectedKebele.district || 'N/A'}<br />
-                      Main Office: {selectedKebele.mainOffice || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300">Contact</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Phone: {selectedKebele.contactPhone || 'N/A'}<br />
-                      Email: {selectedKebele.contactEmail || 'N/A'}<br />
-                      Working Hours: {selectedKebele.workingHours || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Services</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedKebele.services?.map((service, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 bg-primary-100 dark:bg-primary-900 text-primary-600 
-                          dark:text-primary-400 rounded-full text-sm"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
+                  <h3 className="font-semibold text-gray-700 dark:text-gray-300">Location</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Sub City: {selectedKebele.subCity || 'N/A'}<br />
+                    District: {selectedKebele.district || 'N/A'}<br />
+                    Main Office: {selectedKebele.mainOffice || 'N/A'}
+                  </p>
                 </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700 dark:text-gray-300">Contact</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Phone: {selectedKebele.contactPhone || 'N/A'}<br />
+                    Email: {selectedKebele.contactEmail || 'N/A'}<br />
+                    Working Hours: {selectedKebele.workingHours || 'N/A'}
+                  </p>
+                </div>
+              </div>
 
-                {selectedKebele.manager && (
-                  <div>
-                    <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Manager Information</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Name: {selectedKebele.manager.fullName}<br />
-                      Position: {selectedKebele.manager.position}<br />
-                      Phone: {selectedKebele.manager.phone}<br />
-                      Email: {selectedKebele.manager.email || 'N/A'}
-                    </p>
-                  </div>
-                )}
+              <div className="mt-4">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Services</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedKebele.services?.map((service, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-primary-100 dark:bg-primary-900 text-primary-600 
+                        dark:text-primary-400 rounded-full text-sm"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {selectedKebele.manager && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Manager Information</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Name: {selectedKebele.manager.fullName}<br />
+                    Position: {selectedKebele.manager.position}<br />
+                    Phone: {selectedKebele.manager.phone}<br />
+                    Email: {selectedKebele.manager.email || 'N/A'}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setSelectedKebele(null)}
+                  className="px-4 py-2 text-gray-600 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    handleEdit(selectedKebele);
+                    setSelectedKebele(null);
+                  }}
+                  className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 
+                    flex items-center"
+                >
+                  <HiOutlinePencil className="w-5 h-5 mr-2" />
+                  Edit Kebele
+                </button>
+                <button
+                  onClick={() => {
+                    handleDelete(selectedKebele);
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 
+                    flex items-center"
+                >
+                  <HiOutlineTrash className="w-5 h-5 mr-2" />
+                  Delete Kebele
+                </button>
               </div>
             </div>
           </motion.div>

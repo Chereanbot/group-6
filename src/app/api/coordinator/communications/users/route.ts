@@ -9,7 +9,6 @@ export async function GET(request: Request) {
   try {
     // Try NextAuth session first
     const session = await getServerSession(authOptions);
-    
     let userId = session?.user?.id;
 
     // If no session, try JWT token
@@ -48,7 +47,7 @@ export async function GET(request: Request) {
 
     const officeId = coordinator.coordinatorProfile.office.id;
 
-    // Get all admins and super admins (regardless of office)
+    // Get all admins and super admins
     const admins = await prisma.user.findMany({
       where: {
         userRole: {
@@ -67,7 +66,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // Get lawyers from coordinator's office
+    // Get lawyers in the same office
     const lawyers = await prisma.user.findMany({
       where: {
         userRole: UserRoleEnum.LAWYER,
@@ -83,85 +82,59 @@ export async function GET(request: Request) {
         userRole: true,
         isOnline: true,
         lastSeen: true,
-        status: true,
-        lawyerProfile: {
-          include: {
-            specializations: {
-              include: {
-                specialization: true
-              }
-            },
-            office: true
-          }
-        }
+        status: true
       }
     });
 
-    // Get clients from coordinator's office
-    const clients = await prisma.user.findMany({
+    // Get all kebele managers from active kebeles
+    const kebeleManagers = await prisma.kebeleManager.findMany({
       where: {
-        userRole: UserRoleEnum.CLIENT,
-        status: UserStatus.ACTIVE,
-        clientProfile: {
-          officeId
+        status: 'ACTIVE',
+        kebele: {
+          status: 'ACTIVE'
         }
       },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        userRole: true,
-        isOnline: true,
-        lastSeen: true,
-        status: true,
-        clientProfile: {
+      include: {
+        kebele: {
           select: {
-            caseType: true,
-            caseCategory: true,
-            officeId: true
+            id: true,
+            kebeleName: true,
+            subCity: true,
+            district: true,
+            contactPhone: true,
+            contactEmail: true,
+            workingHours: true
           }
         }
       }
     });
 
-    // Transform the data to match the expected format
-    const transformedLawyers = lawyers.map(lawyer => ({
-      id: lawyer.id,
-      fullName: lawyer.fullName,
-      email: lawyer.email,
-      userRole: lawyer.userRole,
-      isOnline: lawyer.isOnline,
-      lastSeen: lawyer.lastSeen,
-      status: lawyer.status,
-      lawyerProfile: lawyer.lawyerProfile ? {
-        specializations: lawyer.lawyerProfile.specializations.map(spec => ({
-          specialization: {
-            name: spec.specialization.name
-          }
-        }))
-      } : null
-    }));
-
-    const transformedClients = clients.map(client => ({
-      id: client.id,
-      fullName: client.fullName,
-      email: client.email,
-      userRole: client.userRole,
-      isOnline: client.isOnline,
-      lastSeen: client.lastSeen,
-      status: client.status,
-      clientProfile: client.clientProfile ? {
-        caseType: client.clientProfile.caseType,
-        caseCategory: client.clientProfile.caseCategory
-      } : null
+    // Transform kebele managers to match user format
+    const transformedKebeleManagers = kebeleManagers.map(manager => ({
+      id: manager.id,
+      fullName: manager.fullName,
+      email: manager.email,
+      userRole: 'KEBELE_MANAGER' as UserRoleEnum,
+      isOnline: false,
+      lastSeen: null,
+      status: UserStatus.ACTIVE,
+      kebeleProfile: {
+        kebeleName: manager.kebele.kebeleName,
+        subCity: manager.kebele.subCity,
+        district: manager.kebele.district,
+        position: manager.position,
+        phone: manager.phone,
+        contactPhone: manager.kebele.contactPhone,
+        contactEmail: manager.kebele.contactEmail,
+        workingHours: manager.kebele.workingHours
+      }
     }));
 
     return NextResponse.json({
       admins,
-      lawyers: transformedLawyers,
-      clients: transformedClients
+      lawyers,
+      kebeleManagers: transformedKebeleManagers
     });
-
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { HiOutlineSearch, HiOutlineOfficeBuilding, HiOutlineShieldCheck, HiOutlineX, HiOutlineUserGroup } from 'react-icons/hi';
+import { HiOutlineSearch, HiOutlineOfficeBuilding, HiOutlineShieldCheck, HiOutlineX } from 'react-icons/hi';
 import { CommunicationUser } from './types';
 import { toast } from 'react-hot-toast';
 
-type UserRole = 'COORDINATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'LAWYER' | 'CLIENT';
+type UserRole = 'COORDINATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'LAWYER' | 'KEBELE_MANAGER';
 
 type User = {
   id: string;
@@ -16,6 +16,10 @@ type User = {
     office?: {
       name: string;
     };
+  };
+  kebeleProfile?: {
+    kebeleName?: string;
+    position?: string;
   };
   unreadCount?: number;
   lastMessage?: {
@@ -32,7 +36,7 @@ interface UserListProps {
 export default function UserList({ onSelectUser, onClose }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'coordinator' | 'admin' | 'lawyer' | 'client'>('all');
+  const [filter, setFilter] = useState<'all' | 'admin' | 'lawyer' | 'kebele_manager'>('all');
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -64,9 +68,9 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
             ...user,
             type: 'lawyer'
           })),
-          ...(data.clients || []).map((user: any) => ({
+          ...(data.kebeleManagers || []).map((user: any) => ({
             ...user,
-            type: 'client'
+            type: 'kebele_manager'
           }))
         ];
 
@@ -76,8 +80,7 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
           if (filter !== 'all') {
             if (filter === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(user.userRole)) return false;
             if (filter === 'lawyer' && user.userRole !== 'LAWYER') return false;
-            if (filter === 'client' && user.userRole !== 'CLIENT') return false;
-            if (filter === 'coordinator' && user.userRole !== 'COORDINATOR') return false;
+            if (filter === 'kebele_manager' && user.userRole !== 'KEBELE_MANAGER') return false;
           }
 
           // Search filter
@@ -86,7 +89,8 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
             return (
               user.fullName.toLowerCase().includes(searchLower) ||
               user.email.toLowerCase().includes(searchLower) ||
-              (user.coordinatorProfile?.office?.name || '').toLowerCase().includes(searchLower)
+              (user.coordinatorProfile?.office?.name || '').toLowerCase().includes(searchLower) ||
+              (user.kebeleProfile?.kebeleName || '').toLowerCase().includes(searchLower)
             );
           }
 
@@ -125,12 +129,20 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white">Select User</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Select User</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full"
+          >
+            <HiOutlineX className="w-5 h-5" />
+          </button>
+        </div>
         <div className="mt-4 space-y-4">
           <div className="relative">
             <input
               type="text"
-              placeholder="Search by name, email, or office..."
+              placeholder="Search by name, email, or kebele..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 
@@ -139,49 +151,49 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
             <HiOutlineSearch className="absolute left-3 top-3 text-gray-400" />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex space-x-2 overflow-x-auto pb-2">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'all'
+              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap
+                ${filter === 'all'
                   ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                }`}
             >
               All
             </button>
             <button
-              onClick={() => setFilter('lawyer')}
-              className={`px-3 py-1 rounded-full text-sm flex items-center ${
-                filter === 'lawyer'
+              onClick={() => setFilter('admin')}
+              className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
+                ${filter === 'admin'
                   ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                }`}
+            >
+              <HiOutlineShieldCheck className="w-4 h-4 mr-1" />
+              Admins
+            </button>
+            <button
+              onClick={() => setFilter('lawyer')}
+              className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
+                ${filter === 'lawyer'
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                }`}
             >
               <HiOutlineOfficeBuilding className="w-4 h-4 mr-1" />
               Lawyers
             </button>
             <button
-              onClick={() => setFilter('client')}
-              className={`px-3 py-1 rounded-full text-sm flex items-center ${
-                filter === 'client'
+              onClick={() => setFilter('kebele_manager')}
+              className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
+                ${filter === 'kebele_manager'
                   ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                }`}
             >
-              <HiOutlineUserGroup className="w-4 h-4 mr-1" />
-              Clients
-            </button>
-            <button
-              onClick={() => setFilter('admin')}
-              className={`px-3 py-1 rounded-full text-sm flex items-center ${
-                filter === 'admin'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}
-            >
-              <HiOutlineShieldCheck className="w-4 h-4 mr-1" />
-              Admins
+              <HiOutlineOfficeBuilding className="w-4 h-4 mr-1" />
+              Kebele Managers
             </button>
           </div>
         </div>
@@ -220,12 +232,25 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
                       border-2 border-white dark:border-gray-900" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 text-left">
+                <div className="flex-1 text-left">
                   <h3 className="font-medium text-gray-900 dark:text-white truncate">
                     {user.fullName}
                   </h3>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className={`px-2 py-1 text-xs rounded-full font-medium
+                      ${user.userRole === 'KEBELE_MANAGER' 
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.userRole === 'ADMIN' || user.userRole === 'SUPER_ADMIN'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-blue-100 text-blue-800'
+                      }`}>
+                      {user.userRole === 'KEBELE_MANAGER' 
+                        ? `${user.kebeleProfile?.position || 'Manager'} at ${user.kebeleProfile?.kebeleName}`
+                        : user.userRole.toLowerCase()}
+                    </span>
+                  </div>
                   <p className="text-sm text-gray-500 truncate">
-                    {user.userRole.toLowerCase()} • {user.coordinatorProfile?.office?.name || 'Head Office'}
+                    {user.email}
                   </p>
                   {!user.isOnline && user.lastSeen && (
                     <p className="text-xs text-gray-400 mt-1">
@@ -237,16 +262,6 @@ export default function UserList({ onSelectUser, onClose }: UserListProps) {
             ))}
           </div>
         )}
-      </div>
-
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <button
-          onClick={onClose}
-          className="w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-400 
-            hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors duration-200"
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );

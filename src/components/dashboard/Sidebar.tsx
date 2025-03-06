@@ -78,19 +78,25 @@ const sidebarItems: SidebarItem[] = [
     icon: <HiOutlineScale className="w-6 h-6" />,
     path: '/client/cases',
     subItems: [
-      { 
-        title: 'Active Cases', 
-        path: '/client/cases/active',
+      {
+         title: 'New Case',
+         path: '/client/cases/register',
+         icon: <HiOutlinePlusCircle className="w-5 h-5" />
+      },
+      {
+        title: 'Raw Cases',
+        path: '/client/cases/raw',
         icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
       { 
-        title: 'File New Case', 
-        path: '/client/cases/new',
-        icon: <HiOutlinePlusCircle className="w-5 h-5" />
+        title: 'My Cases', 
+        path: '/client/cases/my-cases',
+        icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
+     
       { 
-        title: 'Case Timeline', 
-        path: '/client/cases/timeline',
+        title: 'Waiting Cases', 
+        path: '/client/cases/waiting',
         icon: <HiOutlineClock className="w-5 h-5" />
       },
       { 
@@ -170,8 +176,13 @@ const sidebarItems: SidebarItem[] = [
         icon: <HiOutlineClipboardList className="w-5 h-5" />,
       },
       { 
-        title: 'Book Appointment', 
-        path: '/client/appointments/book',
+        title: 'Calendar', 
+        path: '/client/appointments/calendar',
+        icon: <HiOutlineCalendar className="w-5 h-5" />,
+      },
+      { 
+        title: 'Request Appointment', 
+        path: '/client/appointments/request',
         icon: <HiOutlinePlusCircle className="w-5 h-5" />,
       },
       { 

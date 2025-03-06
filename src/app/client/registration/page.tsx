@@ -22,6 +22,10 @@ import {
   HiOutlineChevronLeft,
   HiOutlineCheck
 } from 'react-icons/hi';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   // Personal Information
@@ -118,7 +122,9 @@ export default function RegistrationPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [documents, setDocuments] = useState<File[]>([]);
   const [offices, setOffices] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasActiveCase, setHasActiveCase] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const fetchOffices = async () => {
@@ -142,6 +148,73 @@ export default function RegistrationPage() {
 
     fetchOffices();
   }, [toast]);
+
+  // Fetch client profile and case status
+  useEffect(() => {
+    const fetchProfileAndCases = async () => {
+      try {
+        const response = await fetch('/api/client/profile');
+        const data = await response.json();
+
+        if (data.success) {
+          setProfile(data.data);
+          
+          // Check if client has any active cases
+          const casesResponse = await fetch('/api/client/cases');
+          const casesData = await response.json();
+          
+          if (casesData.success) {
+            const activeCase = casesData.data.find(
+              case_ => case_.status !== 'CLOSED' && case_.status !== 'REJECTED'
+            );
+            setHasActiveCase(!!activeCase);
+            
+            if (activeCase) {
+              toast({
+                title: "Active Case Found",
+                description: "You already have an active case. You cannot register a new case until the current one is closed.",
+                variant: "default",
+                className: "bg-yellow-500 text-white"
+              });
+              router.push('/client/cases/waiting');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch your profile information",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfileAndCases();
+  }, []);
+
+  // Update form with profile data when available
+  useEffect(() => {
+    if (profile) {
+      form.reset({
+        fullName: profile.user.fullName,
+        phone: profile.phone,
+        email: profile.user.email || '',
+        age: profile.age,
+        gender: profile.sex,
+        familyMembers: profile.numberOfFamily,
+        healthStatus: profile.healthStatus,
+        region: profile.region,
+        zone: profile.zone,
+        wereda: profile.wereda,
+        kebele: profile.kebele,
+        houseNumber: profile.houseNumber || '',
+        officeId: profile.assignedOffice.id
+      });
+    }
+  }, [profile]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -184,7 +257,7 @@ export default function RegistrationPage() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const getFieldsForStep = (step: number): string[] => {
+  const getFieldsForStep = (step: number): (keyof z.infer<typeof formSchema>)[] => {
     switch (step) {
       case 0: // Personal
         return ['fullName', 'phone', 'email', 'age', 'gender', 'familyMembers', 'healthStatus'];
@@ -250,6 +323,35 @@ export default function RegistrationPage() {
       setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (hasActiveCase) {
+    return (
+      <Card className="max-w-2xl mx-auto mt-8">
+        <CardContent className="p-6">
+          <Alert>
+            <AlertTitle>Active Case Found</AlertTitle>
+            <AlertDescription>
+              You already have an active case. You cannot register a new case until the current one is closed.
+              <Button
+                className="mt-4"
+                onClick={() => router.push('/client/cases/waiting')}
+              >
+                View Active Case
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
@@ -427,18 +529,28 @@ export default function RegistrationPage() {
                   <Input
                     id="region"
                     {...form.register('region')}
-                    className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    error={form.formState.errors.region?.message}
+                    className={cn(
+                      "mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white",
+                      form.formState.errors.region && "border-red-500"
+                    )}
                   />
+                  {form.formState.errors.region && (
+                    <p className="text-sm text-red-500">{form.formState.errors.region.message}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="zone" className="dark:text-gray-200">Zone</Label>
                   <Input
                     id="zone"
                     {...form.register('zone')}
-                    className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    error={form.formState.errors.zone?.message}
+                    className={cn(
+                      "mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white",
+                      form.formState.errors.zone && "border-red-500"
+                    )}
                   />
+                  {form.formState.errors.zone && (
+                    <p className="text-sm text-red-500">{form.formState.errors.zone.message}</p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -447,18 +559,28 @@ export default function RegistrationPage() {
                   <Input
                     id="wereda"
                     {...form.register('wereda')}
-                    className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    error={form.formState.errors.wereda?.message}
+                    className={cn(
+                      "mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white",
+                      form.formState.errors.wereda && "border-red-500"
+                    )}
                   />
+                  {form.formState.errors.wereda && (
+                    <p className="text-sm text-red-500">{form.formState.errors.wereda.message}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="kebele" className="dark:text-gray-200">Kebele</Label>
                   <Input
                     id="kebele"
                     {...form.register('kebele')}
-                    className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    error={form.formState.errors.kebele?.message}
+                    className={cn(
+                      "mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white",
+                      form.formState.errors.kebele && "border-red-500"
+                    )}
                   />
+                  {form.formState.errors.kebele && (
+                    <p className="text-sm text-red-500">{form.formState.errors.kebele.message}</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -466,8 +588,14 @@ export default function RegistrationPage() {
                 <Input
                   id="houseNumber"
                   {...form.register('houseNumber')}
-                  className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={cn(
+                    "mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white",
+                    form.formState.errors.houseNumber && "border-red-500"
+                  )}
                 />
+                {form.formState.errors.houseNumber && (
+                  <p className="text-sm text-red-500">{form.formState.errors.houseNumber.message}</p>
+                )}
               </div>
             </div>
           )}
@@ -502,7 +630,9 @@ export default function RegistrationPage() {
                 <div>
                   <Label htmlFor="caseCategory">Case Category</Label>
                   <Select
-                    onValueChange={(value) => form.setValue('caseCategory', value)}
+                    onValueChange={(value: "FAMILY" | "CRIMINAL" | "CIVIL" | "PROPERTY" | "LABOR" | "COMMERCIAL" | "CONSTITUTIONAL" | "ADMINISTRATIVE" | "OTHER") => 
+                      form.setValue('caseCategory', value)
+                    }
                     defaultValue={form.getValues('caseCategory')}
                   >
                     <SelectTrigger>
@@ -536,7 +666,9 @@ export default function RegistrationPage() {
               <div>
                 <Label htmlFor="priority">Priority Level</Label>
                 <Select
-                  onValueChange={(value) => form.setValue('priority', value)}
+                  onValueChange={(value: "LOW" | "MEDIUM" | "HIGH") => 
+                    form.setValue('priority', value)
+                  }
                   defaultValue={form.getValues('priority')}
                 >
                   <SelectTrigger>

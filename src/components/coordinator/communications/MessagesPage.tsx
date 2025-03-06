@@ -65,12 +65,12 @@ const POLLING_INTERVAL = 3000; // 3 seconds
 export default function MessagesPage() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [filter, setFilter] = useState<'all' | 'admins' | 'lawyers' | 'clients'>('all');
+  const [filter, setFilter] = useState<'all' | 'admins' | 'lawyers' | 'kebele_managers'>('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [admins, setAdmins] = useState<CommunicationUser[]>([]);
   const [lawyers, setLawyers] = useState<CommunicationUser[]>([]);
-  const [clients, setClients] = useState<CommunicationUser[]>([]);
+  const [kebeleManagers, setKebeleManagers] = useState<CommunicationUser[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [showUserList, setShowUserList] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
@@ -96,6 +96,7 @@ export default function MessagesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<Date>(new Date());
   const pollingIntervalRef = useRef<NodeJS.Timeout>();
+  const [error, setError] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,7 +108,12 @@ export default function MessagesPage() {
 
   // Fetch users and chats on component mount
   useEffect(() => {
+    let isSubscribed = true;
+    let timeoutId: NodeJS.Timeout;
+
     const fetchUsersAndChats = async () => {
+      if (!isSubscribed) return;
+
       try {
         setLoading(true);
         
@@ -115,13 +121,13 @@ export default function MessagesPage() {
         const userResponse = await fetch('/api/auth/session');
         if (userResponse.ok) {
           const userData = await userResponse.json();
-          setCurrentUserId(userData?.user?.id);
+          if (isSubscribed) setCurrentUserId(userData?.user?.id);
         } else {
           // Try getting user from cookie token
           const response = await fetch('/api/auth/verify');
           if (response.ok) {
             const data = await response.json();
-            if (data.isAuthenticated && data.user) {
+            if (data.isAuthenticated && data.user && isSubscribed) {
               setCurrentUserId(data.user.id);
             }
           }
@@ -135,9 +141,11 @@ export default function MessagesPage() {
         const usersData = await usersResponse.json();
         
         // Set all users regardless of whether they have a chat or not
-        setAdmins(usersData.admins || []);
-        setLawyers(usersData.lawyers || []);
-        setClients(usersData.clients || []);
+        if (isSubscribed) {
+          setAdmins(usersData.admins || []);
+          setLawyers(usersData.lawyers || []);
+          setKebeleManagers(usersData.kebeleManagers || []);
+        }
 
         // Fetch existing chats
         const chatsResponse = await fetch('/api/chats');
@@ -145,18 +153,34 @@ export default function MessagesPage() {
           throw new Error('Failed to fetch chats');
         }
         const chatsData = await chatsResponse.json();
-        setChats(chatsData);
+        if (isSubscribed) {
+          setChats(chatsData);
+        }
 
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to load users and chats');
+        if (isSubscribed) {
+          toast.error('Failed to load users and chats');
+        }
       } finally {
-        setLoading(false);
+        if (isSubscribed) {
+          setLoading(false);
+          // Schedule next update after 30 seconds
+          timeoutId = setTimeout(fetchUsersAndChats, 30000);
+        }
       }
     };
 
     fetchUsersAndChats();
-  }, []);
+
+    // Cleanup function
+    return () => {
+      isSubscribed = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, []); // Empty dependency array since we want this to run only on mount
 
   // Filter and search users
   const filteredUsers = useMemo(() => {
@@ -169,20 +193,21 @@ export default function MessagesPage() {
       case 'lawyers':
         users = lawyers;
         break;
-      case 'clients':
-        users = clients;
+      case 'kebele_managers':
+        users = kebeleManagers;
         break;
       default:
-        users = [...admins, ...lawyers, ...clients];
+        users = [...admins, ...lawyers, ...kebeleManagers];
     }
 
     if (!searchTerm) return users;
 
     return users.filter(user => 
       user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.kebeleProfile?.kebeleName || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [filter, searchTerm, admins, lawyers, clients]);
+  }, [filter, searchTerm, admins, lawyers, kebeleManagers]);
 
   const fetchMessages = async (chatId: string, isInitialLoad: boolean = false) => {
     try {
@@ -238,22 +263,33 @@ export default function MessagesPage() {
     };
   }, [selectedChat]);
 
-  // Add polling effect with cleanup
+  // Add polling effect with cleanup and proper debouncing
   useEffect(() => {
     let isSubscribed = true;
-    const pollInterval = 3000; // Poll every 3 seconds
+    const pollInterval = 5000; // Poll every 5 seconds
+    let lastPollTime = Date.now();
 
     const pollMessages = async () => {
+      // Check if enough time has passed since last poll
+      const now = Date.now();
+      if (now - lastPollTime < pollInterval) {
+        return;
+      }
+
       if (selectedChat && isSubscribed && !loading) {
+        lastPollTime = now;
         await fetchMessages(selectedChat, false);
       }
     };
 
     const intervalId = setInterval(pollMessages, pollInterval);
 
+    // Cleanup function
     return () => {
       isSubscribed = false;
-      clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [selectedChat, loading]);
 
@@ -424,8 +460,9 @@ export default function MessagesPage() {
 
   const handleUserClick = async (user: CommunicationUser) => {
     try {
-      setIsCreatingChat(true);
-      
+      setLoading(true);
+      setError(null);
+
       // Check if chat already exists with this user
       const existingChat = chats.find(chat => 
         chat.user && chat.user.id === user.id
@@ -433,57 +470,71 @@ export default function MessagesPage() {
 
       if (existingChat) {
         setSelectedChat(existingChat.id);
-        await fetchMessages(existingChat.id);
         setShowUserList(false);
         return;
       }
 
-      // Create new chat
-      const response = await fetch('/api/chats/new', {
+      // Determine participant type based on user role
+      let participantType = 'USER';
+      if (user.userRole === 'KEBELE_MANAGER') {
+        participantType = 'KEBELE_MANAGER';
+      } else if (user.userRole === 'KEBELE_MEMBER') {
+        participantType = 'KEBELE_MEMBER';
+      }
+
+      const response = await fetch('/api/coordinator/communications/chats/new', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          participantId: user.id
+        body: JSON.stringify({
+          participantId: user.id,
+          participantType
         }),
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to create chat');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create chat');
       }
 
       const newChat = await response.json();
       
-      // Transform the chat data to match the expected format
-      const transformedChat: Chat = {
-        id: newChat.id,
-        user: {
-          id: user.id,
-          fullName: user.fullName,
-          email: user.email,
-          userRole: user.userRole,
-          isOnline: user.isOnline,
-          lastSeen: user.lastSeen,
-          status: user.status,
-          starred: false,
-          unreadCount: 0
-        },
-        unreadCount: 0,
-        lastMessage: null
-      };
-      
-      // Add new chat to the list and select it
-      setChats(prev => [transformedChat, ...prev]);
-      setSelectedChat(transformedChat.id);
-      setMessages([]); // Clear messages for new chat
+      // Update chats list with the new chat
+      setChats(prevChats => {
+        // Check if chat already exists
+        const chatExists = prevChats.some(chat => chat.id === newChat.id);
+        if (chatExists) {
+          return prevChats;
+        }
+        return [
+          {
+            id: newChat.id,
+            user: {
+              ...newChat.user,
+              starred: false,
+              unreadCount: 0,
+              kebeleProfile: user.kebeleProfile
+            },
+            unreadCount: 0,
+            lastMessage: null
+          },
+          ...prevChats
+        ];
+      });
+
+      // Select the new chat
+      setSelectedChat(newChat.id);
       setShowUserList(false);
-      
+
+      // Fetch messages for the new chat
+      await fetchMessages(newChat.id, true);
     } catch (error) {
       console.error('Error creating chat:', error);
-      toast.error('Failed to create chat');
+      setError(error instanceof Error ? error.message : 'Failed to create chat');
+      toast.error(error instanceof Error ? error.message : 'Failed to create chat');
     } finally {
-      setIsCreatingChat(false);
+      setLoading(false);
     }
   };
 
@@ -958,15 +1009,15 @@ export default function MessagesPage() {
               Lawyers
             </button>
             <button
-              onClick={() => setFilter('clients')}
+              onClick={() => setFilter('kebele_managers')}
               className={`px-3 py-1 rounded-full text-sm font-medium flex items-center whitespace-nowrap
-                ${filter === 'clients'
+                ${filter === 'kebele_managers'
                   ? 'bg-primary-500 text-white'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
                 }`}
             >
-              <HiOutlineUserGroup className="w-4 h-4 mr-1" />
-              Clients
+              <HiOutlineOfficeBuilding className="w-4 h-4 mr-1" />
+              Kebele Managers
             </button>
           </div>
         </div>
@@ -982,7 +1033,7 @@ export default function MessagesPage() {
               <div className="space-y-2">
                 {filteredUsers.map((user) => (
                   <button
-                  key={user.id}
+                    key={user.id}
                     onClick={() => handleUserClick(user)}
                     disabled={isCreatingChat}
                     className="w-full flex items-center p-2 hover:bg-gray-50 
@@ -992,31 +1043,33 @@ export default function MessagesPage() {
                       <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-500 
                         to-primary-600 flex items-center justify-center">
                         <span className="text-sm font-medium text-white">
-                        {user.fullName.charAt(0)}
-                      </span>
-                    </div>
-                    {user.isOnline && (
+                          {user.fullName.charAt(0)}
+                        </span>
+                      </div>
+                      {user.isOnline && (
                         <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 
                           rounded-full border-2 border-white dark:border-gray-900" />
-                    )}
-                  </div>
+                      )}
+                    </div>
                     <div className="ml-3 text-left flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {user.fullName}
+                        {user.fullName}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                        {user.userRole.toLowerCase()} • {
+                        {user.userRole === 'KEBELE_MANAGER' 
+                          ? `${user.kebeleProfile?.position || 'Manager'} at ${user.kebeleProfile?.kebeleName}`
+                          : user.userRole.toLowerCase()} • {
                           user.isOnline ? 'Online' : 
                           user.lastSeen ? 
                             `Last seen ${format(new Date(user.lastSeen), 'p')}` : 
                             'Offline'
                         }
-                    </p>
-                  </div>
-                  </button>
-              ))}
-                </div>
+                      </p>
                     </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -1140,7 +1193,7 @@ export default function MessagesPage() {
             {isTyping && (
               <div className="text-xs text-gray-500 mt-1 ml-4">
                 Typing...
-          </div>
+              </div>
             )}
           </div>
 

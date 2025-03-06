@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatAppointmentMessage } from '@/lib/infobip';
 
 interface Appointment {
   id: string;
@@ -64,39 +65,55 @@ interface GridViewProps {
   appointments: Appointment[];
   onUpdateStatus: (id: string, status: string) => Promise<void>;
   onDeleteAppointment: (id: string) => Promise<void>;
+  onRefresh: () => void;
 }
 
-export default function GridView({ appointments, onUpdateStatus, onDeleteAppointment }: GridViewProps) {
+export default function GridView({ appointments, onUpdateStatus, onDeleteAppointment, onRefresh }: GridViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [sendingNotification, setSendingNotification] = useState<string | null>(null);
 
-  const handleSendNotification = async () => {
-    if (!selectedAppointment || !notificationMessage.trim()) return;
-
+  const handleSendNotification = async (appointment: Appointment) => {
     try {
-      const response = await fetch('/api/coordinator/clients/appointments/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          appointmentId: selectedAppointment.id,
-          clientId: selectedAppointment.client.id,
-          message: notificationMessage,
-          type: 'APPOINTMENT_UPDATE'
-        })
+      setSendingNotification(appointment.id);
+
+      const message = formatAppointmentMessage({
+        scheduledTime: appointment.scheduledTime,
+        purpose: appointment.purpose,
+        venue: appointment.venue,
+        duration: appointment.duration,
       });
 
-      if (!response.ok) throw new Error('Failed to send notification');
+      const response = await fetch(`/api/coordinator/clients/appointments/${appointment.id}/notify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ message }),
+      });
 
-      toast.success('Notification sent successfully');
-      setNotificationMessage('');
-      setShowNotificationModal(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send notification');
+      }
+
+      toast({
+        title: "Success",
+        description: "Notification sent successfully",
+      });
+      onRefresh();
     } catch (error) {
-      console.error('Error sending notification:', error);
-      toast.error('Failed to send notification');
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send notification",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingNotification(null);
     }
   };
 
@@ -127,6 +144,19 @@ export default function GridView({ appointments, onUpdateStatus, onDeleteAppoint
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 

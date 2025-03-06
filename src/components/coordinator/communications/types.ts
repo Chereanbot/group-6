@@ -1,8 +1,18 @@
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'LAWYER' | 'COORDINATOR' | 'KEBELE_MANAGER' | 'KEBELE_MEMBER';
+
+export interface KebeleProfile {
+  kebeleName: string;
+  subCity: string;
+  district: string;
+  position?: string;
+  phone?: string;
+}
+
 export interface BaseUser {
   id: string;
   fullName: string;
   email: string;
-  userRole: 'COORDINATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'LAWYER' | 'CLIENT';
+  userRole: UserRole;
   isOnline: boolean;
   lastSeen: Date | null;
   status: string;
@@ -32,6 +42,7 @@ export interface CommunicationUser extends BaseUser {
     caseType?: string;
     caseCategory?: string;
   } | null;
+  kebeleProfile?: KebeleProfile;
 }
 
 export type MessageStatus = 'SENT' | 'DELIVERED' | 'READ';
@@ -63,9 +74,6 @@ export interface Message {
 export interface Chat {
   id: string;
   user: ChatUser;
-  lastMessage?: {
-    content: string;
-    createdAt: Date;
-  };
+  lastMessage: Message | null;
   unreadCount: number;
 }; 

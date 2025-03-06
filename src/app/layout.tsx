@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { LanguageProvider } from '@/contexts/LanguageContext';
+import { LanguageProvider } from '@/providers/LanguageProvider';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import localFont from "next/font/local";
