@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Coordinator Portal | DulaMS',
+  title: 'Du Las | Coordinator Portal',
   description: 'Coordinator portal for managing legal services',
 }; 

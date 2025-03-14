@@ -3,9 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import MainNavbar from './components/MainNavbar';
-import SecondaryNavbar from './components/SecondaryNavbar';
-import AnimatedSection from './components/AnimatedSection';
+import Navbar from '@/components/Navbar';
 import {
   HiScale as HiOutlineScale,
   HiShieldCheck as HiOutlineShieldCheck,
@@ -25,125 +23,6 @@ import {
   HiChevronLeft as HiOutlineChevronLeft,
   HiChevronRight as HiOutlineChevronRight
 } from 'react-icons/hi';
-
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const navItems = [
-    { title: 'Home', href: '/', icon: <HiOutlineHome className="w-5 h-5" /> },
-    { title: 'About', href: '/about', icon: <HiOutlineInformationCircle className="w-5 h-5" /> },
-    { title: 'Services', href: '/services', icon: <HiOutlineScale className="w-5 h-5" /> },
-    { title: 'Documents', href: '/documents', icon: <HiOutlineDocumentText className="w-5 h-5" /> },
-    { title: 'Programmes', href: '/programmes', icon: <HiOutlineInformationCircle className='w-5 h-5'/>},
-    { title: 'Rules & Regulations', href: '/rules', icon: <HiOutlineBookOpen className="w-5 h-5" /> },
-    { title: 'Feedback', href: '/feedback', icon: <HiOutlineStar className="w-5 h-5" /> },
-    { title: 'Contact', href: '/contact', icon: <HiOutlinePhone className="w-5 h-5" /> },
-    { title: 'Login', href: '/login', icon: <HiOutlinePhone className="w-5 h-5" /> }
-  ];
-
-  return (
-    <nav className="bg-white dark:bg-gray-900 shadow-sm fixed w-full z-50 top-0">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center">
-              <motion.img 
-                src="/images/logo.png" 
-                alt="Dilla University Legal Aid Service"
-                className="h-12 w-auto rounded-lg shadow-lg"
-                initial={{ opacity: 0, rotate: -10, scale: 0.8 }}
-                animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                transition={{ 
-                  duration: 0.8,
-                  ease: "easeOut"
-                }}
-                whileHover={{ 
-                  scale: 1.05,
-                  rotate: 5,
-                  transition: { duration: 0.2 }
-                }}
-              />
-              <motion.span 
-                className="ml-3 text-xl font-bold text-gray-900 dark:text-white"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                Du Las
-              </motion.span>
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="flex items-center text-gray-600 dark:text-gray-300 hover:text-primary-600 
-                dark:hover:text-primary-500 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {item.icon}
-                <span className="ml-2">{item.title}</span>
-              </Link>
-            ))}
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg
-              bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
-            >
-              Login
-            </Link>
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="flex items-center md:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400
-              hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2
-              focus:ring-inset focus:ring-primary-500"
-            >
-              {isOpen ? (
-                <HiOutlineX className="block h-6 w-6" />
-              ) : (
-                <HiOutlineMenu className="block h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      {isOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navItems.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="flex items-center text-gray-600 dark:text-gray-300 hover:text-primary-600
-                dark:hover:text-primary-500 px-3 py-2 rounded-md text-base font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                {item.icon}
-                <span className="ml-2">{item.title}</span>
-              </Link>
-            ))}
-            <Link
-              href="/login"
-              className="flex items-center justify-center px-4 py-2 rounded-lg
-              bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Login
-            </Link>
-          </div>
-        </div>
-      )}
-    </nav>
-  );
-};
 
 const features = [
   {
@@ -253,8 +132,8 @@ const PartnersSection = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold mb-4">Our Partners</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Our Partners</h2>
+          <p className="text-indigo-600 dark:text-indigo-400">
             Proud to work with leading organizations
           </p>
         </motion.div>
@@ -331,7 +210,7 @@ const Footer = () => {
               />
               <span className="text-xl font-bold">Du Las</span>
             </motion.div>
-            <p className="text-gray-300 mb-6">
+            <p className="text-blue-200 mb-6">
               Providing accessible legal assistance to our community through dedicated service and expertise.
             </p>
             <div className="flex space-x-4">
@@ -371,7 +250,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+            <h3 className="text-lg font-semibold mb-4 bg-gradient-to-r from-blue-200 to-indigo-200 text-transparent bg-clip-text">Quick Links</h3>
             <ul className="space-y-2">
               {['About Us', 'Services', 'Contact', 'FAQ'].map((item) => (
                 <motion.li 
@@ -387,7 +266,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
+            <h3 className="text-lg font-semibold mb-4 bg-gradient-to-r from-blue-200 to-indigo-200 text-transparent bg-clip-text">Contact Us</h3>
             <ul className="space-y-3">
               <motion.li 
                 className="flex items-center space-x-3"
@@ -396,7 +275,7 @@ const Footer = () => {
                 <div className="bg-white/10 p-2 rounded-full">
                   <HiOutlinePhone className="w-5 h-5" />
                 </div>
-                <span>+251 123 456 789</span>
+                <span>+251 947006369</span>
               </motion.li>
               <motion.li 
                 className="flex items-center space-x-3"
@@ -405,7 +284,7 @@ const Footer = () => {
                 <div className="bg-white/10 p-2 rounded-full">
                   <HiOutlineMailOpen className="w-5 h-5" />
                 </div>
-                <span>info@dulas.edu.et</span>
+                <span>cherinetafewerk@gmail.com</span>
               </motion.li>
               <motion.li 
                 className="flex items-center space-x-3"
@@ -502,7 +381,9 @@ const ParallaxSection = () => {
                 </motion.div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                  <h3 className="text-xl font-bold text-white mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">
+                    {item.title}
+                  </h3>
                   <p className="text-gray-200 text-sm">{item.description}</p>
                 </div>
               </div>
@@ -514,290 +395,487 @@ const ParallaxSection = () => {
   );
 };
 
-interface Slide {
-  type: 'video' | 'image';
-  image: string;
-  video?: string;
-  title: string;
-  description: string;
-  overlay: string;
-  badges: string[];
-  cta: {
-    primary: { text: string; href: string; };
-    secondary: { text: string; href: string; };
-  };
-}
-
 const HeroSection = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const slideInterval = useRef<NodeJS.Timeout>();
 
-  const slides: Slide[] = [
+  const slides = [
     {
-      type: 'video',
-      image: "/hero/hero1.jpg",
-      video: "/hero/legal-services.mp4",
-      title: "Professional Legal Services",
-      description: "Expert legal assistance for our community with dedicated support and guidance",
-      overlay: "from-black/80 via-black/50 to-transparent",
-      badges: ["24/7 Support", "Expert Team", "Trusted Service"],
-      cta: {
-        primary: { text: "Get Started", href: "/services" },
-        secondary: { text: "Learn More", href: "/about" }
-      }
+      title: "Justice For All",
+      subtitle: "Expert Legal Aid at Your Service",
+      description: "Empowering the community with professional legal assistance and guidance",
+      image: "/images/hero/justice.jpg",
+      overlayImage: "/images/hero/scales-overlay.png",
+      cta: "Get Legal Help",
+      color: "from-blue-600/20 via-transparent to-transparent",
+      icon: <HiOutlineScale className="w-8 h-8" />,
+      accent: "blue"
     },
     {
-      type: 'image',
-      image: "/hero/hero2.jpg",
-      title: "Student Legal Support",
-      description: "Comprehensive legal services tailored for university students and academic needs",
-      overlay: "from-primary-900/80 via-primary-900/50 to-transparent",
-      badges: ["Student Focus", "Academic Support", "Affordable"],
-      cta: {
-        primary: { text: "Student Services", href: "/student-services" },
-        secondary: { text: "Contact Us", href: "/contact" }
-      }
+      title: "Professional Legal Team",
+      subtitle: "Experienced Attorneys",
+      description: "Our team of dedicated lawyers is here to protect your rights and interests",
+      image: "/images/hero/team.jpg",
+      overlayImage: "/images/hero/team-overlay.png",
+      cta: "Meet Our Team",
+      color: "from-green-600/20 via-transparent to-transparent",
+      icon: <HiOutlineUserGroup className="w-8 h-8" />,
+      accent: "green"
     },
     {
-      type: 'image',
-      image: "/hero/hero3.jpg",
-      title: "Community Outreach",
-      description: "Making legal aid accessible to all members of our diverse community",
-      overlay: "from-gray-900/80 via-gray-900/50 to-transparent",
-      badges: ["Community First", "Inclusive Support", "Free Consultation"],
-      cta: {
-        primary: { text: "Join Program", href: "/community" },
-        secondary: { text: "Learn More", href: "/programs" }
-      }
+      title: "Free Legal Consultation",
+      subtitle: "We're Here to Help",
+      description: "Get expert legal advice without any cost or obligation",
+      image: "/images/hero/consultation.jpg",
+      overlayImage: "/images/hero/consultation-overlay.png",
+      cta: "Book Consultation",
+      color: "from-purple-600/20 via-transparent to-transparent",
+      icon: <HiOutlineChatAlt2 className="w-8 h-8" />,
+      accent: "purple"
     },
     {
-      type: 'image',
-      image: "/hero/hero4.jpg",
-      title: "Expert Consultation",
-      description: "Professional guidance from experienced legal practitioners when you need it most",
-      overlay: "from-primary-800/80 via-primary-800/50 to-transparent",
-      badges: ["Expert Advice", "Confidential", "Personalized"],
-      cta: {
-        primary: { text: "Book Consultation", href: "/consultation" },
-        secondary: { text: "Our Experts", href: "/team" }
-      }
+      title: "About Dilla University",
+      subtitle: "Excellence in Education",
+      description: "A premier institution committed to academic excellence and community service since 2007",
+      image: "/images/hero/university.jpg",
+      overlayImage: "/images/hero/university-overlay.png",
+      cta: "Discover More",
+      color: "from-yellow-600/20 via-transparent to-transparent",
+      icon: <HiOutlineBookOpen className="w-8 h-8" />,
+      accent: "yellow"
+    },
+    {
+      title: "Meet Our Developers",
+      subtitle: "Innovation & Technology",
+      description: "Powered by a talented team of developers committed to creating cutting-edge legal tech solutions",
+      image: "/images/hero/developers.jpg",
+      overlayImage: "/images/hero/tech-overlay.png",
+      cta: "Our Team",
+      color: "from-red-600/20 via-transparent to-transparent",
+      icon: <HiOutlineLightningBolt className="w-8 h-8" />,
+      accent: "red"
     }
   ];
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (!isVideoPlaying) {
+    slideInterval.current = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % slides.length);
-      }
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [isVideoPlaying, slides.length]);
+    }, 5000);
 
-  // Particle effect component
-  const ParticleEffect = () => (
-    <div className="absolute inset-0 z-10 pointer-events-none">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary-500/10 via-transparent to-transparent" />
-      {[...Array(20)].map((_, i) => (
+    return () => {
+      if (slideInterval.current) {
+        clearInterval(slideInterval.current);
+      }
+    };
+  }, []);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    const x = (clientX / innerWidth) * 2 - 1;
+    const y = (clientY / innerHeight) * 2 - 1;
+    setMousePosition({ x, y });
+  };
+
+  // Enhanced Particle effect with more variety and stable values
+  const ParticleEffect = () => {
+    const [particles, setParticles] = useState([]);
+    
+    useEffect(() => {
+      // Generate particles only on client-side
+      const newParticles = Array.from({ length: 80 }).map((_, i) => {
+        const type = i % 4; // 0: square, 1: triangle, 2: diamond, 3: circle
+        const size = 1 + (i % 3); // Stable sizes: 1, 2, 3
+        const xPos = (i / 80) * 100; // Distribute evenly across width
+        const opacity = 0.2 + ((i % 4) / 4) * 0.3; // Stable opacity values
+        const scale = 0.2 + ((i % 5) / 5) * 0.8; // Stable scale values
+        const rotation = (i * 45) % 360; // Stable rotation values
+
+        return { type, size, xPos, opacity, scale, rotation };
+      });
+      
+      setParticles(newParticles);
+    }, []); // Run only once on mount
+
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {particles.map((particle, i) => {
+          const baseClass = `absolute ${
+            particle.type === 0
+              ? `w-${particle.size} h-${particle.size}`
+              : particle.type === 1
+              ? `w-0 h-0 border-l-[${particle.size}px] border-l-transparent border-r-[${particle.size}px] border-r-transparent border-b-[${particle.size * 1.5}px]`
+              : particle.type === 2
+              ? `w-${particle.size} h-${particle.size} rotate-45`
+              : `w-${particle.size} h-${particle.size} rounded-full`
+          } ${
+            particle.type === 0
+              ? `bg-${slides[currentSlide].accent}-400`
+              : particle.type === 1
+              ? `border-b-${slides[currentSlide].accent}-300`
+              : `bg-white`
+          }`;
+
+          return (
         <motion.div
           key={i}
-          className="absolute w-1 h-1 bg-white rounded-full"
+              className={baseClass}
           initial={{
-            x: Math.random() * 100 + "%",
+                x: `${particle.xPos}%`,
             y: "100%",
-            opacity: 0.2 + Math.random() * 0.3,
-            scale: 0.2 + Math.random() * 0.8,
+                opacity: particle.opacity,
+                scale: particle.scale,
+                rotate: particle.rotation
           }}
           animate={{
             y: "0%",
-            opacity: 0,
+                opacity: [particle.opacity, particle.opacity * 2, 0],
+                rotate: particle.rotation + 360,
+                scale: [1, 1.2, 0.8, 1]
           }}
           transition={{
-            duration: 2 + Math.random() * 2,
+                duration: 2 + (i % 3),
             repeat: Infinity,
-            delay: Math.random() * 2,
-            ease: "linear",
+                delay: (i % 20) * 0.1,
+                ease: "easeInOut"
           }}
         />
+          );
+        })}
+    </div>
+  );
+  };
+
+  // Enhanced Floating elements with dynamic effects
+  const FloatingElements = () => (
+    <div className="absolute inset-0 pointer-events-none">
+      {slides.map((slide, i) => (
+        <motion.div
+          key={i}
+          className="absolute"
+          style={{
+            left: `${15 + i * 20}%`,
+            top: `${10 + (i % 3) * 25}%`,
+          }}
+          animate={{ 
+            y: [0, -20, 0],
+            rotate: [0, 5, -5, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ 
+            duration: 4 + i,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        >
+          <motion.div 
+            className="relative group"
+            whileHover={{ scale: 1.2 }}
+          >
+            <motion.div
+              className={`w-12 h-12 rounded-xl bg-gradient-to-br from-${slide.accent}-500/20 to-transparent 
+                backdrop-blur-sm flex items-center justify-center text-white/80 group-hover:from-${slide.accent}-500/40`}
+              whileHover={{
+                boxShadow: `0 0 20px ${slide.accent}`,
+              }}
+            >
+              {slide.icon}
+            </motion.div>
+            <motion.div
+              className="absolute -inset-2 rounded-xl"
+              animate={{
+                boxShadow: [
+                  `0 0 0 0 rgba(${slide.accent},0)`,
+                  `0 0 20px 10px rgba(${slide.accent},0.2)`,
+                  `0 0 0 0 rgba(${slide.accent},0)`
+                ]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+            ease: "easeInOut"
+          }}
+            />
+          </motion.div>
+        </motion.div>
       ))}
     </div>
   );
 
-  return (
-    <div className="relative h-[85vh] min-h-[600px] max-h-[900px] overflow-hidden bg-gray-900">
-      <ParticleEffect />
-      
-      {slides.map((slide, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0 }}
-          animate={{ 
-            opacity: currentSlide === index ? 1 : 0,
-            scale: currentSlide === index ? 1 : 1.1
-          }}
-          transition={{ 
-            duration: 1.2,
-            ease: "easeInOut"
-          }}
-          className="absolute inset-0"
-        >
-          <div className="relative h-full w-full">
-            {slide.type === 'video' && slide.video ? (
-              <video
-                ref={videoRef}
-                poster={slide.image}
-                className="w-full h-full object-cover object-center"
-                playsInline
-                muted
-                loop
-                onPlay={() => setIsVideoPlaying(true)}
-                onPause={() => setIsVideoPlaying(false)}
-              >
-                <source src={slide.video} type="video/mp4" />
-              </video>
-            ) : (
-              <img
-                src={slide.image}
-                alt={slide.title}
-                className="w-full h-full object-cover object-center"
-              />
-            )}
-            
-            <div className={`absolute inset-0 bg-gradient-to-r ${slide.overlay}`} />
-            
-            <div className="absolute inset-0 flex items-center">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ 
-                  opacity: currentSlide === index ? 1 : 0,
-                  y: currentSlide === index ? 0 : 30
-                }}
-                transition={{ 
-                  delay: 0.3,
-                  duration: 0.8,
-                  ease: "easeOut"
-                }}
-                className="container mx-auto px-4 sm:px-6 lg:px-8"
-              >
-                <div className="max-w-xl">
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {slide.badges.map((badge, i) => (
-                      <motion.span
-                        key={badge}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 + i * 0.1 }}
-                        className="px-3 py-1 text-sm bg-white/10 backdrop-blur-sm 
-                          rounded-full text-white font-medium"
-                      >
-                        {badge}
-                      </motion.span>
-                    ))}
-                  </div>
+  // Add 3D Text Effect
+  const Text3DEffect = ({ children, delay = 0 }) => (
+    <motion.span
+      className="inline-block"
+      initial={{ opacity: 0, y: 20, rotateX: 90 }}
+      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+      transition={{
+        duration: 0.8,
+        delay,
+        type: "spring",
+        stiffness: 100
+      }}
+    >
+      {children}
+    </motion.span>
+  );
 
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 
-                    leading-tight text-white"
-                  >
-                    {slide.title}
-                  </h1>
-                  <p className="text-xl md:text-2xl text-gray-100 mb-8 
-                    leading-relaxed"
-                  >
-                    {slide.description}
-                  </p>
+  // Enhanced slide variants with more complex animations
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 1000 : -1000,
+      opacity: 0,
+      scale: 0.9,
+      rotateY: direction > 0 ? 45 : -45,
+      filter: "blur(10px)"
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+      rotateY: 0,
+      filter: "blur(0px)"
+    },
+    exit: (direction: number) => ({
+      x: direction < 0 ? 1000 : -1000,
+      opacity: 0,
+      scale: 0.9,
+      rotateY: direction > 0 ? -45 : 45,
+      filter: "blur(10px)"
+    })
+  };
+
+  return (
+    <section 
+      className="relative h-screen w-full overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800"
+      onMouseMove={handleMouseMove}
+    >
+      {/* Animated Background Pattern */}
+      <motion.div
+        className="absolute inset-0 opacity-10"
+        initial={{ backgroundPosition: "0% 0%" }}
+        animate={{ 
+          backgroundPosition: ["0% 0%", "100% 100%"],
+          scale: [1, 1.1, 1],
+          rotate: [0, 5, 0]
+        }}
+        transition={{ 
+          repeat: Infinity,
+          duration: 20,
+          ease: "linear"
+        }}
+        style={{
+          backgroundImage: "url('/images/pattern.svg')",
+          backgroundSize: "30px 30px"
+        }}
+      />
+
+      {/* Enhanced effects */}
+      <ParticleEffect />
+      <FloatingElements />
+
+      {/* Dynamic light effect */}
+              <motion.div
+        className="absolute inset-0 pointer-events-none"
+                animate={{ 
+          background: [
+            `radial-gradient(circle at ${50 + mousePosition.x * 20}% ${50 + mousePosition.y * 20}%, 
+              ${slides[currentSlide].accent}-500/20 0%, transparent 50%)`,
+            `radial-gradient(circle at ${50 + mousePosition.x * 20}% ${50 + mousePosition.y * 20}%, 
+              transparent 0%, transparent 50%)`
+          ]
+        }}
+        transition={{ duration: 1 }}
+      />
+
+      {/* Hero Content */}
+      <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+        <AnimatePresence initial={false} custom={currentSlide} mode="wait">
+          <motion.div
+            key={currentSlide}
+            custom={currentSlide}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+                transition={{ 
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.5 },
+              rotateY: { duration: 0.8 },
+              scale: { duration: 0.8 },
+              filter: { duration: 0.5 }
+            }}
+            className="absolute inset-0 flex items-center justify-between perspective-1000"
+            style={{
+              transform: `perspective(1000px) rotateX(${mousePosition.y * 5}deg) rotateY(${mousePosition.x * 5}deg)`
+            }}
+          >
+            <div className="w-full lg:w-1/2 text-white p-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center space-x-3 text-sm font-semibold text-blue-400 dark:text-blue-300 uppercase tracking-wider"
+              >
+                {slides[currentSlide].icon}
+                <motion.span className="bg-gradient-to-r from-blue-400 to-indigo-400 text-transparent bg-clip-text">
+                  {slides[currentSlide].subtitle}
+                      </motion.span>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="mt-4 text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight bg-clip-text text-transparent 
+                  bg-gradient-to-r from-white via-blue-100 to-blue-300"
+              >
+                {slides[currentSlide].title}
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-4 text-xl text-blue-100 max-w-xl"
+              >
+                {slides[currentSlide].description}
+              </motion.p>
 
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
-                    animate={{ 
-                      opacity: currentSlide === index ? 1 : 0,
-                      y: currentSlide === index ? 0 : 20
-                    }}
-                    transition={{ delay: 0.6 }}
-                    className="flex flex-wrap gap-4"
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8 flex gap-4"
                   >
                     <Link
-                      href={slide.cta.primary.href}
-                      className="px-8 py-4 bg-primary-600 hover:bg-primary-700 
-                        text-white rounded-lg font-medium transition-all duration-300 
-                        transform hover:scale-105 hover:shadow-lg"
+                  href="/contact"
+                  className="group relative inline-flex items-center px-8 py-4 text-base font-medium rounded-lg overflow-hidden"
+                >
+                  <motion.span 
+                    className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600"
+                    animate={{
+                      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
+                    }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  />
+                  <span className="relative flex items-center text-white group-hover:text-blue-100">
+                    {slides[currentSlide].cta}
+                    <motion.span
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ repeat: Infinity, duration: 1.5 }}
+                      className="ml-2"
                     >
-                      {slide.cta.primary.text}
+                      →
+                    </motion.span>
+                  </span>
                     </Link>
                     <Link
-                      href={slide.cta.secondary.href}
-                      className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white 
-                        backdrop-blur-sm rounded-lg font-medium transition-all duration-300
-                        transform hover:scale-105 border border-white/20"
-                    >
-                      {slide.cta.secondary.text}
+                  href="/about"
+                  className="group relative inline-flex items-center px-8 py-4 text-base font-medium rounded-lg overflow-hidden"
+                >
+                  <motion.span 
+                    className="absolute inset-0 border-2 border-blue-400/20 rounded-lg"
+                    whileHover={{
+                      borderColor: "rgba(96, 165, 250, 0.4)",
+                      boxShadow: "0 0 20px rgba(96, 165, 250, 0.2)"
+                    }}
+                  />
+                  <span className="relative text-blue-300 group-hover:text-blue-200">Learn More</span>
                     </Link>
                   </motion.div>
                 </div>
+
+            {/* Enhanced image section */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="hidden lg:block w-1/2 h-full relative perspective-1000"
+              style={{
+                transform: `perspective(1000px) rotateY(${mousePosition.x * -10}deg) rotateX(${mousePosition.y * -10}deg)`
+              }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div
+                  className="relative w-full h-[80%] rounded-2xl overflow-hidden shadow-2xl"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <motion.div
+                    className={`absolute inset-0 bg-gradient-to-br ${slides[currentSlide].color}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  />
+                  <motion.img
+                    src={slides[currentSlide].image}
+                    alt={slides[currentSlide].title}
+                    className="w-full h-full object-cover"
+                    initial={{ scale: 1.2, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  />
               </motion.div>
-            </div>
           </div>
         </motion.div>
-      ))}
+          </motion.div>
+        </AnimatePresence>
 
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 
-        flex space-x-3 z-20"
-      >
+        {/* Enhanced slide navigation */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-4">
         {slides.map((_, index) => (
-          <button
+            <motion.button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-500 
-              ${currentSlide === index 
-                ? "bg-white w-8" 
-                : "bg-white/50 hover:bg-white/80"
-              }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-
-      <button
-        onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-        className="absolute left-4 top-1/2 transform -translate-y-1/2 p-4 
-          rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm
-          transition-all duration-300 hover:scale-110 z-20 group"
-        aria-label="Previous slide"
-      >
-        <HiOutlineChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-      </button>
-      <button
-        onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-        className="absolute right-4 top-1/2 transform -translate-y-1/2 p-4 
-          rounded-full bg-black/20 hover:bg-black/30 text-white backdrop-blur-sm
-          transition-all duration-300 hover:scale-110 z-20 group"
-        aria-label="Next slide"
-      >
-        <HiOutlineChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-      </button>
-
+              className={`relative h-3 rounded-full overflow-hidden backdrop-blur-sm
+                ${currentSlide === index ? "w-16" : "w-3"}`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1 }}
-        className="absolute bottom-8 right-8 z-20"
-      >
-        <div className="flex flex-col items-center">
-          <div className="text-white/60 text-sm mb-2">Scroll</div>
+                className="absolute inset-0 bg-gradient-to-r from-primary-500 to-primary-400"
+                initial={false}
+                animate={{
+                  opacity: currentSlide === index ? 1 : 0.3
+                }}
+              />
+              {currentSlide === index && (
           <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{
-              duration: 1.5,
+                  className="absolute inset-0 bg-white"
+                  layoutId="slideIndicator"
+                  initial={false}
+                  animate={{
+                    x: ["0%", "235%", "0%"],
+                    transition: {
+                      duration: 2,
               repeat: Infinity,
-              repeatType: "loop",
-            }}
-            className="w-5 h-8 border-2 border-white/30 rounded-full 
-              flex items-start justify-center p-1"
-          >
-            <div className="w-1 h-2 bg-white/60 rounded-full" />
-          </motion.div>
+                      ease: "linear"
+                    }
+                  }}
+                />
+              )}
+            </motion.button>
+          ))}
         </div>
-      </motion.div>
     </div>
+
+      {/* Add overlay images for depth */}
+      <motion.img
+        src={slides[currentSlide].overlayImage}
+        alt=""
+        className="absolute right-0 top-0 h-full w-1/3 object-cover opacity-20 mix-blend-overlay"
+        initial={{ opacity: 0, scale: 1.2 }}
+        animate={{ opacity: 0.2, scale: 1 }}
+        transition={{ duration: 1 }}
+      />
+    </section>
   );
 };
 
@@ -831,8 +909,8 @@ const TestimonialsSection = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl font-bold mb-4">What People Say</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">What People Say</h2>
+          <p className="text-indigo-600 dark:text-indigo-400">
             Hear from our community members and partners
           </p>
         </motion.div>
@@ -944,10 +1022,10 @@ const AnimatedStat = ({ label, value, suffix, delay }: {
       transition={{ delay }}
       className="text-center"
     >
-      <div className="text-4xl lg:text-5xl font-bold mb-2">
+      <div className="text-4xl lg:text-5xl font-bold mb-2 text-white">
         {count}{suffix}
       </div>
-      <p className="text-primary-100">{label}</p>
+      <p className="text-blue-200">{label}</p>
     </motion.div>
   );
 };
@@ -976,8 +1054,8 @@ const FAQSection = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Frequently Asked Questions</h2>
+          <p className="text-indigo-600 dark:text-indigo-400">
             Find answers to common questions about our legal services
           </p>
         </motion.div>
@@ -1045,8 +1123,8 @@ const NewsSection = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl font-bold mb-4">Latest Updates</h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">Latest Updates</h2>
+          <p className="text-indigo-600 dark:text-indigo-400">
             Stay informed about our latest news and developments
           </p>
         </motion.div>
@@ -1070,7 +1148,9 @@ const NewsSection = () => {
                 <time className="text-sm text-gray-500 mb-2 block">
                   {new Date(item.date).toLocaleDateString()}
                 </time>
-                <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                <h3 className="text-xl font-semibold mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">
+                  {item.title}
+                </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   {item.excerpt}
                 </p>
@@ -1099,11 +1179,11 @@ const FeaturesSection = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl font-bold mb-4"
+            className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text"
           >
             Why Choose Us
           </motion.h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-indigo-600 dark:text-indigo-400">
             Experience the future of legal services with our comprehensive platform
           </p>
         </div>
@@ -1116,17 +1196,13 @@ const FeaturesSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm
-                hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30
-                rounded-lg flex items-center justify-center text-primary-500 mb-4">
+              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-lg flex items-center justify-center text-primary-500 mb-4">
                 {feature.icon}
               </div>
-              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                {feature.description}
-              </p>
+              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -1144,11 +1220,11 @@ const ServicesSection = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl font-bold mb-4"
+            className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text"
           >
             Our Services
           </motion.h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-indigo-600 dark:text-indigo-400">
             Comprehensive legal solutions for all your needs
           </p>
         </div>
@@ -1160,21 +1236,10 @@ const ServicesSection = () => {
               initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="group relative overflow-hidden rounded-2xl"
+              className={`group relative overflow-hidden rounded-2xl p-8 ${service.color} bg-opacity-10`}
             >
-              <div className={`absolute inset-0 ${service.color} opacity-10
-                group-hover:opacity-20 transition-opacity`} />
-              <div className="relative p-8">
-                <h3 className="text-xl font-semibold mb-2">{service.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  {service.description}
-                </p>
-                <Link href="/services" className="inline-flex items-center text-primary-500
-                  hover:text-primary-600 font-medium">
-                  Learn More
-                  <HiOutlineChevronRight className="ml-1 w-5 h-5" />
-                </Link>
-              </div>
+              <h3 className="text-xl font-semibold mb-2">{service.title}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{service.description}</p>
             </motion.div>
           ))}
         </div>
@@ -1185,12 +1250,12 @@ const ServicesSection = () => {
 
 const CTASection = () => {
   return (
-    <section className="bg-primary-900 text-white py-20">
+    <section className="py-20 bg-primary-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between">
           <div className="mb-8 md:mb-0">
-            <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-primary-100">
+            <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-blue-200 text-transparent bg-clip-text">Ready to Get Started?</h2>
+            <p className="text-blue-200">
               Join thousands of satisfied clients who trust our legal services
             </p>
           </div>
@@ -1217,8 +1282,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white dark:bg-gray-900">
       <div className="relative">
-        <MainNavbar />
-        <SecondaryNavbar />
+        <Navbar />
       </div>
       <div className="pt-32">
         <HeroSection />
@@ -1228,6 +1292,7 @@ export default function Home() {
         <PartnersSection />
         <FAQSection />
         <CTASection />
+        <Footer />
       </div>
     </main>
   );

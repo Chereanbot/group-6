@@ -1,54 +1,53 @@
-import twilio from 'twilio';
+// Remove Twilio import and use fetch for InfoBip
+const INFOBIP_API_KEY = process.env.INFOBIP_API_KEY;
+const INFOBIP_BASE_URL = process.env.INFOBIP_BASE_URL;
+const INFOBIP_SENDER = process.env.INFOBIP_SENDER;
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-
-if (!accountSid || !authToken || !fromNumber) {
-  throw new Error('Missing Twilio credentials in environment variables');
+interface SMSOptions {
+  to: string;
+  message: string;
 }
 
-const client = twilio(accountSid, authToken);
-
-export async function sendSMS(to: string, content: string) {
+export async function sendSMS({ to, message }: SMSOptions) {
   try {
-    const formattedNumber = formatPhoneNumber(to);
-    console.log(`Sending SMS to ${formattedNumber} from ${fromNumber}`);
-
-    // Add error handling for empty or invalid content
-    if (!content.trim()) {
-      throw new Error('Message content cannot be empty');
+    if (!INFOBIP_API_KEY || !INFOBIP_BASE_URL || !INFOBIP_SENDER) {
+      throw new Error('Missing InfoBip credentials');
     }
 
-    // Attempt to send the message
-    const message = await client.messages.create({
-      body: content,
-      from: fromNumber,
-      to: formattedNumber,
-      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/messages/phone/status-webhook`,
+    // Format phone number to E.164 format
+    const formattedTo = to.startsWith('+') ? to : `+${to.replace(/\D/g, '')}`;
+
+    const response = await fetch(`${INFOBIP_BASE_URL}/sms/2/text/advanced`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `App ${INFOBIP_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            from: INFOBIP_SENDER,
+            destinations: [
+              {
+                to: formattedTo
+              }
+            ],
+            text: message
+          }
+        ]
+      })
     });
 
-    console.log(`SMS sent successfully. Message SID: ${message.sid}`);
-
-    if (message.errorCode) {
-      throw new Error(`Twilio Error: ${message.errorMessage}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`InfoBip API error: ${JSON.stringify(errorData)}`);
     }
 
-    return {
-      success: true,
-      messageId: message.sid,
-      status: message.status,
-    };
-  } catch (error: any) {
-    console.error('Error sending SMS:', error);
-    // Add more specific error handling
-    if (error.code === 21211) {
-      throw new Error('Invalid phone number format');
-    } else if (error.code === 21408) {
-      throw new Error('Message content too long');
-    } else if (error.code === 21610) {
-      throw new Error('Message cannot be empty');
-    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('SMS sending error:', error);
     throw error;
   }
 }

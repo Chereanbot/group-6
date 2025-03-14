@@ -26,7 +26,8 @@ import {
   HiOutlineClipboard,
   HiOutlineTemplate,
   HiOutlineCollection,
-  HiOutlinePhone
+  HiOutlinePhone,
+  HiOutlineX
 } from 'react-icons/hi';
 
 const menuItems = [
@@ -68,18 +69,19 @@ const menuItems = [
     icon: HiOutlineScale,
     submenu: [
       { 
+        title: 'All Caese', 
+        path: '/coordinator/cases/lists',
+        icon: HiOutlineClipboard,
+        badge: 'all' 
+      },
+
+      { 
         title: 'New Legal Aid Case', 
         path: '/coordinator/cases/new',
         icon: HiOutlinePlus,
         badge: 'New'
       },
-      //save as draft
-      { 
-        title: 'Draft Cases', 
-        path: '/coordinator/cases/draft',
-        icon: HiOutlineClipboard,
-        badge: '3'
-      },
+   
       { 
         title: 'Active Cases', 
         path: '/coordinator/cases/active',
@@ -141,7 +143,14 @@ const menuItems = [
         path: '/coordinator/clients/requests',
         icon: HiOutlineClipboardList,
         badge: 'New'
-      }
+      },
+      {
+        title: 'Appointment Settings',
+        path: '/coordinator/clients/appointments/settings',
+        icon: HiOutlineCog,
+        badge: 'settings'
+      },
+
     ]
   },
   {
@@ -260,8 +269,8 @@ const menuItems = [
         badge: '3'
       },
       { 
-        title: 'Phone Log', 
-        path: '/coordinator/communications/phone-log',
+        title: 'Sms', 
+        path: '/coordinator/communications/sms',
         icon: HiOutlinePhone
       },
       { 
@@ -279,10 +288,14 @@ const menuItems = [
   }
 ];
 
-export default function CoordinatorSidebar() {
+interface CoordinatorSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function CoordinatorSidebar({ isOpen, onClose }: CoordinatorSidebarProps) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
-  const [collapsed, setCollapsed] = useState(false);
 
   const toggleSubmenu = (title: string) => {
     setOpenMenus(prev => 
@@ -296,121 +309,104 @@ export default function CoordinatorSidebar() {
   const isSubmenuOpen = (title: string) => openMenus.includes(title);
 
   return (
-    <div 
-      className={`fixed left-0 top-0 h-full bg-white dark:bg-gray-800 border-r 
-        border-gray-200 dark:border-gray-700 overflow-y-auto transition-all duration-300
-        backdrop-filter backdrop-blur-sm shadow-xl
-        ${collapsed ? 'w-20' : 'w-64'}`}
-    >
-      {/* Logo */}
-      <div className="p-6 flex justify-between items-center backdrop-blur-md bg-white/30 dark:bg-gray-800/30 sticky top-0 z-10">
-        {!collapsed && (
-          <div className="hover:scale-105 transition-transform duration-200">
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
-              DulaS
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-              Legal Aid Center
-            </p>
-          </div>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-110 
-            transition-all duration-200 hover:shadow-md active:scale-95"
-        >
-          <HiOutlineChevronDown 
-            className={`w-5 h-5 transform transition-transform duration-300 
-              ${collapsed ? 'rotate-90' : '-rotate-90'}`}
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           />
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="px-4 pb-6">
-        {menuItems.map((item) => (
-          <div key={item.title} className="mb-2 group">
-            {item.submenu ? (
-              <div>
+          
+          {/* Sidebar */}
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 20 }}
+            className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-lg z-50 overflow-y-auto"
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Menu</h2>
                 <button
-                  onClick={() => toggleSubmenu(item.title)}
-                  className={`w-full flex items-center justify-between px-4 py-2 rounded-lg
-                    transition-all duration-200 hover:scale-[1.02] hover:shadow-md
-                    ${isSubmenuOpen(item.title) 
-                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 shadow-lg'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                    }`}
+                  onClick={onClose}
+                  className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  <div className="flex items-center">
-                    <item.icon className="w-5 h-5 mr-3 group-hover:rotate-6 transition-transform duration-200" />
-                    {!collapsed && <span className="font-medium">{item.title}</span>}
-                  </div>
-                  {!collapsed && (
-                    <motion.div
-                      animate={{ rotate: isSubmenuOpen(item.title) ? 180 : 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <HiOutlineChevronDown className="w-4 h-4" />
-                    </motion.div>
-                  )}
+                  <HiOutlineX className="h-6 w-6" />
                 </button>
-
-                <AnimatePresence>
-                  {isSubmenuOpen(item.title) && !collapsed && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-4 mt-2 space-y-1"
-                    >
-                      {item.submenu.map((subitem) => (
-                        <Link
-                          key={subitem.path}
-                          href={subitem.path}
-                          className={`flex items-center justify-between px-4 py-2 rounded-lg 
-                            text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-sm
-                            ${isActive(subitem.path)
-                              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 shadow-md'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                            }`}
-                        >
-                          <div className="flex items-center space-x-2">
-                            {subitem.icon && <subitem.icon className="w-4 h-4 group-hover:rotate-6 transition-transform duration-200" />}
-                            <span className="group-hover:text-primary-600 dark:group-hover:text-primary-400">{subitem.title}</span>
-                          </div>
-                          {subitem.badge && (
-                            <span className="px-2 py-1 text-xs font-medium bg-primary-100/80 
-                              dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 rounded-full
-                              shadow-inner hover:shadow-md transition-shadow duration-200">
-                              {subitem.badge}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
-            ) : (
-              <Link
-                href={item.path}
-                className={`flex items-center justify-between px-4 py-2 rounded-lg
-                  transition-all duration-200 hover:scale-[1.02] hover:shadow-md
-                  ${isActive(item.path)
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                  }`}
-              >
-                <div className="flex items-center">
-                  <item.icon className="w-5 h-5 mr-3 group-hover:rotate-6 transition-transform duration-200" />
-                  {!collapsed && <span className="font-medium">{item.title}</span>}
-                </div>
-              </Link>
-            )}
-          </div>
-        ))}
-      </nav>
-    </div>
+
+              <nav className="space-y-2">
+                {menuItems.map((item) => (
+                  <div key={item.title}>
+                    {item.submenu ? (
+                      <div>
+                        <button
+                          onClick={() => toggleSubmenu(item.title)}
+                          className={`w-full flex items-center justify-between p-2 rounded-md ${
+                            isActive(item.path)
+                              ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <item.icon className="h-5 w-5 mr-3" />
+                            <span>{item.title}</span>
+                          </div>
+                          <HiOutlineChevronDown
+                            className={`h-5 w-5 transform transition-transform ${
+                              isSubmenuOpen(item.title) ? 'rotate-180' : ''
+                            }`}
+                          />
+                        </button>
+                        {isSubmenuOpen(item.title) && (
+                          <div className="ml-8 mt-2 space-y-1">
+                            {item.submenu.map((subItem) => (
+                              <Link
+                                key={subItem.title}
+                                href={subItem.path}
+                                className={`flex items-center p-2 rounded-md ${
+                                  isActive(subItem.path)
+                                    ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                <subItem.icon className="h-5 w-5 mr-3" />
+                                <span>{subItem.title}</span>
+                                {subItem.badge && (
+                                  <span className="ml-auto px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded-full">
+                                    {subItem.badge}
+                                  </span>
+                                )}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Link
+                        href={item.path}
+                        className={`flex items-center p-2 rounded-md ${
+                          isActive(item.path)
+                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <item.icon className="h-5 w-5 mr-3" />
+                        <span>{item.title}</span>
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </nav>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 } 

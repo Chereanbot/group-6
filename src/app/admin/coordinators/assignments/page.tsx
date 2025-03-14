@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { AssignmentService } from '@/services/coordinator/AssignmentService';
+import { toast } from 'react-hot-toast';
 import { 
   CoordinatorAssignment, 
   AssignmentStatus,
   AssignmentFilter 
 } from '@/types/coordinator';
+import { adminStyles } from '@/styles/admin';
 
 const AssignmentsPage = () => {
   const [assignments, setAssignments] = useState<CoordinatorAssignment[]>([]);
@@ -16,46 +17,121 @@ const AssignmentsPage = () => {
     dateRange: undefined,
   });
 
-  const service = new AssignmentService();
-
-  useEffect(() => {
-    loadAssignments();
-  }, [filters]);
-
   const loadAssignments = async () => {
     try {
-      const data = await service.getAssignments(filters);
-      setAssignments(data);
+      setLoading(true);
+      const queryParams = new URLSearchParams();
+      
+      if (filters.status.length > 0) {
+        filters.status.forEach(status => queryParams.append('status', status));
+      }
+      
+      if (filters.dateRange) {
+        queryParams.append('startDate', filters.dateRange.start.toISOString());
+        queryParams.append('endDate', filters.dateRange.end.toISOString());
+      }
+
+      const response = await fetch(`/api/admin/coordinators/assignments?${queryParams}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load assignments');
+      }
+
+      setAssignments(result.data.assignments);
     } catch (error) {
       console.error('Failed to load assignments:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to load assignments');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleStatusChange = async (assignmentId: string, status: AssignmentStatus) => {
+    try {
+      const response = await fetch(`/api/admin/coordinators/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update assignment status');
+      }
+
+      toast.success('Assignment status updated successfully');
+      loadAssignments();
+    } catch (error) {
+      console.error('Failed to update assignment status:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update assignment status');
+    }
+  };
+
+  const handleDelete = async (assignmentId: string) => {
+    try {
+      const response = await fetch(`/api/admin/coordinators/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete assignment');
+      }
+
+      toast.success('Assignment deleted successfully');
+      loadAssignments();
+    } catch (error) {
+      console.error('Failed to delete assignment:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete assignment');
+    }
+  };
+
+  useEffect(() => {
+    loadAssignments();
+  }, [filters]);
+
+  if (loading) {
+    return (
+      <div className={adminStyles.container}>
+        <div className={adminStyles.loading.container}>
+          <div className={adminStyles.loading.spinner}></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Coordinator Assignments</h1>
+    <div className={adminStyles.container}>
+      <div className={adminStyles.pageHeader}>
+        <h1 className={adminStyles.pageTitle}>Coordinator Assignments</h1>
+      </div>
 
       {/* Filters */}
-      <div className="mb-6 flex gap-4">
-        <select
-          className="border rounded-lg px-4 py-2"
-          onChange={(e) => setFilters(prev => ({
-            ...prev,
-            status: e.target.value ? [e.target.value as AssignmentStatus] : []
-          }))}
-        >
-          <option value="">All Status</option>
-          {Object.values(AssignmentStatus).map(status => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
+      <div className={adminStyles.filters.container}>
+        <div className={adminStyles.filters.group}>
+          <select
+            className={adminStyles.filters.input}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              status: e.target.value ? [e.target.value as AssignmentStatus] : []
+            }))}
+          >
+            <option value="">All Status</option>
+            {Object.values(AssignmentStatus).map(status => (
+              <option key={status} value={status}>{status}</option>
+            ))}
+          </select>
+        </div>
 
-        <div className="flex gap-2 items-center">
+        <div className={adminStyles.filters.group}>
           <input
             type="date"
-            className="border rounded-lg px-4 py-2"
+            className={adminStyles.filters.input}
             onChange={(e) => setFilters(prev => ({
               ...prev,
               dateRange: {
@@ -64,10 +140,10 @@ const AssignmentsPage = () => {
               }
             }))}
           />
-          <span>to</span>
+          <span className="text-gray-500 dark:text-gray-400">to</span>
           <input
             type="date"
-            className="border rounded-lg px-4 py-2"
+            className={adminStyles.filters.input}
             onChange={(e) => setFilters(prev => ({
               ...prev,
               dateRange: {
@@ -80,67 +156,73 @@ const AssignmentsPage = () => {
       </div>
 
       {/* Assignments Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full">
-          <thead className="bg-gray-50">
+      <div className={adminStyles.table.container}>
+        <table className={adminStyles.table.table}>
+          <thead className={adminStyles.table.header}>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Coordinator
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Project
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Duration
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className={adminStyles.table.headerCell}>Coordinator</th>
+              <th className={adminStyles.table.headerCell}>Project</th>
+              <th className={adminStyles.table.headerCell}>Status</th>
+              <th className={adminStyles.table.headerCell}>Duration</th>
+              <th className={adminStyles.table.headerCell}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className={adminStyles.table.body}>
             {assignments.map((assignment) => (
-              <tr key={assignment.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {/* Add coordinator details */}
+              <tr key={assignment.id} className={adminStyles.table.row}>
+                <td className={adminStyles.table.cell}>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
+                    {assignment.coordinator?.user?.fullName}
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {assignment.coordinator?.user?.email}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                <td className={adminStyles.table.cell}>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {assignment.project?.name}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {assignment.project?.description}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${assignment.status === AssignmentStatus.ACTIVE ? 'bg-green-100 text-green-800' :
-                      assignment.status === AssignmentStatus.COMPLETED ? 'bg-blue-100 text-blue-800' :
-                      assignment.status === AssignmentStatus.CANCELLED ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'}`}>
+                <td className={adminStyles.table.cell}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium
+                    ${assignment.status === AssignmentStatus.ACTIVE ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                    assignment.status === AssignmentStatus.COMPLETED ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                    assignment.status === AssignmentStatus.CANCELLED ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'}`}>
                     {assignment.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
+                <td className={adminStyles.table.cell}>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {new Date(assignment.startDate).toLocaleDateString()}
                   </div>
                   {assignment.endDate && (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       to {new Date(assignment.endDate).toLocaleDateString()}
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button className="text-indigo-600 hover:text-indigo-900 mr-4">
-                    Edit
-                  </button>
-                  <button className="text-red-600 hover:text-red-900">
-                    Cancel
-                  </button>
+                <td className={adminStyles.table.cell}>
+                  <div className="flex space-x-2">
+                    <select
+                      className={`${adminStyles.form.select} text-sm`}
+                      value={assignment.status}
+                      onChange={(e) => handleStatusChange(assignment.id, e.target.value as AssignmentStatus)}
+                    >
+                      {Object.values(AssignmentStatus).map(status => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleDelete(assignment.id)}
+                      className={`${adminStyles.button.base} ${adminStyles.button.danger}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

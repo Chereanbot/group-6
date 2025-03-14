@@ -883,17 +883,25 @@ async function seedMessages() {
 
   for (const message of messagesToCreate) {
     try {
+      // Create a chat for the conversation
+      const chat = await prisma.chat.create({
+        data: {
+          participants: {
+            create: [
+              { userId: message.senderId },
+              { userId: message.recipientId }
+            ]
+          }
+        }
+      });
+
+      // Create the message
       await prisma.message.create({
         data: {
-          subject: message.subject,
-          content: message.content,
+          text: message.content,
           sender: { connect: { id: message.senderId } },
           recipient: { connect: { id: message.recipientId } },
-          priority: message.priority as MessagePriority,
-          category: message.category as MessageCategory,
-          isRead: message.isRead,
-          isStarred: message.isStarred,
-          isArchived: message.isArchived
+          chat: { connect: { id: chat.id } }
         }
       });
     } catch (error) {

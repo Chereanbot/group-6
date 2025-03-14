@@ -148,7 +148,7 @@ export default function MessagesPage() {
         }
 
         // Fetch existing chats
-        const chatsResponse = await fetch('/api/chats');
+        const chatsResponse = await fetch('/api/coordinator/communications/chats');
         if (!chatsResponse.ok) {
           throw new Error('Failed to fetch chats');
         }
@@ -214,7 +214,7 @@ export default function MessagesPage() {
       if (!chatId) return;
       
       setLoading(true);
-      const url = `/api/chats/${chatId}/messages`;
+      const url = `/api/coordinator/communications/messages?chatId=${chatId}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -222,13 +222,12 @@ export default function MessagesPage() {
       }
       
       const data = await response.json();
-      if (!Array.isArray(data)) {
-        console.error('Invalid message data received:', data);
-        return;
-      }
-
+      
+      // Ensure data is an array
+      const messages = Array.isArray(data) ? data : [];
+      
       // Sort messages by date
-      const sortedMessages = data.sort((a: Message, b: Message) => 
+      const sortedMessages = messages.sort((a: Message, b: Message) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
       
@@ -242,7 +241,7 @@ export default function MessagesPage() {
       }
 
       // Scroll to bottom on initial load or new messages
-      if (isInitialLoad || data.length > 0) {
+      if (isInitialLoad || messages.length > 0) {
         scrollToBottom();
       }
     } catch (error) {
@@ -303,7 +302,7 @@ export default function MessagesPage() {
         return;
       }
 
-      const response = await fetch(`/api/chats/${selectedChat}/messages`, {
+      const response = await fetch(`/api/coordinator/communications/messages?chatId=${selectedChat}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -431,7 +430,7 @@ export default function MessagesPage() {
         }]
       };
 
-      const response = await fetch(`/api/chats/${selectedChat}/messages`, {
+      const response = await fetch(`/api/coordinator/communications/messages?chatId=${selectedChat}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(messageData),
@@ -482,14 +481,13 @@ export default function MessagesPage() {
         participantType = 'KEBELE_MEMBER';
       }
 
-      const response = await fetch('/api/coordinator/communications/chats/new', {
+      const response = await fetch('/api/coordinator/communications/chats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          participantId: user.id,
-          participantType
+          participantId: user.id
         }),
       });
 
@@ -510,12 +508,7 @@ export default function MessagesPage() {
         return [
           {
             id: newChat.id,
-            user: {
-              ...newChat.user,
-              starred: false,
-              unreadCount: 0,
-              kebeleProfile: user.kebeleProfile
-            },
+            user: newChat.user,
             unreadCount: 0,
             lastMessage: null
           },
@@ -540,7 +533,7 @@ export default function MessagesPage() {
 
   const handleArchiveChat = async (chatId: string) => {
     try {
-      const response = await fetch(`/api/chats/${chatId}/archive`, {
+      const response = await fetch(`/api/coordinator/communications/chats/${chatId}/archive`, {
         method: 'POST',
       });
 
@@ -563,7 +556,7 @@ export default function MessagesPage() {
     if (!confirm('Are you sure you want to delete this chat?')) return;
 
     try {
-      const response = await fetch(`/api/chats/${chatId}`, {
+      const response = await fetch(`/api/coordinator/communications/chats/${chatId}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete chat');
@@ -609,7 +602,7 @@ export default function MessagesPage() {
       case 'delete':
         if (message.senderId === currentUserId) {
           try {
-            const response = await fetch(`/api/chats/${selectedChat}/messages/${message.id}`, {
+            const response = await fetch(`/api/coordinator/communications/messages/${message.id}`, {
               method: 'DELETE',
             });
             if (response.ok) {
@@ -635,7 +628,7 @@ export default function MessagesPage() {
     if (!selectedMessageForForward) return;
 
     try {
-      const response = await fetch(`/api/chats/${targetChatId}/messages`, {
+      const response = await fetch(`/api/coordinator/communications/messages?chatId=${targetChatId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -667,19 +660,131 @@ export default function MessagesPage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Update the message rendering to handle attachments
+  // Update the message rendering to include better UI
+  const renderMessage = (msg: Message) => (
+    <div
+      key={msg.id}
+      className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"} mb-4`}
+      onContextMenu={(e) => handleMessageContextMenu(e, msg)}
+    >
+      <div
+        className={`group relative max-w-[70%] ${
+          isSelectionMode ? 'cursor-pointer' : ''
+        }`}
+        onClick={() => {
+          if (isSelectionMode) {
+            toggleMessageSelection(msg.id);
+          }
+        }}
+      >
+        {isSelectionMode && (
+          <div className={`absolute -left-8 top-1/2 -translate-y-1/2 
+            ${selectedMessages.has(msg.id) ? 'text-primary-500' : 'text-gray-400'}`}>
+            <div className={`w-5 h-5 border-2 rounded-full flex items-center justify-center
+              ${selectedMessages.has(msg.id) 
+                ? 'border-primary-500 bg-primary-500' 
+                : 'border-gray-400'
+              }`}>
+              {selectedMessages.has(msg.id) && (
+                <HiOutlineCheck className="w-3 h-3 text-white" />
+              )}
+            </div>
+          </div>
+        )}
+        <div
+          className={`relative rounded-2xl px-4 py-2 shadow-sm ${
+            msg.senderId === currentUserId
+              ? "bg-primary-500 text-white ml-12 rounded-br-none"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white mr-12 rounded-bl-none"
+          }`}
+        >
+          {/* Message content */}
+          <div className="prose dark:prose-invert max-w-none">
+            {renderMessageContent(msg)}
+          </div>
+
+          {/* Message metadata */}
+          <div className={`flex items-center justify-end mt-1 space-x-1 text-xs 
+            ${msg.senderId === currentUserId ? "text-primary-100" : "text-gray-500"}`}>
+            <span className="font-medium">{format(new Date(msg.createdAt), 'p')}</span>
+            {msg.senderId === currentUserId && (
+              <span className="flex items-center">
+                {msg.status === 'SENT' && (
+                  <HiOutlineCheck className="w-3 h-3 ml-0.5" />
+                )}
+                {msg.status === 'DELIVERED' && (
+                  <div className="flex ml-0.5">
+                    <HiOutlineCheck className="w-3 h-3" />
+                    <HiOutlineCheck className="w-3 h-3 -ml-1" />
+                  </div>
+                )}
+                {msg.status === 'READ' && (
+                  <div className="flex text-blue-300 ml-0.5">
+                    <HiOutlineCheck className="w-3 h-3" />
+                    <HiOutlineCheck className="w-3 h-3 -ml-1" />
+                  </div>
+                )}
+              </span>
+            )}
+          </div>
+
+          {/* Message actions (hover) */}
+          <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity
+            ${msg.senderId === currentUserId ? "-left-8" : "-right-8"}`}>
+            <div className="flex space-x-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMessageAction('reply', msg);
+                }}
+                className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                title="Reply"
+              >
+                <HiOutlineReply className="w-4 h-4" />
+              </button>
+              {msg.senderId === currentUserId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMessageAction('edit', msg);
+                  }}
+                  className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  title="Edit"
+                >
+                  <HiOutlinePencil className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Update the message content rendering
   const renderMessageContent = (msg: Message) => {
     if (msg.attachments && msg.attachments.length > 0) {
       const attachment = msg.attachments[0];
       if (attachment.type.startsWith('image/')) {
         return (
           <div className="space-y-2">
-            <img 
-              src={attachment.url} 
-              alt={attachment.name}
-              className="max-w-[300px] max-h-[300px] rounded-lg object-contain"
-              loading="lazy"
-            />
+            <div className="relative group">
+              <img 
+                src={attachment.url} 
+                alt={attachment.name}
+                className="max-w-[300px] max-h-[300px] rounded-lg object-contain cursor-pointer"
+                loading="lazy"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: Implement image preview modal
+                }}
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 
+                transition-opacity rounded-lg flex items-center justify-center opacity-0 
+                group-hover:opacity-100">
+                <HiOutlinePhotograph className="w-8 h-8 text-white" />
+              </div>
+            </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {attachment.name} ({(attachment.size / 1024 / 1024).toFixed(2)} MB)
             </p>
@@ -687,7 +792,7 @@ export default function MessagesPage() {
         );
       } else {
         return (
-          <div className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="flex items-center space-x-2 p-2 bg-white/10 dark:bg-gray-700/50 rounded-lg">
             <HiOutlinePaperClip className="w-5 h-5" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{attachment.name}</p>
@@ -699,7 +804,7 @@ export default function MessagesPage() {
               href={attachment.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-2 px-2 py-1 text-sm bg-primary-500 hover:bg-primary-600 
+              className="ml-2 px-2 py-1 text-sm bg-white/20 hover:bg-white/30 
                 text-white rounded flex items-center space-x-1"
               onClick={(e) => e.stopPropagation()}
             >
@@ -710,7 +815,97 @@ export default function MessagesPage() {
         );
       }
     }
-    return <p className="text-sm whitespace-pre-wrap">{msg.text}</p>;
+    return (
+      <p className="text-sm whitespace-pre-wrap break-words">
+        {msg.text}
+      </p>
+    );
+  };
+
+  const toggleMessageSelection = (messageId: string) => {
+    const newSelection = new Set(selectedMessages);
+    if (newSelection.has(messageId)) {
+      newSelection.delete(messageId);
+    } else {
+      newSelection.add(messageId);
+    }
+    setSelectedMessages(newSelection);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedMessages.size) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedMessages.size} messages?`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedMessages).map(messageId =>
+        fetch(`/api/coordinator/communications/messages/${messageId}`, {
+          method: 'DELETE',
+        })
+      );
+
+      await Promise.all(deletePromises);
+      
+      setMessages(prev => prev.filter(msg => !selectedMessages.has(msg.id)));
+      setSelectedMessages(new Set());
+      setIsSelectionMode(false);
+      toast.success('Messages deleted successfully');
+    } catch (error) {
+      console.error('Error deleting messages:', error);
+      toast.error('Failed to delete messages');
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedMessages.size === messages.length) {
+      setSelectedMessages(new Set());
+    } else {
+      setSelectedMessages(new Set(messages.map(msg => msg.id)));
+    }
+  };
+
+  // Add bulk actions header when in selection mode
+  const renderBulkActionsHeader = () => {
+    if (!isSelectionMode) return null;
+
+    return (
+      <div className="absolute top-0 left-0 right-0 z-10 bg-white dark:bg-gray-900 
+        border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => {
+              setIsSelectionMode(false);
+              setSelectedMessages(new Set());
+            }}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
+              dark:hover:text-gray-200"
+          >
+            <HiOutlineX className="w-6 h-6" />
+          </button>
+          <span className="text-sm font-medium">
+            {selectedMessages.size} selected
+          </span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleSelectAll}
+            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 
+              hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
+          >
+            {selectedMessages.size === messages.length ? 'Deselect All' : 'Select All'}
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 
+              dark:text-red-400 dark:hover:bg-red-900/20 rounded-md"
+          >
+            Delete Selected
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // Update the file preview component
@@ -803,157 +998,6 @@ export default function MessagesPage() {
       </div>
     );
   };
-
-  const toggleMessageSelection = (messageId: string) => {
-    const newSelection = new Set(selectedMessages);
-    if (newSelection.has(messageId)) {
-      newSelection.delete(messageId);
-    } else {
-      newSelection.add(messageId);
-    }
-    setSelectedMessages(newSelection);
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedMessages.size) return;
-    
-    if (!confirm(`Are you sure you want to delete ${selectedMessages.size} messages?`)) {
-      return;
-    }
-
-    try {
-      const deletePromises = Array.from(selectedMessages).map(messageId =>
-        fetch(`/api/chats/${selectedChat}/messages/${messageId}`, {
-          method: 'DELETE',
-        })
-      );
-
-      await Promise.all(deletePromises);
-      
-      setMessages(prev => prev.filter(msg => !selectedMessages.has(msg.id)));
-      setSelectedMessages(new Set());
-      setIsSelectionMode(false);
-      toast.success('Messages deleted successfully');
-    } catch (error) {
-      console.error('Error deleting messages:', error);
-      toast.error('Failed to delete messages');
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (selectedMessages.size === messages.length) {
-      setSelectedMessages(new Set());
-    } else {
-      setSelectedMessages(new Set(messages.map(msg => msg.id)));
-    }
-  };
-
-  // Add bulk actions header when in selection mode
-  const renderBulkActionsHeader = () => {
-    if (!isSelectionMode) return null;
-
-    return (
-      <div className="absolute top-0 left-0 right-0 z-10 bg-white dark:bg-gray-900 
-        border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => {
-              setIsSelectionMode(false);
-              setSelectedMessages(new Set());
-            }}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
-              dark:hover:text-gray-200"
-          >
-            <HiOutlineX className="w-6 h-6" />
-          </button>
-          <span className="text-sm font-medium">
-            {selectedMessages.size} selected
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleSelectAll}
-            className="px-3 py-1 text-sm text-gray-600 dark:text-gray-300 
-              hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
-          >
-            {selectedMessages.size === messages.length ? 'Deselect All' : 'Select All'}
-          </button>
-          <button
-            onClick={handleBulkDelete}
-            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 
-              dark:text-red-400 dark:hover:bg-red-900/20 rounded-md"
-          >
-            Delete Selected
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  // Update the message rendering to include selection functionality
-  const renderMessage = (msg: Message) => (
-    <div
-      key={msg.id}
-      className={`flex ${msg.senderId === currentUserId ? "justify-end" : "justify-start"}`}
-      onContextMenu={(e) => handleMessageContextMenu(e, msg)}
-    >
-      <div
-        className={`group relative max-w-[70%] ${
-          isSelectionMode ? 'cursor-pointer' : ''
-        }`}
-        onClick={() => {
-          if (isSelectionMode) {
-            toggleMessageSelection(msg.id);
-          }
-        }}
-      >
-        {isSelectionMode && (
-          <div className={`absolute -left-8 top-1/2 -translate-y-1/2 
-            ${selectedMessages.has(msg.id) ? 'text-primary-500' : 'text-gray-400'}`}>
-            <div className={`w-5 h-5 border-2 rounded-full flex items-center justify-center
-              ${selectedMessages.has(msg.id) 
-                ? 'border-primary-500 bg-primary-500' 
-                : 'border-gray-400'
-              }`}>
-              {selectedMessages.has(msg.id) && (
-                <HiOutlineCheck className="w-3 h-3 text-white" />
-              )}
-            </div>
-          </div>
-        )}
-        <div
-          className={`rounded-2xl px-4 py-2 ${
-            msg.senderId === currentUserId
-              ? "bg-primary-500 text-white ml-12"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white mr-12"
-          }`}
-        >
-          {renderMessageContent(msg)}
-          <div className={`flex items-center mt-1 space-x-1 text-xs 
-            ${msg.senderId === currentUserId ? "text-primary-100" : "text-gray-500"}`}>
-            <span>{format(new Date(msg.createdAt), 'p')}</span>
-            {msg.senderId === currentUserId && (
-              <span>
-                {msg.status === 'SENT' && <HiOutlineCheck className="w-4 h-4" />}
-                {msg.status === 'DELIVERED' && (
-                  <div className="flex">
-                    <HiOutlineCheck className="w-4 h-4" />
-                    <HiOutlineCheck className="w-4 h-4 -ml-2" />
-                  </div>
-                )}
-                {msg.status === 'READ' && (
-                  <div className="flex text-blue-400">
-                    <HiOutlineCheck className="w-4 h-4" />
-                    <HiOutlineCheck className="w-4 h-4 -ml-2" />
-                  </div>
-                )}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900">

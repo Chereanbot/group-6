@@ -19,6 +19,18 @@ export interface Case {
       }>;
     };
   };
+  assignedCoordinator?: {
+    fullName: string;
+    email: string;
+    phone: string;
+    coordinator?: {
+      type: string;
+      office: {
+        name: string;
+        location: string;
+      };
+    };
+  };
   client: {
     fullName: string;
     email: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   HiOutlineCalendar, 
   HiOutlineCash,
@@ -34,10 +34,22 @@ import { Timeline } from './components/Timeline';
 import { CaseProgress } from './components/CaseProgress';
 import { CaseAnalytics } from './components/CaseAnalytics';
 import { CaseDetailsAnalytics } from './components/CaseDetailsAnalytics';
+import { IconType } from 'react-icons';
+
+interface HelpHint {
+  category: string;
+  messages: string[];
+  icon: IconType;
+  color: string;
+}
 
 const Dashboard = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [showHelpMenu, setShowHelpMenu] = useState(false);
+  const [showHelpHint, setShowHelpHint] = useState(true);
+  const [currentHintIndex, setCurrentHintIndex] = useState(0);
+  const [showInitialHints, setShowInitialHints] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     stats: [],
     nextAppointment: null,
@@ -59,6 +71,147 @@ const Dashboard = () => {
     priorityDistribution: [],
     caseInsights: []
   });
+
+  // Enhanced initial help messages
+  const initialHelpMessages = [
+    {
+      text: "👋 Welcome! Need help getting started?",
+      color: "bg-blue-500",
+      position: { x: -120, y: -80 }
+    },
+    {
+      text: "📱 Click here for quick assistance!",
+      color: "bg-purple-500",
+      position: { x: -100, y: -40 }
+    },
+    {
+      text: "💡 Discover all features",
+      color: "bg-green-500",
+      position: { x: -80, y: -120 }
+    }
+  ];
+
+  // Enhanced help hints with categories and messages
+  const helpHints: HelpHint[] = [
+    {
+      category: "Navigation",
+      messages: [
+        "👋 Need help finding your way around?",
+        "🎯 Looking for specific features?",
+        "🗺️ Want to explore all capabilities?"
+      ],
+      icon: HiOutlineLocationMarker,
+      color: "text-blue-500"
+    },
+    {
+      category: "Case Management",
+      messages: [
+        "📊 Want to track your case progress?",
+        "📁 Need to manage documents?",
+        "⚖️ Looking for case updates?"
+      ],
+      icon: HiOutlineDocumentText,
+      color: "text-purple-500"
+    },
+    {
+      category: "Support",
+      messages: [
+        "🤝 Need assistance with anything?",
+        "💬 Want to chat with support?",
+        "❓ Have questions about services?"
+      ],
+      icon: HiOutlineChat,
+      color: "text-green-500"
+    }
+  ];
+
+  const CurrentHintIcon = helpHints[currentHintIndex].icon;
+
+  // Animation variants
+  const floatingVariants: Variants = {
+    hidden: { opacity: 0, y: 20, x: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      x: 0,
+      transition: {
+        delay: i * 0.2,
+        duration: 0.5,
+        repeat: Infinity,
+        repeatType: "reverse",
+        repeatDelay: 3
+      }
+    }),
+    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
+  };
+
+  const buttonVariants: Variants = {
+    initial: { scale: 1 },
+    animate: {
+      scale: [1, 1.1, 1],
+      rotate: [0, -10, 10, -10, 0],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatDelay: 3
+      }
+    },
+    hover: {
+      scale: 1.15,
+      rotate: 180,
+      transition: { duration: 0.3 }
+    },
+    tap: { scale: 0.95 }
+  };
+
+  const menuItemVariants: Variants = {
+    initial: { x: -10, opacity: 0 },
+    animate: { x: 0, opacity: 1 },
+    hover: { scale: 1.05, x: 5 }
+  };
+
+  const notificationDotVariants: Variants = {
+    initial: { scale: 0 },
+    animate: {
+      scale: [1, 1.2, 1],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatType: "reverse"
+      }
+    }
+  };
+
+  // Animation variants for initial messages
+  const initialMessageVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: (i: number) => ({
+      opacity: 1,
+      scale: 1,
+      transition: {
+        delay: i * 0.3,
+        duration: 0.5,
+        repeat: 3,
+        repeatType: "reverse"
+      }
+    }),
+    exit: { 
+      opacity: 0,
+      scale: 0.8,
+      transition: { duration: 0.3 }
+    }
+  };
+
+  // Floating animation for messages
+  const floatingAnimation = {
+    y: [-5, 5],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      repeatType: "reverse" as const,
+      ease: "easeInOut"
+    }
+  };
 
   // Format relative time
   const formatRelativeTime = (date: Date | string) => {
@@ -309,7 +462,7 @@ const Dashboard = () => {
               title: 'Book Appointment',
               icon: HiOutlineCalendar,
               color: 'bg-blue-100 text-blue-600',
-              href: '/client/appointments/book',
+              href: '/client/appointments/list',
               description: 'Schedule a meeting with your lawyer'
             },
             {
@@ -317,7 +470,7 @@ const Dashboard = () => {
               title: 'Make Payment',
               icon: HiOutlineCash,
               color: 'bg-green-100 text-green-600',
-              href: '/client/payments',
+              href: '/client/registration/payment',
               description: 'View and pay pending invoices'
             },
             {
@@ -325,7 +478,7 @@ const Dashboard = () => {
               title: 'Message Lawyer',
               icon: HiOutlineChat,
               color: 'bg-purple-100 text-purple-600',
-              href: '/client/messages',
+              href: '/client/communication/messages',
               description: 'Send a message to your lawyer'
             },
             {
@@ -403,6 +556,29 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    // Show initial hints for 10 seconds
+    const initialHintTimer = setTimeout(() => {
+      setShowInitialHints(false);
+    }, 10000);
+
+    // Then show rotating category hints for another 10 seconds
+    const categoryHintTimer = setTimeout(() => {
+      setShowHelpHint(false);
+    }, 20000);
+
+    // Rotate through hint categories
+    const hintInterval = setInterval(() => {
+      setCurrentHintIndex((prev) => (prev + 1) % helpHints.length);
+    }, 5000);
+
+    return () => {
+      clearTimeout(initialHintTimer);
+      clearTimeout(categoryHintTimer);
+      clearInterval(hintInterval);
+    };
+  }, [helpHints.length]);
+
   const handleMarkNotificationAsRead = async (id: string) => {
     try {
       await fetch(`/api/client/notifications/${id}/read`, { method: 'POST' });
@@ -432,13 +608,13 @@ const Dashboard = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'book-appointment':
-        router.push('/client/appointments/book');
+        router.push('/client/appointments/list');
         break;
       case 'make-payment':
         router.push('/client/registration/payment');
         break;
       case 'message-lawyer':
-        router.push('/client/messages');
+        router.push('/client/communication/messages');
         break;
       case 'submit-document':
         router.push('/client/documents/upload');
@@ -470,6 +646,31 @@ const Dashboard = () => {
     }
   };
 
+  // Add help action handler
+  const handleHelpAction = (action: string) => {
+    switch (action) {
+      case 'tutorial':
+        // Handle tutorial action
+        router.push('/client/tutorial');
+        break;
+      case 'faq':
+        // Handle FAQ action
+        router.push('/client/faq');
+        break;
+      case 'support':
+        // Handle support action
+        router.push('/client/support');
+        break;
+      case 'documentation':
+        // Handle documentation action
+        router.push('/client/documentation');
+        break;
+      default:
+        break;
+    }
+    setShowHelpMenu(false);
+  };
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -479,9 +680,9 @@ const Dashboard = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 lg:p-8"
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 p-0"
     >
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-full space-y-6 px-4 lg:px-8">
         <motion.h1
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -571,6 +772,196 @@ const Dashboard = () => {
               />
             </motion.div>
           </div>
+        </div>
+      </div>
+      {/* Enhanced Help Button Section */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <AnimatePresence>
+          {showInitialHints && (
+            <div className="absolute bottom-0 right-0">
+              {initialHelpMessages.map((message, index) => (
+                <motion.div
+                  key={index}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  custom={index}
+                  variants={initialMessageVariants}
+                  style={{
+                    position: 'absolute',
+                    bottom: message.position.y,
+                    right: message.position.x,
+                    transformOrigin: 'bottom right'
+                  }}
+                  className="whitespace-nowrap"
+                >
+                  <motion.div
+                    animate={floatingAnimation}
+                    className={`${message.color} text-white px-4 py-2 rounded-full shadow-lg 
+                               text-sm font-medium flex items-center space-x-2 
+                               backdrop-blur-sm bg-opacity-90 cursor-pointer
+                               hover:bg-opacity-100 transition-all duration-300`}
+                    onClick={() => {
+                      setShowHelpMenu(true);
+                      setShowInitialHints(false);
+                      setShowHelpHint(false);
+                    }}
+                  >
+                    <span>{message.text}</span>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-2 h-2 rounded-full bg-white"
+                    />
+                  </motion.div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {showHelpHint && !showInitialHints && (
+            <div className="absolute bottom-full right-0 mb-6 space-y-3">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                variants={floatingVariants}
+                custom={currentHintIndex}
+                className="relative"
+              >
+                <motion.div 
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 max-w-xs
+                             hover:shadow-2xl transition-all duration-300 cursor-pointer"
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    setShowHelpMenu(true);
+                    setShowHelpHint(false);
+                  }}
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <div className={`${helpHints[currentHintIndex].color} p-2 rounded-full bg-opacity-10`}>
+                      <CurrentHintIcon className="w-5 h-5" />
+                    </div>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {helpHints[currentHintIndex].category}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {helpHints[currentHintIndex].messages.map((message, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="text-sm text-gray-600 dark:text-gray-300"
+                      >
+                        {message}
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <div className="relative group">
+          <motion.button
+            onClick={() => {
+              setShowHelpMenu(!showHelpMenu);
+              setShowHelpHint(false);
+              setShowInitialHints(false);
+            }}
+            variants={buttonVariants}
+            initial="initial"
+            animate="animate"
+            whileHover="hover"
+            whileTap="tap"
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 
+                       text-white rounded-full p-4 shadow-lg transition-all duration-300 
+                       flex items-center justify-center relative group"
+          >
+            <HiOutlineInformationCircle className="w-7 h-7 group-hover:rotate-180 transition-transform duration-300" />
+            <motion.div
+              variants={notificationDotVariants}
+              initial="initial"
+              animate="animate"
+              className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"
+            />
+          </motion.button>
+
+          <AnimatePresence>
+            {showHelpMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="absolute bottom-full right-0 mb-4 w-80 bg-white dark:bg-gray-800 
+                           rounded-xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="space-y-4">
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white mb-3 border-b pb-2 dark:border-gray-700">
+                    How can we help you?
+                  </div>
+                  
+                  {[
+                    {
+                      id: 'tutorial',
+                      title: 'Take a Tour',
+                      description: 'Get started with a guided tour',
+                      icon: HiOutlineClipboardCheck,
+                      color: 'text-blue-600'
+                    },
+                    {
+                      id: 'faq',
+                      title: 'FAQ',
+                      description: 'Find answers to common questions',
+                      icon: HiOutlineDocumentText,
+                      color: 'text-green-600'
+                    },
+                    {
+                      id: 'support',
+                      title: 'Contact Support',
+                      description: 'Get help from our team',
+                      icon: HiOutlineChat,
+                      color: 'text-purple-600'
+                    },
+                    {
+                      id: 'documentation',
+                      title: 'Documentation',
+                      description: 'Browse detailed guides',
+                      icon: HiOutlineDocumentDuplicate,
+                      color: 'text-orange-600'
+                    }
+                  ].map((item, index) => (
+                    <motion.button
+                      key={item.id}
+                      variants={menuItemVariants}
+                      initial="initial"
+                      animate="animate"
+                      whileHover="hover"
+                      transition={{ delay: index * 0.1 }}
+                      onClick={() => handleHelpAction(item.id)}
+                      className="flex items-start space-x-4 w-full p-3 hover:bg-gray-50 dark:hover:bg-gray-700 
+                                rounded-lg transition-all duration-200 group"
+                    >
+                      <div className={`p-2 rounded-lg ${item.color} bg-opacity-10 group-hover:bg-opacity-20`}>
+                        <item.icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {item.title}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.description}
+                        </div>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

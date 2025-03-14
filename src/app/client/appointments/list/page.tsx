@@ -22,6 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HiOutlineBell } from "react-icons/hi";
+import NotificationSettings from '@/components/NotificationSettings';
 
 interface Appointment {
   id: string;
@@ -54,6 +57,7 @@ export default function ClientAppointmentList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [clientId, setClientId] = useState<string>(''); // You'll need to get this from your auth context
   const { toast } = useToast();
 
   const fetchAppointments = async () => {
@@ -87,6 +91,8 @@ export default function ClientAppointmentList() {
 
   useEffect(() => {
     fetchAppointments();
+    // Get client ID from your auth context
+    // setClientId(authContext.user.id);
   }, []);
 
   const getStatusBadgeColor = (status: string) => {
@@ -136,81 +142,97 @@ export default function ClientAppointmentList() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>My Appointments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Purpose</TableHead>
-                  <TableHead>Case Type</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Venue</TableHead>
-                  <TableHead>Coordinator</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {appointments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
-                      No appointments found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  appointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
-                      <TableCell>
-                        {format(new Date(appointment.scheduledTime), 'PPp')}
-                      </TableCell>
-                      <TableCell>{appointment.duration} minutes</TableCell>
-                      <TableCell>{appointment.purpose}</TableCell>
-                      <TableCell>{appointment.caseType}</TableCell>
-                      <TableCell>
-                        <Badge className={getPriorityBadgeColor(appointment.priority)}>
-                          {appointment.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusBadgeColor(appointment.status)}>
-                          {appointment.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{appointment.venue || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{appointment.coordinator.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {appointment.coordinator.office?.name || 'No office assigned'}
-                            {appointment.coordinator.office?.location && 
-                              ` - ${appointment.coordinator.office.location}`
-                            }
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedAppointment(appointment)}
-                        >
-                          View Details
-                        </Button>
-                      </TableCell>
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="list">Appointments</TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <HiOutlineBell className="h-5 w-5" />
+            Notifications
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="list">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Appointments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Purpose</TableHead>
+                      <TableHead>Case Type</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Venue</TableHead>
+                      <TableHead>Coordinator</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {appointments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8">
+                          No appointments found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      appointments.map((appointment) => (
+                        <TableRow key={appointment.id}>
+                          <TableCell>
+                            {format(new Date(appointment.scheduledTime), 'PPp')}
+                          </TableCell>
+                          <TableCell>{appointment.duration} minutes</TableCell>
+                          <TableCell>{appointment.purpose}</TableCell>
+                          <TableCell>{appointment.caseType}</TableCell>
+                          <TableCell>
+                            <Badge className={getPriorityBadgeColor(appointment.priority)}>
+                              {appointment.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadgeColor(appointment.status)}>
+                              {appointment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{appointment.venue || 'N/A'}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{appointment.coordinator.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {appointment.coordinator.office?.name || 'No office assigned'}
+                                {appointment.coordinator.office?.location && 
+                                  ` - ${appointment.coordinator.office.location}`
+                                }
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedAppointment(appointment)}
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="notifications">
+          <div className="flex justify-center">
+            <NotificationSettings userId={clientId} userType="client" />
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
         <DialogContent className="max-w-2xl">

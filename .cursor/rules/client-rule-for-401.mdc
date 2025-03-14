@@ -1,6 +1,10 @@
 ---
-description: client rolesor the 401requste
+description: 
 globs: 
+---
+---
+description: client rolesor the 401requste
+globs: true
 alwaysApply: true
 ---
  try {

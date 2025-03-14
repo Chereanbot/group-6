@@ -56,6 +56,10 @@ export default function MyCasesPage(): JSX.Element {
     }
   };
 
+  const handleCaseDeleted = () => {
+    fetchCases(); // Refresh the cases list after deletion
+  };
+
   const filteredCases = cases.filter((case_) => {
     const matchesSearch = case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       case_.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -167,7 +171,11 @@ export default function MyCasesPage(): JSX.Element {
           </CardContent>
         </Card>
       ) : (
-        <CaseTable cases={filteredCases} isAmharic={isAmharic} />
+        <CaseTable 
+          cases={filteredCases} 
+          isAmharic={isAmharic} 
+          onCaseDeleted={handleCaseDeleted}
+        />
       )}
     </motion.div>
   );

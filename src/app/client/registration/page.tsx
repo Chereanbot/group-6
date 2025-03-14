@@ -197,21 +197,21 @@ export default function RegistrationPage() {
 
   // Update form with profile data when available
   useEffect(() => {
-    if (profile) {
+    if (profile && profile.user) {
       form.reset({
-        fullName: profile.user.fullName,
-        phone: profile.phone,
+        fullName: profile.user.fullName || '',
+        phone: profile.phone || '',
         email: profile.user.email || '',
-        age: profile.age,
-        gender: profile.sex,
-        familyMembers: profile.numberOfFamily,
-        healthStatus: profile.healthStatus,
-        region: profile.region,
-        zone: profile.zone,
-        wereda: profile.wereda,
-        kebele: profile.kebele,
+        age: profile.age || 18,
+        gender: profile.sex || 'MALE',
+        familyMembers: profile.numberOfFamily || 0,
+        healthStatus: profile.healthStatus || 'HEALTHY',
+        region: profile.region || '',
+        zone: profile.zone || '',
+        wereda: profile.wereda || '',
+        kebele: profile.kebele || '',
         houseNumber: profile.houseNumber || '',
-        officeId: profile.assignedOffice.id
+        officeId: profile.assignedOffice?.id || ''
       });
     }
   }, [profile]);

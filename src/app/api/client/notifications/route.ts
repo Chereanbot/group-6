@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyAuth } from "@/lib/edge-auth";
 import prisma from "@/lib/prisma";
-import { UserRoleEnum } from "@prisma/client";
+import { UserRoleEnum, NotificationType } from "@prisma/client";
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
@@ -25,23 +25,52 @@ export async function GET(): Promise<NextResponse> {
       );
     }
 
-    // Get notifications
+    // Get query parameters
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const typeParam = url.searchParams.get('type')?.toUpperCase();
+    const itemsPerPage = 10;
+
+    // Validate notification type
+    let type: NotificationType | undefined;
+    if (typeParam && typeParam !== 'ALL') {
+      if (Object.values(NotificationType).includes(typeParam as NotificationType)) {
+        type = typeParam as NotificationType;
+      } else {
+        return NextResponse.json(
+          { success: false, message: "Invalid notification type" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Build where clause
+    const where = {
+      userId: payload.id,
+      ...(type ? { type } : {})
+    };
+
+    // Get total count for pagination
+    const total = await prisma.notification.count({ where });
+    const totalPages = Math.ceil(total / itemsPerPage);
+
+    // Get notifications with pagination
     const notifications = await prisma.notification.findMany({
-      where: {
-        userId: payload.id
-      },
+      where,
       orderBy: {
         createdAt: 'desc'
       },
+      skip: (page - 1) * itemsPerPage,
+      take: itemsPerPage,
       select: {
         id: true,
         title: true,
         message: true,
         type: true,
         status: true,
-        createdAt: true
-      },
-      take: 10 // Limit to 10 most recent notifications
+        createdAt: true,
+        link: true
+      }
     });
 
     return NextResponse.json({
@@ -52,8 +81,12 @@ export async function GET(): Promise<NextResponse> {
         message: notification.message,
         type: notification.type.toLowerCase(),
         read: notification.status === 'READ',
-        createdAt: notification.createdAt.toISOString()
-      }))
+        createdAt: notification.createdAt.toISOString(),
+        link: notification.link
+      })),
+      page,
+      totalPages,
+      totalItems: total
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);

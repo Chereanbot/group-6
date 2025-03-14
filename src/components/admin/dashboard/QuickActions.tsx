@@ -1,19 +1,21 @@
 "use client";
 
-import { HiOutlinePlus, HiOutlineUserAdd, HiOutlineDocumentAdd, HiOutlineCog } from 'react-icons/hi';
+import {
+  HiOutlineUserAdd,
+  HiOutlineOfficeBuilding,
+  HiOutlineCog,
+  HiOutlineDocumentReport,
+  HiOutlineChartBar,
+  HiOutlineCash,
+  HiOutlineUserGroup,
+  HiOutlineShieldCheck
+} from 'react-icons/hi';
 import { useRouter } from 'next/navigation';
 
 const QuickActions = () => {
   const router = useRouter();
 
   const actions = [
-    {
-      title: 'New Case',
-      icon: <HiOutlinePlus className="w-6 h-6" />,
-      description: 'Create a new legal case',
-      href: '/admin/cases/new',
-      color: 'bg-blue-500'
-    },
     {
       title: 'Add User',
       icon: <HiOutlineUserAdd className="w-6 h-6" />,
@@ -22,12 +24,22 @@ const QuickActions = () => {
       color: 'bg-green-500'
     },
     {
-      title: 'New Service',
-      icon: <HiOutlineDocumentAdd className="w-6 h-6" />,
-      description: 'Create service package',
-      href: '/admin/services/new',
-      color: 'bg-purple-500'
+      title: 'Office Management',
+      icon: <HiOutlineOfficeBuilding className="w-6 h-6" />,
+      description: 'Manage office resources',
+      href: '/admin/office',
+      color: 'bg-pink-500'
     },
+ 
+  
+    {
+      title: 'Security Settings',
+      icon: <HiOutlineShieldCheck className="w-6 h-6" />,
+      description: 'Manage security controls',
+      href: '/admin/users/security',
+      color: 'bg-red-500'
+    },
+   
     {
       title: 'Settings',
       icon: <HiOutlineCog className="w-6 h-6" />,
@@ -38,12 +50,12 @@ const QuickActions = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {actions.map((action) => (
         <button
           key={action.title}
           onClick={() => router.push(action.href)}
-          className="p-4 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-all"
+          className="p-4 rounded-lg bg-white dark:bg-gray-800 shadow hover:shadow-md transition-all transform hover:scale-105 duration-200"
         >
           <div className={`w-12 h-12 rounded-lg ${action.color} text-white flex items-center justify-center mb-4`}>
             {action.icon}

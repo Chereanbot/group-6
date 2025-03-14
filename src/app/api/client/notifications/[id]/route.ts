@@ -38,14 +38,12 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      data: {
-        id: params.id
-      }
+      message: "Notification deleted successfully"
     });
   } catch (error) {
-    console.error("Error dismissing notification:", error);
+    console.error("Error deleting notification:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to dismiss notification" },
+      { success: false, message: "Failed to delete notification" },
       { status: 500 }
     );
   }

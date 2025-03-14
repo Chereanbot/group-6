@@ -408,10 +408,10 @@ export function WelcomeTour() {
       onClickMask={() => {
         // Do nothing to prevent closing on mask click
       }}
-      onClickNext={() => {
+      onNext={() => {
         handleStepChange(currentStep + 1);
       }}
-      onClickPrev={() => {
+      onPrev={() => {
         handleStepChange(currentStep - 1);
       }}
       onClickDot={(step: number) => {

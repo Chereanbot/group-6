@@ -10,8 +10,9 @@ import {
   FaSun, FaMoon, FaBell, FaGlobe, FaUser,
   FaSignOutAlt, FaBars, FaTimes, FaHome,
   FaFolder, FaCalendarAlt, FaFileAlt,
-  FaEnvelope, FaCog, FaQuestionCircle
+  FaEnvelope, FaCog, FaQuestionCircle, FaTrash, FaExternalLinkAlt
 } from 'react-icons/fa';
+import { formatDistanceToNow } from 'date-fns';
 
 interface MenuItem {
   label: string;
@@ -24,15 +25,58 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  time: string;
-  read: boolean;
   type: 'info' | 'warning' | 'success' | 'error';
+  read: boolean;
+  createdAt: string;
+  link?: string;
 }
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },
   { code: 'am', name: 'አማርኛ', flag: '🇪🇹' }
 ];
+
+// Add keyframes animation for bell
+const bellRingAnimation = `
+@keyframes bellRing {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(7deg); }
+  80% { transform: rotate(-7deg); }
+  100% { transform: rotate(0); }
+}
+
+.animate-bell {
+  animation: bellRing 1s ease-in-out;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.bell-ring-effect::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: rgba(239, 68, 68, 0.5);
+  animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+`;
+
+// Add style tag to head
+const styleTag = document.createElement('style');
+styleTag.textContent = bellRingAnimation;
+document.head.appendChild(styleTag);
 
 const Header = () => {
   const router = useRouter();
@@ -44,6 +88,10 @@ const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [user, setUser] = useState<{ fullName: string; email: string } | null>(null);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+  const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
   
   const headerRef = useRef<HTMLElement>(null);
   const languageRef = useRef<HTMLDivElement>(null);
@@ -107,6 +155,26 @@ const Header = () => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    // Simulating user data fetch - replace this with your actual user data fetching logic
+    const fetchUserData = async () => {
+      try {
+        // Replace this with your actual API call
+        // const response = await fetch('/api/user');
+        // const userData = await response.json();
+        // For now, using mock data
+        setUser({
+          fullName: 'John Doe',
+          email: 'john.doe@example.com'
+        });
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   const handleLogout = async () => {
     try {
       await router.push('/login');
@@ -130,6 +198,154 @@ const Header = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Update notification state and trigger animation
+  useEffect(() => {
+    if (notifications.length > previousNotificationCount) {
+      setHasNewNotifications(true);
+      const timer = setTimeout(() => setHasNewNotifications(false), 2000);
+      return () => clearTimeout(timer);
+    }
+    setPreviousNotificationCount(notifications.length);
+  }, [notifications.length, previousNotificationCount]);
+
+  // Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setNotificationsLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+
+        const response = await fetch('/api/client/notifications', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          router.push('/login');
+          return;
+        }
+
+        if (!response.ok) throw new Error('Failed to fetch notifications');
+        const { data } = await response.json();
+        setNotifications(data);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+    const pollInterval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(pollInterval);
+  }, [router]);
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`/api/client/notifications/${notificationId}/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to mark notification as read');
+      
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification.id === notificationId
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch('/api/client/notifications/mark-all-read', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to mark all notifications as read');
+      
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification => ({ ...notification, read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  // Add delete notification functionality
+  const handleDeleteNotification = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+
+      const response = await fetch(`/api/client/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) throw new Error('Failed to delete notification');
+      
+      setNotifications(prevNotifications =>
+        prevNotifications.filter(notification => notification.id !== notificationId)
+      );
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
   if (!mounted) return null;
 
   return (
@@ -142,7 +358,7 @@ const Header = () => {
         {/* Logo and Brand */}
         <Link href="/dashboard" className="flex items-center space-x-3">
           <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
-          <span className="font-bold text-xl hidden sm:inline">DulaCMS</span>
+          <span className="font-bold text-xl hidden sm:inline">Du LAS</span>
         </Link>
 
         {/* Right Section */}
@@ -185,13 +401,20 @@ const Header = () => {
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setHasNewNotifications(false);
+              }}
+              className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 relative 
+                ${hasNewNotifications ? 'animate-bell bell-ring-effect' : ''}`}
             >
-              <FaBell className="w-5 h-5" />
+              <FaBell className={`w-5 h-5 ${hasNewNotifications ? 'text-red-500' : ''}`} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadCount}
+                <span className="absolute -top-1 -right-1 flex items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
                 </span>
               )}
             </button>
@@ -202,36 +425,109 @@ const Header = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg 
+                  className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg 
                     border border-gray-200 dark:border-gray-700"
                 >
-                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="font-semibold">{t('notifications.title')}</h3>
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{t('notifications.title')}</h3>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-full">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                        >
+                          {t('notifications.markAllRead')}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
+
+                  <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+                    {notificationsLoading ? (
                       <div className="p-4 text-center text-gray-500">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                        <p className="mt-2">{t('notifications.loading')}</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        <div className="mb-2">
+                          <FaBell className="w-8 h-8 mx-auto text-gray-400" />
+                        </div>
                         {t('notifications.noNotifications')}
                       </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 border-b border-gray-200 dark:border-gray-700 
-                            ${!notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <span className={`p-2 rounded-full ${getNotificationIcon(notification.type)}`}>
-                              <FaBell className="w-4 h-4" />
-                            </span>
-                            <div>
-                              <h4 className="font-medium">{t(`notifications.${notification.title}`)}</h4>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">{notification.message}</p>
-                              <span className="text-xs text-gray-500">{notification.time}</span>
+                      <>
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-200 dark:border-gray-700 
+                              ${!notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''} 
+                              hover:bg-gray-50 dark:hover:bg-gray-700/50 group`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <span className={`p-2 rounded-full ${getNotificationIcon(notification.type)}`}>
+                                <FaBell className="w-4 h-4" />
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <h4 className="font-medium truncate pr-4">{notification.title}</h4>
+                                  <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {notification.link && (
+                                      <Link
+                                        href={notification.link}
+                                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          markAsRead(notification.id);
+                                        }}
+                                      >
+                                        <FaExternalLinkAlt className="w-3.5 h-3.5 text-gray-500" />
+                                      </Link>
+                                    )}
+                                    <button
+                                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-600 rounded"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteNotification(notification.id);
+                                      }}
+                                    >
+                                      <FaTrash className="w-3.5 h-3.5 text-red-500" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{notification.message}</p>
+                                <div className="flex justify-between items-center mt-2">
+                                  <span className="text-xs text-gray-500">
+                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                  </span>
+                                  {!notification.read && (
+                                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                                      {t('notifications.new')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
+                        ))}
+                        <div className="p-3 text-center border-t border-gray-200 dark:border-gray-700">
+                          <Link
+                            href="/client/notifications"
+                            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center justify-center space-x-1"
+                            onClick={() => setShowNotifications(false)}
+                          >
+                            <span>{t('notifications.viewAll')}</span>
+                            <FaExternalLinkAlt className="w-3 h-3" />
+                          </Link>
                         </div>
-                      ))
+                      </>
                     )}
                   </div>
                 </motion.div>
@@ -271,8 +567,8 @@ const Header = () => {
                     border border-gray-200 dark:border-gray-700"
                 >
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <p className="font-medium">John Doe</p>
-                    <p className="text-sm text-gray-500">john.doe@example.com</p>
+                    <p className="font-medium">{user?.fullName || 'Guest User'}</p>
+                    <p className="text-sm text-gray-500">{user?.email || 'No email available'}</p>
                   </div>
                   <nav className="p-2">
                     <Link

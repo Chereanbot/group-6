@@ -9,140 +9,164 @@ import {
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { UserStatus } from '@prisma/client';
+import { Search, X } from 'lucide-react';
+
+interface FiltersState {
+  specialization: string;
+  status: string;
+  office: string;
+  searchTerm: string;
+  experience: string;
+  caseLoad: string;
+}
 
 interface LawyerFiltersProps {
-  filters: {
-    specialization: string;
-    status: string;
-    office: string;
-    searchTerm: string;
-  };
-  onFilterChange: (filters: any) => void;
+  filters: FiltersState;
+  onFilterChange: (filters: FiltersState) => void;
 }
 
 export function LawyerFilters({ filters, onFilterChange }: LawyerFiltersProps) {
-  const [offices, setOffices] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
-  const [localFilters, setLocalFilters] = useState(filters);
+  const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
+  const [specializations, setSpecializations] = useState<string[]>([]);
+  const [offices, setOffices] = useState<string[]>([]);
 
   useEffect(() => {
-    // Fetch offices and specializations
-    const fetchFilterData = async () => {
+    // Fetch specializations and offices
+    const fetchFilterOptions = async () => {
       try {
-        const [officesRes, specializationsRes] = await Promise.all([
-          fetch('/api/admin/offices'),
-          fetch('/api/admin/specializations')
+        const token = localStorage.getItem('token');
+        const [specializationsRes, officesRes] = await Promise.all([
+          fetch('/api/specializations', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch('/api/offices', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
         ]);
 
-        if (officesRes.ok && specializationsRes.ok) {
-          const [officesData, specializationsData] = await Promise.all([
-            officesRes.json(),
-            specializationsRes.json()
-          ]);
+        if (specializationsRes.ok) {
+          const specData = await specializationsRes.json();
+          setSpecializations(specData.data.map((s: any) => s.name));
+        }
 
-          setOffices(officesData.data || []);
-          setSpecializations(specializationsData.data || []);
+        if (officesRes.ok) {
+          const officeData = await officesRes.json();
+          setOffices(officeData.data.map((o: any) => o.name));
         }
       } catch (error) {
-        console.error('Error fetching filter data:', error);
+        console.error('Error fetching filter options:', error);
       }
     };
 
-    fetchFilterData();
+    fetchFilterOptions();
   }, []);
 
-  const handleFilterChange = (key: string, value: string) => {
+  const handleFilterChange = (key: keyof FiltersState, value: string) => {
     const newFilters = { ...localFilters, [key]: value };
     setLocalFilters(newFilters);
     onFilterChange(newFilters);
   };
 
   const handleReset = () => {
-    const resetFilters = {
+    const resetFilters: FiltersState = {
       specialization: 'all',
       status: 'all',
       office: 'all',
-      searchTerm: ''
+      searchTerm: '',
+      experience: '',
+      caseLoad: ''
     };
     setLocalFilters(resetFilters);
     onFilterChange(resetFilters);
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground dark:text-muted-foreground-dark" />
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name or email"
+              placeholder="Search by name or email..."
               value={localFilters.searchTerm}
               onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-              className="pl-10 bg-background dark:bg-background-dark border-border dark:border-border-dark text-foreground dark:text-foreground-dark"
+              className="pl-8"
             />
           </div>
         </div>
-        
-        <div className="w-full sm:w-48">
-          <Select
-            value={localFilters.office || 'all'}
-            onValueChange={(value) => handleFilterChange('office', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Offices" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Offices</SelectItem>
-              {offices.map((office: any) => (
-                <SelectItem key={office.id} value={office.id}>
-                  {office.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={localFilters.status}
+          onValueChange={(value) => handleFilterChange('status', value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {Object.values(UserStatus).map((status) => (
+              <SelectItem key={status} value={status}>
+                {status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={localFilters.specialization}
+          onValueChange={(value) => handleFilterChange('specialization', value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Specialization" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Specializations</SelectItem>
+            {specializations.map((spec) => (
+              <SelectItem key={spec} value={spec}>
+                {spec}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={localFilters.office}
+          onValueChange={(value) => handleFilterChange('office', value)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Office" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Offices</SelectItem>
+            {offices.map((office) => (
+              <SelectItem key={office} value={office}>
+                {office}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            type="number"
+            placeholder="Minimum years of experience"
+            value={localFilters.experience}
+            onChange={(e) => handleFilterChange('experience', e.target.value)}
+          />
         </div>
-
-        <div className="w-full sm:w-48">
-          <Select
-            value={localFilters.specialization || 'all'}
-            onValueChange={(value) => handleFilterChange('specialization', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Specializations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Specializations</SelectItem>
-              {specializations.map((spec: any) => (
-                <SelectItem key={spec.id} value={spec.id}>
-                  {spec.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex-1">
+          <Input
+            type="number"
+            placeholder="Maximum case load"
+            value={localFilters.caseLoad}
+            onChange={(e) => handleFilterChange('caseLoad', e.target.value)}
+          />
         </div>
-
-        <div className="w-full sm:w-48">
-          <Select
-            value={localFilters.status || 'all'}
-            onValueChange={(value) => handleFilterChange('status', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="ACTIVE">Active</SelectItem>
-              <SelectItem value="INACTIVE">Inactive</SelectItem>
-              <SelectItem value="SUSPENDED">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
         <Button
           variant="outline"
           onClick={handleReset}
-          className="w-full sm:w-auto border-border dark:border-border-dark text-foreground dark:text-foreground-dark hover:bg-muted dark:hover:bg-muted-dark"
+          className="w-full sm:w-auto"
         >
+          <X className="mr-2 h-4 w-4" />
           Reset Filters
         </Button>
       </div>

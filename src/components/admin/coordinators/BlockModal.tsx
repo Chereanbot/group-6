@@ -1,90 +1,90 @@
 import { useState } from 'react';
+import { Dialog } from '@headlessui/react';
+import { HiOutlineExclamationCircle } from 'react-icons/hi';
+import { Coordinator } from '@/types/coordinator';
 
-interface BlockModalProps {
+export interface BlockModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (action: 'block' | 'ban', reason: string) => void;
-  coordinatorName: string;
-  loading?: boolean;
+  loading: boolean;
+  coordinator: Coordinator | null;
 }
 
-export const BlockModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  coordinatorName,
-  loading = false 
-}: BlockModalProps) => {
+export function BlockModal({ isOpen, onClose, onConfirm, loading, coordinator }: BlockModalProps) {
   const [action, setAction] = useState<'block' | 'ban'>('block');
   const [reason, setReason] = useState('');
 
-  if (!isOpen) return null;
+  if (!coordinator) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full">
-        <h3 className="text-lg font-bold mb-4">
-          {action === 'block' ? 'Block' : 'Ban'} {coordinatorName}
-        </h3>
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="mx-auto max-w-md rounded-lg bg-white dark:bg-gray-800 p-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <HiOutlineExclamationCircle className="h-6 w-6 text-yellow-600" aria-hidden="true" />
+            </div>
+            <div className="ml-3">
+              <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
+                {action === 'block' ? 'Block' : 'Ban'} Coordinator
+              </Dialog.Title>
+            </div>
+          </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Action</label>
-          <select
-            value={action}
-            onChange={(e) => setAction(e.target.value as 'block' | 'ban')}
-            className="w-full border rounded-lg p-2"
-            disabled={loading}
-          >
-            <option value="block">Block (30 days)</option>
-            <option value="ban">Ban (Permanent)</option>
-          </select>
-        </div>
+          <div className="mt-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Are you sure you want to {action} {coordinator.user.fullName}?
+            </p>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Reason</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="w-full border rounded-lg p-2"
-            rows={3}
-            placeholder="Enter reason..."
-            required
-            disabled={loading}
-          />
-        </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Action
+              </label>
+              <select
+                value={action}
+                onChange={(e) => setAction(e.target.value as 'block' | 'ban')}
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              >
+                <option value="block">Block</option>
+                <option value="ban">Ban</option>
+              </select>
+            </div>
 
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              if (reason.trim()) {
-                onConfirm(action, reason);
-              }
-            }}
-            className={`px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700
-              ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={loading || !reason.trim()}
-          >
-            {loading ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
-              </span>
-            ) : (
-              `Confirm ${action === 'block' ? 'Block' : 'Ban'}`
-            )}
-          </button>
-        </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Reason
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                rows={3}
+                placeholder="Enter reason..."
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end space-x-4">
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+              onClick={() => onConfirm(action, reason)}
+              disabled={loading || !reason.trim()}
+            >
+              {loading ? 'Processing...' : action === 'block' ? 'Block' : 'Ban'}
+            </button>
+          </div>
+        </Dialog.Panel>
       </div>
-    </div>
+    </Dialog>
   );
-}; 
+} 

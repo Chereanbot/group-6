@@ -1,255 +1,220 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { CaseStatus, CaseType, Priority, CaseCategory, UserRoleEnum, Prisma, ActivityType, UserStatus } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import prisma from '@/lib/prisma';
+import { verifyAuth } from '@/lib/auth';
+import { UserRoleEnum, CaseStatus, Priority, CaseCategory } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
+    // Get token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 403 }
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
       );
     }
 
-    const data = await request.json();
+    // Verify authentication and coordinator role
+    const authResult = await verifyAuth(token);
     
-    // Validate required fields
-    const requiredFields = [
-      'clientName',
-      'clientPhone',
-      'caseType',
-      'caseDescription',
-      'coordinatorId',
-      'officeId'
-    ];
-
-    const missingFields = requiredFields.filter(field => !data[field]);
-    if (missingFields.length > 0) {
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `Missing required fields: ${missingFields.join(', ')}` 
-        },
+        { success: false, error: 'Unauthorized - Invalid role' },
+        { status: 401 }
+      );
+    }
+
+    // Get coordinator profile with office
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: authResult.user.id },
+      include: { office: true }
+    });
+
+    if (!coordinator || !coordinator.office) {
+      return NextResponse.json(
+        { success: false, error: 'Coordinator not found or no office assigned' },
         { status: 400 }
       );
     }
 
-    // Create or update case in transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Check if user exists by phone number
-      let user = await tx.user.findFirst({
-        where: { phone: data.clientPhone }
-      });
+    // Parse request body
+    const body = await request.json();
+    const {
+      title,
+      description,
+      category,
+      priority,
+      region,
+      zone,
+      wereda,
+      kebele,
+      houseNumber,
+      caseType,
+      caseDescription,
+      evidenceDescription,
+      clientName,
+      clientPhone,
+      clientEmail,
+      documents
+    } = body;
 
-      // Create user if doesn't exist
-      if (!user) {
-        user = await tx.user.create({
-          data: {
-            fullName: data.clientName,
-            phone: data.clientPhone,
-            email: data.clientEmail || null,
-            password: Math.random().toString(36).slice(-8), // Generate random password
-            userRole: UserRoleEnum.CLIENT,
-            status: 'ACTIVE'
-          }
-        });
-      }
+    // Validate required fields
+    if (!title || !category || !wereda || !kebele || !clientName || !clientPhone) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
 
-      // Create the case
-      const newCase = await tx.case.create({
-        data: {
-          title: data.caseDescription,
-          description: data.caseDescription,
-          status: CaseStatus.ACTIVE,
-          priority: data.priority || Priority.MEDIUM,
-          category: data.category as CaseCategory || CaseCategory.OTHER,
-          
-          // Client Information
-          clientName: data.clientName,
-          clientPhone: data.clientPhone,
-          clientAddress: data.clientAddress || '',
-          
-          // Location Details
-          region: data.region || '',
-          zone: data.zone || '',
-          wereda: data.wereda,
-          kebele: data.kebele,
-          houseNumber: data.houseNumber || '',
-          
-          // Request & Response
-          clientRequest: data.clientRequest,
-          requestDetails: data.requestDetails || {},
-          
-          // Relations
-          client: {
-            connect: {
-              id: user.id
-            }
-          },
-          assignedOffice: {
-            connect: {
-              id: data.officeId
-            }
-          },
-
-          // Create initial activity
-          activities: {
-            create: {
-              title: "Case Created",
-              type: "CREATED",
-              description: `Case created for client ${data.clientName}`,
-              userId: user.id
-            }
-          }
+    // Create the case
+    const newCase = await prisma.case.create({
+      data: {
+        title,
+        description,
+        category: category as CaseCategory,
+        priority: (priority || 'MEDIUM') as Priority,
+        status: CaseStatus.PENDING,
+        region,
+        zone,
+        wereda,
+        kebele,
+        houseNumber,
+        clientName,
+        clientPhone,
+        clientRequest: caseDescription,
+        documentNotes: evidenceDescription,
+        assignedOffice: {
+          connect: { id: coordinator.officeId }
         },
-        include: {
-          client: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-              userRole: true
-            }
-          },
-          assignedOffice: true,
-          activities: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  email: true,
-                  userRole: true
-                }
-              }
+        // Create client if email is provided
+        client: clientEmail ? {
+          connectOrCreate: {
+            where: { email: clientEmail },
+            create: {
+              email: clientEmail,
+              phone: clientPhone,
+              fullName: clientName,
+              password: '', // This should be handled properly in production
+              userRole: UserRoleEnum.CLIENT
             }
           }
-        }
-      });
-
-      return newCase;
+        } : undefined
+      }
     });
 
+    // Create case activity
+    await prisma.caseActivity.create({
+      data: {
+        caseId: newCase.id,
+        userId: authResult.user.id,
+        title: 'Case Created',
+        description: `Case created by coordinator ${authResult.user.fullName}`,
+        type: 'CREATED'
+      }
+    });
+
+    // Return success response
     return NextResponse.json({
       success: true,
-      data: result
+      message: 'Case created successfully',
+      data: newCase
     });
 
   } catch (error) {
     console.error('Error creating case:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create case' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status') as CaseStatus;
-    const priority = searchParams.get('priority') as Priority;
-    const search = searchParams.get('search');
-    const type = searchParams.get('type') as CaseType;
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    // Get auth token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
-    const where: Prisma.CaseWhereInput = {
-      // Add filters only if they are provided
-      ...(status && { status }),
-      ...(priority && { priority }),
-      ...(type && { caseType: type }),
-      ...(search && {
-        OR: [
-          { title: { contains: search, mode: 'insensitive' } },
-          { description: { contains: search, mode: 'insensitive' } },
-          { clientName: { contains: search, mode: 'insensitive' } },
-          { clientPhone: { contains: search, mode: 'insensitive' } }
-        ]
-      }),
-      ...(startDate && endDate && {
-        createdAt: {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }),
-      // Filter by office
-      officeId: {
-        not: null
-      }
-    };
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized: Please login first" },
+        { status: 401 }
+      );
+    }
 
-    const [total, cases] = await prisma.$transaction([
-      prisma.case.count({ where }),
-      prisma.case.findMany({
-        where,
-        include: {
-          documents: true,
-          activities: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  email: true,
-                  userRole: true
-                }
-              }
-            },
-            orderBy: {
-              createdAt: 'desc'
-            }
-          },
-          assignedOffice: {
-            select: {
-              id: true,
-              name: true,
-              location: true
-            }
-          },
-          client: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-              userRole: true
-            }
+    // Verify authentication and check coordinator role
+    const { isAuthenticated, user } = await verifyAuth(token);
+
+    if (!isAuthenticated || !user) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is a coordinator
+    if (user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized: Only coordinators can view cases" },
+        { status: 403 }
+      );
+    }
+
+    // Get coordinator's office
+    const coordinator = await prisma.coordinator.findUnique({
+      where: { userId: user.id },
+      select: { officeId: true }
+    });
+
+    if (!coordinator) {
+      return NextResponse.json(
+        { success: false, message: "Coordinator profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // Fetch cases for the coordinator's office
+    const cases = await prisma.case.findMany({
+      where: {
+        officeId: coordinator.officeId
+      },
+      select: {
+        id: true,
+        title: true,
+        clientName: true,
+        status: true,
+        priority: true,
+        category: true,
+        createdAt: true,
+        assignedLawyer: {
+          select: {
+            fullName: true
           }
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        skip: (page - 1) * limit,
-        take: limit
-      })
-    ]);
+        assignedOffice: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      data: {
-        cases,
-        pagination: {
-          total,
-          pages: Math.ceil(total / limit),
-          page,
-          limit
-        }
-      }
+      cases: cases
     });
 
   } catch (error) {
     console.error('Error fetching cases:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to fetch cases" },
+      { status: 500 }
+    );
   }
 } 

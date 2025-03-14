@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendSMS } from '@/lib/sms';
 import { webPush } from '@/lib/webPush';
+import { NotificationPriority } from '@prisma/client';
+import { NotificationType } from '@prisma/client';
 
 interface NotificationOptions {
   userId: string;

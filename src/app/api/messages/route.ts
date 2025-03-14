@@ -124,10 +124,11 @@ export async function GET(req: Request) {
         where: {
           recipientId: authResult.user.id,
           senderId: userId,
-          isRead: false
+          status: {
+            in: ['SENT', 'DELIVERED']
+          }
         },
         data: {
-          isRead: true,
           status: 'READ'
         }
       });
@@ -138,29 +139,31 @@ export async function GET(req: Request) {
       where: {
         recipientId: authResult.user.id,
         senderId: userId,
-        isRead: false
+        status: {
+          in: ['SENT', 'DELIVERED']
+        }
       }
     });
 
     // Process messages
     const processedMessages = messages.map(msg => ({
       id: msg.id,
-      content: msg.content,
+      content: msg.text,
       senderId: msg.senderId,
       recipientId: msg.recipientId,
       timestamp: msg.createdAt,
-      status: msg.status || 'SENT',
-      isRead: Boolean(msg.isRead),
+      status: msg.status,
+      isRead: msg.status === 'READ',
       sender: {
         id: msg.sender.id,
         name: msg.sender.fullName,
         role: msg.sender.userRole
       },
-      recipient: {
+      recipient: msg.recipient ? {
         id: msg.recipient.id,
         name: msg.recipient.fullName,
         role: msg.recipient.userRole
-      }
+      } : null
     }));
 
     return NextResponse.json({
@@ -226,12 +229,12 @@ export async function POST(req: Request) {
     // Create the message with real-time metadata
     const message = await prisma.message.create({
       data: {
-        content,
+        text: content,
         senderId: authResult.user.id,
         recipientId,
         status: 'SENT',
-        createdAt: new Date(),
-        isRead: false
+        chatId: recipientId, // Using recipientId as chatId for direct messages
+        isForwarded: false
       },
       include: {
         sender: {
@@ -259,8 +262,13 @@ export async function POST(req: Request) {
 
     // Process the message with real-time status
     const processedMessage = {
-      ...message,
+      id: message.id,
+      content: message.text,
+      senderId: message.senderId,
+      recipientId: message.recipientId,
       timestamp: message.createdAt,
+      status: message.status,
+      isRead: message.status === 'READ',
       sender: {
         id: message.sender.id,
         name: message.sender.fullName,
@@ -268,13 +276,13 @@ export async function POST(req: Request) {
         isOnline: message.sender.isOnline,
         lastSeen: message.sender.lastSeen
       },
-      recipient: {
+      recipient: message.recipient ? {
         id: message.recipient.id,
         name: message.recipient.fullName,
         role: message.recipient.userRole,
         isOnline: message.recipient.isOnline,
         lastSeen: message.recipient.lastSeen
-      }
+      } : null
     };
 
     return NextResponse.json({ 
@@ -301,7 +309,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { messageId, isRead, isStarred, isArchived } = body;
+    const { messageId, status } = body;
 
     if (!messageId) {
       return new NextResponse(
@@ -313,9 +321,7 @@ export async function PATCH(request: Request) {
     const message = await prisma.message.update({
       where: { id: messageId },
       data: {
-        isRead: isRead !== undefined ? isRead : undefined,
-        isStarred: isStarred !== undefined ? isStarred : undefined,
-        isArchived: isArchived !== undefined ? isArchived : undefined
+        status: status || undefined
       }
     });
 

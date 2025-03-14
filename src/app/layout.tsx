@@ -17,6 +17,7 @@ import '@/styles/calendar.css'
 import 'react-day-picker/dist/style.css';
 import { TemplateProvider } from '@/contexts/TemplateContext';
 import { Toaster } from "@/components/ui/toaster"
+import QueryProvider from '@/providers/QueryProvider';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -69,11 +70,13 @@ export default async function RootLayout({
                       enableSystem
                       disableTransitionOnChange
                     >
-                      <LanguageProvider>
-                        <TemplateProvider>
-                          {children}
-                        </TemplateProvider>
-                      </LanguageProvider>
+                      <QueryProvider>
+                        <LanguageProvider>
+                          <TemplateProvider>
+                            {children}
+                          </TemplateProvider>
+                        </LanguageProvider>
+                      </QueryProvider>
                     </ThemeProvider>
                   </ServiceProvider>
                 </NotificationProvider>

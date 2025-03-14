@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CoordinatorFormService } from '@/services/coordinator/CoordinatorFormService';
 import { CoordinatorType, CoordinatorStatus } from '@prisma/client';
 import { HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineCalendar, HiOutlineBriefcase, HiOutlineMail, HiOutlinePhone, HiOutlineLockClosed } from 'react-icons/hi';
 import { toast } from 'react-hot-toast';
@@ -162,45 +161,23 @@ const AddCoordinatorPage = () => {
   const [offices, setOffices] = useState<Office[]>([]);
   const [officeError, setOfficeError] = useState<string | null>(null);
 
-  const service = new CoordinatorFormService();
-
   const fetchOffices = async () => {
     try {
-      const response = await fetch('/api/offices');
+      const response = await fetch('/api/admin/offices');
       if (!response.ok) {
         throw new Error('Failed to fetch offices');
       }
       const result = await response.json();
       
-      // Extract offices from the response data structure
-      const officesData = result.data.offices || [];
-      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch offices');
+      }
+
       // Transform the data to include availability
-      const officesWithAvailability = await Promise.all(
-        officesData.map(async (office: any) => {
-          try {
-            const availabilityResponse = await fetch(`/api/offices/${office.id}/availability`);
-            if (!availabilityResponse.ok) {
-              throw new Error('Failed to check availability');
-            }
-            const availability = await availabilityResponse.json();
-            return {
-              ...office,
-              capacity: availability.maxAllowed,
-              currentCount: availability.currentCount,
-              available: availability.available
-            };
-          } catch (error) {
-            console.error(`Failed to check availability for office ${office.id}:`, error);
-            return {
-              ...office,
-              capacity: 0,
-              currentCount: 0,
-              available: false
-            };
-          }
-        })
-      );
+      const officesWithAvailability = result.data.offices.map((office: any) => ({
+        ...office,
+        available: office.capacity > office.currentCount
+      }));
       
       // Filter out offices that are not active
       const activeOffices = officesWithAvailability.filter((office: any) => office.status === 'ACTIVE');
@@ -214,6 +191,61 @@ const AddCoordinatorPage = () => {
   useEffect(() => {
     fetchOffices();
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/admin/coordinators', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create coordinator');
+      }
+
+      toast.success('Coordinator created successfully');
+      router.push('/admin/coordinators');
+    } catch (error) {
+      console.error('Failed to create coordinator:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create coordinator');
+      toast.error(error instanceof Error ? error.message : 'Failed to create coordinator');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOfficeChange = async (officeId: string) => {
+    try {
+      setOfficeError(null);
+      const selectedOffice = offices.find(office => office.id === officeId);
+      
+      if (!selectedOffice) {
+        setOfficeError('Invalid office selected');
+        return;
+      }
+
+      if (!selectedOffice.available) {
+        setOfficeError('This office has reached its maximum capacity');
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, officeId }));
+    } catch (error) {
+      console.error('Error checking office availability:', error);
+      setOfficeError('Failed to verify office availability');
+    }
+  };
 
   const steps = [
     { number: 1, title: "Personal Info", icon: HiOutlineUser },
@@ -313,46 +345,6 @@ const AddCoordinatorPage = () => {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const coordinatorData = {
-        email: formData.email,
-        password: formData.password,
-        fullName: formData.fullName,
-        officeId: formData.officeId,
-        phone: formData.phone,
-        type: formData.type,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        specialties: formData.specialties,
-        status: formData.status
-      };
-
-      const result = await service.createCoordinator(coordinatorData);
-
-      if (result.success) {
-        toast.success('Coordinator created successfully');
-        router.push('/admin/coordinators');
-      } else {
-        setError(result.message || 'Failed to create coordinator');
-      }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create coordinator');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddQualification = () => {
     setFormData(prev => ({
       ...prev,
@@ -430,26 +422,6 @@ const AddCoordinatorPage = () => {
       </ul>
     </div>
   );
-
-  const handleOfficeChange = async (officeId: string) => {
-    try {
-      const availability = await service.checkOfficeAvailability(officeId);
-      
-      if (!availability.available) {
-        setOfficeError(`This office has reached its maximum capacity of ${availability.maxAllowed} coordinators (${availability.currentCount}/${availability.maxAllowed})`);
-        return;
-      }
-
-      setOfficeError(null);
-      setFormData(prev => ({
-        ...prev,
-        officeId
-      }));
-    } catch (error) {
-      console.error('Failed to check office availability:', error);
-      setOfficeError('Failed to check office availability. Please try again.');
-    }
-  };
 
   return (
     <div className={formStyles.container}>

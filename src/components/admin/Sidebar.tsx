@@ -237,7 +237,7 @@ const menuItems: MenuItem[] = [
     submenu: [
       { title: 'Service Requests', path: '/admin/services/requests', icon: HiOutlineClipboardList, description: 'Manage service requests' },
       { title: 'Packages', path: '/admin/services/packages', icon: HiOutlineClipboardList, description: 'Manage service packages' },
-      { title: 'Fee Structure', path: '/admin/services/fees', icon: HiOutlineClipboardList, description: 'Manage service fees' }
+      { title: 'Appeal Requests', path: '/admin/services/appeals', icon: HiOutlineClipboardList, description: 'Manage service appeals' }
     ]
   },
   {

@@ -6,7 +6,7 @@ import { UserRoleEnum } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const token = headersList.get('authorization')?.split(' ')[1] || 
                  request.headers.get('cookie')?.split('; ')
                  .find(row => row.startsWith('auth-token='))

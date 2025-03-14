@@ -31,7 +31,7 @@ export async function POST(request: Request) {
           amount: verificationData.amount,
           currency: verificationData.currency,
           status: 'COMPLETED',
-          transactionRef: tx_ref,
+          transactionId: tx_ref,
           paymentMethod: 'CHAPA',
           metadata: verificationData
         }

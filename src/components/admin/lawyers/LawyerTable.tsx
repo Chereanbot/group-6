@@ -17,6 +17,17 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { MoreHorizontal, Edit, Phone, Mail } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface Lawyer {
   id: string;
@@ -49,7 +60,12 @@ interface LawyerTableProps {
 }
 
 export function LawyerTable({ lawyers, loading, onRefresh }: LawyerTableProps) {
+  const router = useRouter();
   const [selectedLawyers, setSelectedLawyers] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  }>({ key: 'fullName', direction: 'asc' });
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -64,23 +80,104 @@ export function LawyerTable({ lawyers, loading, onRefresh }: LawyerTableProps) {
     }
   };
 
+  // Sorting function
+  const sortData = (data: any[], key: string, direction: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      let aValue = key.includes('.') ? key.split('.').reduce((obj, k) => obj?.[k], a) : a[key];
+      let bValue = key.includes('.') ? key.split('.').reduce((obj, k) => obj?.[k], b) : b[key];
+
+      if (aValue === null) aValue = '';
+      if (bValue === null) bValue = '';
+
+      if (direction === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  };
+
+  const handleSort = (key: string) => {
+    setSortConfig({
+      key,
+      direction:
+        sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc',
+    });
+  };
+
+  const sortedLawyers = sortData(lawyers, sortConfig.key, sortConfig.direction);
+
+  const handleView = (id: string) => {
+    router.push(`/admin/lawyers/${id}`);
+  };
+
+  const handleEdit = (id: string) => {
+    router.push(`/admin/lawyers/${id}/edit`);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this lawyer?')) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/lawyers/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete lawyer');
+        }
+
+        toast.success('Lawyer deleted successfully');
+        onRefresh();
+      } catch (error) {
+        toast.error('Failed to delete lawyer');
+        console.error('Error deleting lawyer:', error);
+      }
+    }
+  };
+
+  const handleContact = (type: 'email' | 'phone', value: string) => {
+    if (type === 'email') {
+      window.location.href = `mailto:${value}`;
+    } else {
+      window.location.href = `tel:${value}`;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors: Record<string, string> = {
+      ACTIVE: 'bg-green-500',
+      INACTIVE: 'bg-red-500',
+      PENDING: 'bg-yellow-500',
+      SUSPENDED: 'bg-orange-500'
+    };
+
+    return (
+      <Badge className={`${statusColors[status] || 'bg-gray-500'}`}>
+        {status}
+      </Badge>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="p-4 border-b dark:border-border-dark">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h3 className="text-lg font-medium text-foreground dark:text-foreground-dark">
-            Lawyers List
+            Lawyers List ({sortedLawyers.length})
           </h3>
           <div className="flex flex-wrap gap-2">
-            {selectedLawyers.length > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                className="dark:bg-red-900 dark:text-red-100 dark:hover:bg-red-800"
-              >
-                Delete Selected
-              </Button>
-            )}
             <Button
               variant="outline"
               size="sm"
@@ -98,37 +195,63 @@ export function LawyerTable({ lawyers, loading, onRefresh }: LawyerTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="dark:border-border-dark">
-              <TableHead className="dark:text-foreground-dark">Name</TableHead>
-              <TableHead className="dark:text-foreground-dark">Office</TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('fullName')}
+              >
+                Name {sortConfig.key === 'fullName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('lawyerProfile.office.name')}
+              >
+                Office {sortConfig.key === 'lawyerProfile.office.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
               <TableHead className="dark:text-foreground-dark">Specializations</TableHead>
-              <TableHead className="dark:text-foreground-dark">Experience</TableHead>
-              <TableHead className="dark:text-foreground-dark">Case Load</TableHead>
-              <TableHead className="dark:text-foreground-dark">Rating</TableHead>
-              <TableHead className="dark:text-foreground-dark">Status</TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('lawyerProfile.experience')}
+              >
+                Experience {sortConfig.key === 'lawyerProfile.experience' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('lawyerProfile.caseLoad')}
+              >
+                Case Load {sortConfig.key === 'lawyerProfile.caseLoad' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('lawyerProfile.rating')}
+              >
+                Rating {sortConfig.key === 'lawyerProfile.rating' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer dark:text-foreground-dark"
+                onClick={() => handleSort('status')}
+              >
+                Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </TableHead>
               <TableHead className="dark:text-foreground-dark">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center py-8 text-muted-foreground dark:text-muted-foreground-dark"
-                >
-                  Loading...
+                <TableCell colSpan={8} className="text-center py-8">
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : lawyers.length === 0 ? (
+            ) : sortedLawyers.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="text-center py-8 text-muted-foreground dark:text-muted-foreground-dark"
-                >
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No lawyers found
                 </TableCell>
               </TableRow>
             ) : (
-              lawyers.map((lawyer) => (
+              sortedLawyers.map((lawyer) => (
                 <TableRow
                   key={lawyer.id}
                   className="dark:border-border-dark hover:bg-muted/50 dark:hover:bg-muted-dark/50"
@@ -142,11 +265,11 @@ export function LawyerTable({ lawyers, loading, onRefresh }: LawyerTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="dark:text-foreground-dark">
-                    {lawyer.lawyerProfile?.office?.name}
+                    {lawyer.lawyerProfile?.office?.name || 'Unassigned'}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {lawyer.lawyerProfile?.specializations.map((spec, index) => (
+                      {lawyer.lawyerProfile?.specializations?.map((spec, index) => (
                         <Badge
                           key={index}
                           variant="secondary"
@@ -154,54 +277,49 @@ export function LawyerTable({ lawyers, loading, onRefresh }: LawyerTableProps) {
                         >
                           {spec.specialization.name}
                         </Badge>
-                      ))}
+                      )) || 'None'}
                     </div>
                   </TableCell>
                   <TableCell className="dark:text-foreground-dark">
-                    {lawyer.lawyerProfile?.experience} years
+                    {lawyer.lawyerProfile?.experience || 0} years
                   </TableCell>
                   <TableCell className="dark:text-foreground-dark">
-                    {lawyer.lawyerProfile?.caseLoad} cases
+                    {lawyer.lawyerProfile?.caseLoad || 0} cases
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center dark:text-foreground-dark">
                       <StarIcon className="w-4 h-4 text-yellow-400 dark:text-yellow-500 mr-1" />
-                      {lawyer.lawyerProfile?.rating?.toFixed(1)}
+                      {(lawyer.lawyerProfile?.rating || 0).toFixed(1)}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(lawyer.status)}>
-                      {lawyer.status}
-                    </Badge>
+                    {getStatusBadge(lawyer.status)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Link href={`/admin/lawyers/${lawyer.id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="dark:text-foreground-dark dark:hover:bg-muted-dark/50"
-                        >
-                          <EyeIcon className="w-4 h-4" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </Link>
-                      <Link href={`/admin/lawyers/${lawyer.id}/edit`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="dark:text-foreground-dark dark:hover:bg-muted-dark/50"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleView(lawyer.id)}>
+                          <EyeIcon className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(lawyer.id)}>
+                          <PencilIcon className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => handleDelete(lawyer.id)}
                         >
-                          <PencilIcon className="w-4 h-4" />
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="dark:text-red-400 dark:hover:bg-muted-dark/50"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </Button>
-                    </div>
+                          <TrashIcon className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

@@ -172,23 +172,45 @@ export default function PaymentPage() {
       const response = await fetch('/api/client/profile');
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.data) {
+        if (data?.success && data?.data) {
+          // Safely access nested properties with optional chaining and nullish coalescing
+          const user = data.data.user || {};
+          const location = data.data;
+          
           setClientProfile(prev => ({
             ...prev,
-            fullName: data.data.user.fullName || '',
-            email: data.data.user.email || '',
-            phone: data.data.user.phone || '',
-            address: data.data.region + ', ' + data.data.zone + ', ' + data.data.wereda + ', ' + data.data.kebele || '',
-            idNumber: data.data.idNumber || ''
+            fullName: user?.fullName || '',
+            email: user?.email || '',
+            phone: user?.phone || '',
+            address: [
+              location?.region,
+              location?.zone,
+              location?.wereda,
+              location?.kebele
+            ].filter(Boolean).join(', ') || '',
+            idNumber: location?.idNumber || ''
           }));
+        } else {
+          throw new Error('Invalid profile data structure');
         }
+      } else {
+        throw new Error('Failed to fetch profile');
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch your profile information. Please try again.",
+        title: "Profile Error",
+        description: "Unable to load your profile. Please try again or contact support.",
         variant: "destructive"
+      });
+      
+      // Set default empty values to prevent undefined errors
+      setClientProfile({
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        idNumber: ''
       });
     }
   };

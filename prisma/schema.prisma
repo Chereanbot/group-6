@@ -17,7 +17,7 @@ model User {
   username         String?
   emailVerified    Boolean           @default(false)
   phoneVerified    Boolean           @default(false)
-  userRole         UserRoleEnum      @default(COORDINATOR)
+  userRole         UserRoleEnum      @default(CLIENT)
   status           UserStatus        @default(ACTIVE)
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -271,6 +271,7 @@ enum NotificationType {
   REPLY
   REACTION
   THREAD_UPDATE
+  FOLLOW_UP
 }
 
 // Case Management
@@ -278,7 +279,7 @@ model Case {
   id          String     @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
-  status      CaseStatus @default(ACTIVE)
+  status      CaseStatus @default(PENDING)
   priority    Priority   @default(MEDIUM)
   
   // Case Classification
@@ -357,6 +358,9 @@ model Case {
   assignmentDate  DateTime?
 
   notifications Notification[] @relation("CaseNotifications")
+
+  totalServiceHours Float?     @default(0)
+  expectedDuration  Float?     @default(40) // Expected duration in hours
 
   @@index([status])
   @@index([priority])
@@ -716,14 +720,13 @@ enum PaymentStatus {
 
 enum ServiceType {
   CONSULTATION
-  DOCUMENT_REVIEW
-  LEGAL_REPRESENTATION
+  DOCUMENT_PREPARATION
+  COURT_APPEARANCE
+  RESEARCH
+  COMMUNITY_OUTREACH
   MEDIATION
-  NOTARY
-  BASIC
-  STANDARD
-  PREMIUM
-  OTHER
+  CLIENT_MEETING
+  CASE_REVIEW
 }
 
 enum ServiceCategory {
@@ -1066,8 +1069,9 @@ enum NotificationPriority {
 enum NotificationStatus {
   UNREAD
   READ
-  ARCHIVED
-  DELETED
+  PENDING
+  COMPLETED
+  DISMISSED
 }
 
 // Add these models and enums
@@ -1316,6 +1320,7 @@ model AuditLog {
 // Message Model
 model Message {
   id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  subject         String?
   text            String
   senderId        String          @db.ObjectId
   sender          User            @relation("SentMessages", fields: [senderId], references: [id])
@@ -1500,20 +1505,22 @@ model EventDocument {
 }
 
 model TimeEntry {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  lawyerId    String    @db.ObjectId
-  lawyer      User      @relation(fields: [lawyerId], references: [id])
-  caseId      String?   @db.ObjectId
-  case        Case?     @relation(fields: [caseId], references: [id])
-  description String
-  startTime   DateTime  @default(now())
-  endTime     DateTime?
-  duration    Int       @default(0) // Duration in seconds
-  billable    Boolean   @default(true)
-  rate        Float     @default(150)
-  status      String    @default("RUNNING") // RUNNING, PAUSED, COMPLETED
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String      @id @default(auto()) @map("_id") @db.ObjectId
+  lawyer           User        @relation(fields: [lawyerId], references: [id])
+  lawyerId         String      @db.ObjectId
+  case             Case?       @relation(fields: [caseId], references: [id])
+  caseId           String?     @db.ObjectId
+  description      String
+  startTime        DateTime
+  endTime          DateTime?
+  duration         Int         // Duration in seconds
+  serviceType      ServiceType?
+  needsFollowUp    Boolean     @default(false)
+  followUpNotes    String?
+  outreachLocation String?
+  status           TimeEntryStatus @default(IN_PROGRESS)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   @@index([lawyerId])
   @@index([caseId])
@@ -2433,3 +2440,52 @@ enum HealthStatus {
   CHRONIC_ILLNESS
   OTHER
 }
+
+model SmsTemplate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  content   String
+  category  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SmsMessage {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  recipientId    String   @db.ObjectId
+  recipientName  String
+  recipientPhone String
+  content        String
+  status         String   // 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+enum TimeEntryStatus {
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+}
+
+model notificationSettings {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String   @db.ObjectId
+  userType             String   // 'CLIENT' or 'COORDINATOR'
+  automaticNotifications Boolean  @default(true)
+  emailEnabled         Boolean  @default(true)
+  smsEnabled          Boolean  @default(true)
+  pushEnabled         Boolean  @default(true)
+  reminderTiming      Json     // { before: number, frequency: string, customIntervals: number[] }
+  priorityLevels      Json     // { urgent: boolean, high: boolean, medium: boolean, low: boolean }
+  templates           Json     // { confirmation: string, reminder: string, cancellation: string, rescheduling: string }
+  workingHours        Json     // { start: string, end: string }
+  blackoutDates       String[] @default([])
+  customRules         String[] @default([])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, userType])
+  @@index([userId])
+  @@index([userType])
+}
+

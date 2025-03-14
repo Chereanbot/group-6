@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { Card } from '@/components/ui/card';
 import { 
@@ -8,6 +9,9 @@ import {
   Timer, GitPullRequest
 } from 'lucide-react';
 import { DashboardAlerts } from '@/components/lawyer/dashboard/DashboardAlerts';
+import { CaseProgressHistogram } from '@/components/lawyer/dashboard/CaseProgressHistogram';
+import { Prisma, UserRoleEnum } from '@prisma/client';
+import { CaseAnalyticsCharts } from '@/components/lawyer/case-progress/CaseAnalyticsCharts';
 
 async function getLawyerDashboardData(lawyerId: string) {
   return await prisma.user.findUnique({
@@ -19,7 +23,7 @@ async function getLawyerDashboardData(lawyerId: string) {
         include: {
           office: true,
           performance: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 5
           }
         }
@@ -34,15 +38,15 @@ async function getLawyerDashboardData(lawyerId: string) {
         include: {
           client: true,
           activities: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 1
           },
           documents: {
-                orderBy: { createdAt: 'desc' },
+            orderBy: [{ uploadedAt: 'desc' }],
             take: 5
           },
           notes: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 5
           }
         }
@@ -57,7 +61,7 @@ async function getLawyerDashboardData(lawyerId: string) {
                 gte: new Date()
               }
             },
-            orderBy: { scheduledDate: 'asc' }
+            orderBy: [{ scheduledDate: 'asc' }]
           }
         }
       },
@@ -66,53 +70,57 @@ async function getLawyerDashboardData(lawyerId: string) {
           client: true,
           Appointment: {
             where: {
-              date: { gte: new Date() }
+              scheduledTime: { gte: new Date() }
             },
-            orderBy: { date: 'asc' },
+            orderBy: [{ scheduledTime: 'asc' }],
             take: 5
           },
           communications: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 5
           },
           payments: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ createdAt: 'desc' }],
             take: 5
           }
         }
       },
       notifications: {
         where: { status: 'UNREAD' },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }],
         take: 5
       },
       activities: {
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }],
         take: 10
       },
       documents: {
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }],
         take: 5
       }
     }
-  });
+  }) as any; // TODO: Remove this type assertion once we have proper types
 }
 
 export default async function LawyerDashboard() {
   const headersList = await headers();
-  const lawyerId = headersList.get('x-lawyer-id');
+  const userId = headersList.get('x-user-id');
+  const userRole = headersList.get('x-user-role');
 
-  if (!lawyerId) {
-    console.error('No lawyer ID found in headers');
-    return <div>Error: Unable to load lawyer data</div>;
+  if (!userId) {
+    redirect('/auth/login?error=unauthorized&message=Please_login_first');
+  }
+
+  if (userRole !== 'LAWYER') {
+    redirect('/unauthorized?message=Only_lawyers_can_access_this_page');
   }
 
   try {
-    const dashboardData = await getLawyerDashboardData(lawyerId);
+    const dashboardData = await getLawyerDashboardData(userId);
 
     if (!dashboardData || !dashboardData.lawyerProfile) {
-      console.error('No lawyer data found for ID:', lawyerId);
-      return <div>Error: Unable to load lawyer profile</div>;
+      console.error('No lawyer profile found for ID:', userId);
+      redirect('/auth/login?error=profile_not_found&message=Lawyer_profile_not_found');
     }
 
     const activeCases = dashboardData.assignedCases.filter(c => c.status === 'ACTIVE');
@@ -125,7 +133,7 @@ export default async function LawyerDashboard() {
       .filter(c => c.status === 'UNREAD');
     const upcomingAppointments = dashboardData.assignedServices
       .flatMap(s => s.Appointment)
-      .filter(a => a && new Date(a.scheduledFor) > new Date());
+      .filter(a => a && new Date(a.scheduledTime) > new Date());
     const recentPayments = dashboardData.assignedServices
       .flatMap(s => s.payments)
       .filter(p => p.status === 'COMPLETED');
@@ -161,12 +169,12 @@ export default async function LawyerDashboard() {
 
           <Card className="p-4">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-red-100 dark:bg-red-900 rounded-full">
-                <Scale className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Pending Appeals</p>
-                <h3 className="text-2xl font-bold">{pendingAppeals}</h3>
+                <p className="text-sm text-gray-500">Pending Cases</p>
+                <h3 className="text-2xl font-bold">{pendingCases.length}</h3>
               </div>
             </div>
           </Card>
@@ -187,38 +195,48 @@ export default async function LawyerDashboard() {
 
           <Card className="p-4">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900 rounded-full">
-                <Timer className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-full">
+                <Timer className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Current Case Load</p>
+                <p className="text-sm text-gray-500">Case Load</p>
                 <h3 className="text-2xl font-bold">{dashboardData.lawyerProfile.caseLoad}</h3>
               </div>
             </div>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <Card className="p-6 col-span-1" data-tour="dashboard-activities">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CaseProgressHistogram 
+            cases={dashboardData.assignedCases.map(c => ({
+              id: c.id,
+              title: c.title,
+              status: c.status,
+              progress: c.progress || 0,
+              complexityScore: c.complexityScore,
+              priority: c.priority,
+            }))} 
+          />
+          
+          <Card className="p-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center">
               <GitPullRequest className="mr-2 h-5 w-5" />
-              Recent Case Activities
+              Recent Activities
             </h2>
             <div className="space-y-4">
-              {dashboardData.activities.map(activity => (
+              {dashboardData.activities?.slice(0, 5).map(activity => (
                 <div key={activity.id} className="border-b pb-2">
                   <p className="font-medium">{activity.action}</p>
                   <p className="text-sm text-gray-500">
                     {new Date(activity.createdAt).toLocaleString()}
                   </p>
-                  {activity.details && (
-                    <p className="text-sm mt-1">{JSON.stringify(activity.details)}</p>
-                  )}
                 </div>
               ))}
             </div>
           </Card>
+        </div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           <Card className="p-6 col-span-1" data-tour="dashboard-calendar">
             <h2 className="text-lg font-semibold mb-4 flex items-center">
               <Calendar className="mr-2 h-5 w-5" />
@@ -256,7 +274,7 @@ export default async function LawyerDashboard() {
                   <div>
                     <p className="font-medium">{doc.title}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(doc.uploadedAt).toLocaleDateString()}
+                      {new Date(doc.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <span className="text-sm text-gray-500">{doc.type}</span>
@@ -295,6 +313,8 @@ export default async function LawyerDashboard() {
             </div>
           </Card>
         </div>
+
+        <CaseAnalyticsCharts />
       </div>
     );
   } catch (error) {

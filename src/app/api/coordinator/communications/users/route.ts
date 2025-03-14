@@ -2,16 +2,15 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { UserRoleEnum, UserStatus } from '@prisma/client';
 import { verifyAuth } from '@/lib/auth';
+import { UserRoleEnum } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
-    // Try NextAuth session first
+    // Get user ID from session or token
     const session = await getServerSession(authOptions);
     let userId = session?.user?.id;
 
-    // If no session, try JWT token
     if (!userId) {
       const token = request.headers.get('cookie')?.split(';')
         .find(c => c.trim().startsWith('auth-token='))
@@ -29,36 +28,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get coordinator's office
-    const coordinator = await prisma.user.findUnique({
+    // Get current user's role
+    const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        coordinatorProfile: {
-          include: {
-            office: true
-          }
-        }
-      }
+      select: { userRole: true }
     });
 
-    if (!coordinator?.coordinatorProfile?.office) {
-      return NextResponse.json({ error: 'Coordinator office not found' }, { status: 404 });
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const officeId = coordinator.coordinatorProfile.office.id;
-
-    // Get all admins and super admins
+    // Get all superadmins and admins
     const admins = await prisma.user.findMany({
       where: {
         userRole: {
-          in: [UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN]
+          in: [UserRoleEnum.SUPER_ADMIN, UserRoleEnum.ADMIN]
         },
-        status: UserStatus.ACTIVE
+        id: { not: userId } // Exclude current user
       },
       select: {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         userRole: true,
         isOnline: true,
         lastSeen: true,
@@ -66,19 +58,17 @@ export async function GET(request: Request) {
       }
     });
 
-    // Get lawyers in the same office
+    // Get all lawyers
     const lawyers = await prisma.user.findMany({
       where: {
         userRole: UserRoleEnum.LAWYER,
-        status: UserStatus.ACTIVE,
-        lawyerProfile: {
-          officeId
-        }
+        id: { not: userId }
       },
       select: {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         userRole: true,
         isOnline: true,
         lastSeen: true,
@@ -86,55 +76,54 @@ export async function GET(request: Request) {
       }
     });
 
-    // Get all kebele managers from active kebeles
-    const kebeleManagers = await prisma.kebeleManager.findMany({
+    // Get all coordinators
+    const coordinators = await prisma.user.findMany({
       where: {
-        status: 'ACTIVE',
-        kebele: {
-          status: 'ACTIVE'
-        }
+        userRole: UserRoleEnum.COORDINATOR,
+        id: { not: userId }
       },
-      include: {
-        kebele: {
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        userRole: true,
+        isOnline: true,
+        lastSeen: true,
+        status: true
+      }
+    });
+
+    // Get all clients with their profiles
+    const clients = await prisma.user.findMany({
+      where: {
+        userRole: UserRoleEnum.CLIENT,
+        id: { not: userId }
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        userRole: true,
+        isOnline: true,
+        lastSeen: true,
+        status: true,
+        clientProfile: {
           select: {
-            id: true,
-            kebeleName: true,
-            subCity: true,
-            district: true,
-            contactPhone: true,
-            contactEmail: true,
-            workingHours: true
+            phone: true
           }
         }
       }
     });
-
-    // Transform kebele managers to match user format
-    const transformedKebeleManagers = kebeleManagers.map(manager => ({
-      id: manager.id,
-      fullName: manager.fullName,
-      email: manager.email,
-      userRole: 'KEBELE_MANAGER' as UserRoleEnum,
-      isOnline: false,
-      lastSeen: null,
-      status: UserStatus.ACTIVE,
-      kebeleProfile: {
-        kebeleName: manager.kebele.kebeleName,
-        subCity: manager.kebele.subCity,
-        district: manager.kebele.district,
-        position: manager.position,
-        phone: manager.phone,
-        contactPhone: manager.kebele.contactPhone,
-        contactEmail: manager.kebele.contactEmail,
-        workingHours: manager.kebele.workingHours
-      }
-    }));
 
     return NextResponse.json({
       admins,
       lawyers,
-      kebeleManagers: transformedKebeleManagers
+      coordinators,
+      clients
     });
+
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

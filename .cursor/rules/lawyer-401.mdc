@@ -1,0 +1,23 @@
+---
+description: lawyer 401 requests check
+globs: 
+---
+
+  try {
+    const headersList = await headers();
+    const userId = headersList.get('x-user-id');
+    const userRole = headersList.get('x-user-role');
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Please login first' },
+        { status: 401 }
+      );
+    }
+
+    if (userRole !== 'LAWYER') {
+      return NextResponse.json(
+        { error: 'Unauthorized: Only lawyers can access messages' },
+        { status: 403 }
+      );
+    }

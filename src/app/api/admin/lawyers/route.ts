@@ -1,13 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, verifyAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { UserRoleEnum } from '@prisma/client';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, user } = await verifyAuth(token);
+
+    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const lawyerProfiles = await prisma.lawyerProfile.findMany({
@@ -20,7 +36,7 @@ export async function GET() {
         user: {
           select: {
             id: true,
-            name: true,
+            fullName: true,
           },
         },
         experience: true,
@@ -53,7 +69,7 @@ export async function GET() {
 
     const transformedLawyers = lawyerProfiles.map(profile => ({
       id: profile.userId,
-      name: profile.user.name,
+      name: profile.user.fullName,
       specializations: profile.specializations
         .map(s => s.specialization.name)
         .join(', '),

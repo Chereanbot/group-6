@@ -1,39 +1,49 @@
 import { getAuthHeaders } from '@/utils/auth';
 
 class CoordinatorService {
-  async getAllCoordinators() {
+  async getAllCoordinators(params = {}) {
     try {
-      const response = await fetch('/api/coordinators', {
-        headers: getAuthHeaders(),
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(`/api/coordinators${queryString ? `?${queryString}` : ''}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch coordinators');
+        throw new Error(result.error || 'Failed to fetch coordinators');
       }
 
-      const data = await response.json();
-      return { data: data.coordinators || [], total: data.total };
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch coordinators');
+      }
+
+      return result.data;
     } catch (error) {
       console.error('Error fetching coordinators:', error);
-      return { data: [], total: 0 };
+      throw error;
     }
   }
 
   async getCoordinatorById(id: string) {
     try {
       const response = await fetch(`/api/coordinators/${id}`, {
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch coordinator');
+        throw new Error(result.error || 'Failed to fetch coordinator');
       }
 
-      return await response.json();
+      return result;
     } catch (error) {
       console.error('Error fetching coordinator:', error);
       throw error;
@@ -41,71 +51,145 @@ class CoordinatorService {
   }
 
   async createCoordinator(coordinatorData: any) {
-    const response = await fetch('/api/coordinators', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(coordinatorData)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to create coordinator');
+    try {
+      const response = await fetch('/api/coordinators', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(coordinatorData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create coordinator');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error creating coordinator:', error);
+      throw error;
     }
-    return response.json();
   }
 
   async updateCoordinator(id: string, coordinatorData: any) {
-    const response = await fetch(`/api/coordinators/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(coordinatorData)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update coordinator');
+    try {
+      const response = await fetch(`/api/coordinators/${id}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(coordinatorData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update coordinator');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating coordinator:', error);
+      throw error;
     }
-    return response.json();
   }
 
   async deleteCoordinator(id: string) {
-    const response = await fetch(`/api/coordinators/${id}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete coordinator');
+    try {
+      const response = await fetch(`/api/coordinators/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete coordinator');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting coordinator:', error);
+      throw error;
     }
-    return response.json();
   }
 
   async createAssignment(assignmentData: any) {
-    const response = await fetch('/api/coordinator-assignments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(assignmentData)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to create assignment');
+    try {
+      const response = await fetch('/api/coordinator-assignments', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(assignmentData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create assignment');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      throw error;
     }
-    return response.json();
   }
 
   async updateAssignment(id: string, assignmentData: any) {
-    const response = await fetch(`/api/coordinator-assignments/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(assignmentData)
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update assignment');
+    try {
+      const response = await fetch(`/api/coordinator-assignments/${id}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(assignmentData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update assignment');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      throw error;
     }
-    return response.json();
   }
 
   async deleteAssignment(id: string) {
-    const response = await fetch(`/api/coordinator-assignments/${id}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete assignment');
+    try {
+      const response = await fetch(`/api/coordinator-assignments/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete assignment');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      throw error;
     }
-    return response.json();
   }
 }
 

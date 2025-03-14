@@ -2,74 +2,90 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CoordinatorFormService } from '@/services/coordinator/CoordinatorFormService';
 import { toast } from 'react-hot-toast';
-import { Coordinator, CoordinatorStatus, CoordinatorType } from '@/types/coordinator';
+import { Coordinator, EditCoordinatorRequest } from '@/types/coordinator';
+import { CoordinatorStatus, CoordinatorType } from '@prisma/client';
+import { adminStyles } from '@/styles/admin';
 
-interface EditFormData {
-  fullName: string;
-  email: string;
-  phone: string;
-  type: CoordinatorType;
-  officeId: string;
-  startDate: string;
-  endDate?: string;
-  specialties: string[];
-  status: CoordinatorStatus;
-  qualifications: Array<{
-    type: string;
-    title: string;
-    institution: string;
-    dateObtained: string;
-    expiryDate?: string;
-    score?: number;
-  }>;
+interface Office {
+  id: string;
+  name: string;
+  location: string;
+  capacity: number;
+  currentCount: number;
 }
 
 export function EditCoordinatorForm({ id }: { id: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [coordinator, setCoordinator] = useState<Coordinator | null>(null);
-  const [formData, setFormData] = useState<EditFormData>({
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [userId, setUserId] = useState<string>('');
+  const [formData, setFormData] = useState<EditCoordinatorRequest>({
     fullName: '',
     email: '',
     phone: '',
-    type: CoordinatorType.PERMANENT,
+    type: CoordinatorType.FULL_TIME,
     officeId: '',
-    startDate: '',
-    endDate: '',
+    startDate: new Date().toISOString().split('T')[0],
     specialties: [],
     status: CoordinatorStatus.ACTIVE,
     qualifications: []
   });
 
-  const service = new CoordinatorFormService();
+  const loadOffices = async () => {
+    try {
+      const response = await fetch('/api/admin/offices');
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load offices');
+      }
+
+      setOffices(result.data.offices);
+    } catch (error) {
+      console.error('Failed to load offices:', error);
+      toast.error('Failed to load offices');
+    }
+  };
 
   const loadCoordinator = async () => {
     try {
-      const data = await service.getCoordinator(id);
-      setCoordinator(data);
+      setLoading(true);
+      const response = await fetch(`/api/admin/coordinators/${id}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load coordinator');
+      }
+
+      const coordinator = result.data;
+      if (!coordinator || !coordinator.user) {
+        throw new Error('Invalid coordinator data received');
+      }
+
+      setUserId(coordinator.user.id);
       setFormData({
-        fullName: data.user.fullName,
-        email: data.user.email,
-        phone: data.user.phone || '',
-        type: data.type,
-        officeId: data.officeId,
-        startDate: new Date(data.startDate).toISOString().split('T')[0],
-        endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
-        specialties: data.specialties,
-        status: data.status,
-        qualifications: data.qualifications.map(q => ({
-          type: q.type,
-          title: q.title,
-          institution: q.institution,
-          dateObtained: new Date(q.dateObtained).toISOString().split('T')[0],
-          expiryDate: q.expiryDate ? new Date(q.expiryDate).toISOString().split('T')[0] : '',
+        fullName: coordinator.user.fullName || '',
+        email: coordinator.user.email || '',
+        phone: coordinator.user.phone || '',
+        type: coordinator.type || CoordinatorType.FULL_TIME,
+        officeId: coordinator.officeId || '',
+        startDate: coordinator.startDate ? new Date(coordinator.startDate).toISOString().split('T')[0] : '',
+        endDate: coordinator.endDate ? new Date(coordinator.endDate).toISOString().split('T')[0] : undefined,
+        specialties: coordinator.specialties || [],
+        status: coordinator.status || CoordinatorStatus.ACTIVE,
+        qualifications: (coordinator.qualifications || []).map((q: any) => ({
+          type: q.type || '',
+          title: q.title || '',
+          institution: q.institution || '',
+          dateObtained: q.dateObtained ? new Date(q.dateObtained).toISOString().split('T')[0] : '',
+          expiryDate: q.expiryDate ? new Date(q.expiryDate).toISOString().split('T')[0] : undefined,
           score: q.score || undefined
         }))
       });
     } catch (error) {
+      console.error('Failed to load coordinator:', error);
       toast.error('Failed to load coordinator');
       router.push('/admin/coordinators');
     } finally {
@@ -82,83 +98,98 @@ export function EditCoordinatorForm({ id }: { id: string }) {
     setSaving(true);
 
     try {
-      const response = await service.updateCoordinator(id, formData);
-      if (response.success) {
-        toast.success('Coordinator updated successfully');
-        router.push('/admin/coordinators');
-      } else {
-        toast.error(response.error || 'Failed to update coordinator');
+      const response = await fetch(`/api/admin/coordinators/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          userId
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update coordinator');
       }
+
+      toast.success('Coordinator updated successfully');
+      router.push('/admin/coordinators');
     } catch (error) {
-      toast.error('Failed to update coordinator');
+      console.error('Failed to update coordinator:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update coordinator');
     } finally {
       setSaving(false);
     }
   };
 
   useEffect(() => {
+    loadOffices();
     loadCoordinator();
   }, [id]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      <div className={adminStyles.loading.container}>
+        <div className={adminStyles.loading.spinner}></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Coordinator</h1>
+    <div className={adminStyles.container}>
+      <div className={adminStyles.pageHeader}>
+        <h1 className={adminStyles.pageTitle}>Edit Coordinator</h1>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Information */}
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Personal Information</h2>
+        <section className={adminStyles.card}>
+          <h2 className={adminStyles.sectionHeader}>Personal Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Full Name</label>
+              <label className={adminStyles.form.label}>Full Name</label>
               <input
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                className="w-full border rounded-lg p-2"
+                className={adminStyles.form.input}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label className={adminStyles.form.label}>Email</label>
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full border rounded-lg p-2"
-                required
+                className={adminStyles.form.input}
+                disabled
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
+              <label className={adminStyles.form.label}>Phone</label>
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                className="w-full border rounded-lg p-2"
+                className={adminStyles.form.input}
               />
             </div>
           </div>
         </section>
 
         {/* Employment Details */}
-        <section>
-          <h2 className="text-lg font-semibold mb-4">Employment Details</h2>
+        <section className={adminStyles.card}>
+          <h2 className={adminStyles.sectionHeader}>Employment Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Type</label>
+              <label className={adminStyles.form.label}>Type</label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as CoordinatorType }))}
-                className="w-full border rounded-lg p-2"
+                className={adminStyles.form.select}
                 required
               >
                 {Object.values(CoordinatorType).map(type => (
@@ -167,11 +198,27 @@ export function EditCoordinatorForm({ id }: { id: string }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className={adminStyles.form.label}>Office</label>
+              <select
+                value={formData.officeId}
+                onChange={(e) => setFormData(prev => ({ ...prev, officeId: e.target.value }))}
+                className={adminStyles.form.select}
+                required
+              >
+                <option value="">Select Office</option>
+                {offices.map(office => (
+                  <option key={office.id} value={office.id}>
+                    {office.name} ({office.currentCount}/{office.capacity})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={adminStyles.form.label}>Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as CoordinatorStatus }))}
-                className="w-full border rounded-lg p-2"
+                className={adminStyles.form.select}
                 required
               >
                 {Object.values(CoordinatorStatus).map(status => (
@@ -180,27 +227,193 @@ export function EditCoordinatorForm({ id }: { id: string }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Start Date</label>
+              <label className={adminStyles.form.label}>Start Date</label>
               <input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full border rounded-lg p-2"
+                className={adminStyles.form.input}
                 required
               />
             </div>
-            {formData.type === CoordinatorType.PROJECT_BASED && (
-              <div>
-                <label className="block text-sm font-medium mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="w-full border rounded-lg p-2"
-                  required
-                />
+            <div>
+              <label className={adminStyles.form.label}>End Date</label>
+              <input
+                type="date"
+                value={formData.endDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                className={adminStyles.form.input}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Specialties */}
+        <section className={adminStyles.card}>
+          <h2 className={adminStyles.sectionHeader}>Specialties</h2>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {formData.specialties.map((specialty, index) => (
+                <div key={index} className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-1">
+                  <span>{specialty}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      specialties: prev.specialties.filter((_, i) => i !== index)
+                    }))}
+                    className="ml-2 text-gray-500 hover:text-red-500"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add specialty"
+                className={adminStyles.form.input}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const value = (e.target as HTMLInputElement).value.trim();
+                    if (value) {
+                      setFormData(prev => ({
+                        ...prev,
+                        specialties: [...prev.specialties, value]
+                      }));
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Qualifications */}
+        <section className={adminStyles.card}>
+          <h2 className={adminStyles.sectionHeader}>Qualifications</h2>
+          <div className="space-y-4">
+            {formData.qualifications.map((qualification, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4 border rounded-lg">
+                <div>
+                  <label className={adminStyles.form.label}>Type</label>
+                  <input
+                    type="text"
+                    value={qualification.type}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, type: e.target.value };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={adminStyles.form.label}>Title</label>
+                  <input
+                    type="text"
+                    value={qualification.title}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, title: e.target.value };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={adminStyles.form.label}>Institution</label>
+                  <input
+                    type="text"
+                    value={qualification.institution}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, institution: e.target.value };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={adminStyles.form.label}>Date Obtained</label>
+                  <input
+                    type="date"
+                    value={qualification.dateObtained}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, dateObtained: e.target.value };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={adminStyles.form.label}>Expiry Date</label>
+                  <input
+                    type="date"
+                    value={qualification.expiryDate}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, expiryDate: e.target.value };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                  />
+                </div>
+                <div>
+                  <label className={adminStyles.form.label}>Score</label>
+                  <input
+                    type="number"
+                    value={qualification.score || ''}
+                    onChange={(e) => {
+                      const newQualifications = [...formData.qualifications];
+                      newQualifications[index] = { ...qualification, score: parseFloat(e.target.value) || undefined };
+                      setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                    }}
+                    className={adminStyles.form.input}
+                    step="0.1"
+                    min="0"
+                    max="100"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newQualifications = formData.qualifications.filter((_, i) => i !== index);
+                    setFormData(prev => ({ ...prev, qualifications: newQualifications }));
+                  }}
+                  className={`${adminStyles.button.base} ${adminStyles.button.danger} mt-auto`}
+                >
+                  Remove
+                </button>
               </div>
-            )}
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  qualifications: [...prev.qualifications, {
+                    type: '',
+                    title: '',
+                    institution: '',
+                    dateObtained: new Date().toISOString().split('T')[0],
+                    expiryDate: '',
+                    score: undefined
+                  }]
+                }));
+              }}
+              className={`${adminStyles.button.base} ${adminStyles.button.secondary}`}
+            >
+              Add Qualification
+            </button>
           </div>
         </section>
 
@@ -208,26 +421,16 @@ export function EditCoordinatorForm({ id }: { id: string }) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className={`${adminStyles.button.base} ${adminStyles.button.secondary}`}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            className={`${adminStyles.button.base} ${adminStyles.button.primary}`}
             disabled={saving}
           >
-            {saving ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </span>
-            ) : (
-              'Save Changes'
-            )}
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>

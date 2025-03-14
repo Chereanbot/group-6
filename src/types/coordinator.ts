@@ -1,3 +1,5 @@
+import { CoordinatorStatus, CoordinatorType } from '@prisma/client';
+
 export interface Coordinator {
   id: string;
   userId: string;
@@ -36,25 +38,23 @@ export interface Qualification {
 }
 
 export interface CoordinatorFilter {
+  search?: string;
   status?: CoordinatorStatus[];
   type?: CoordinatorType[];
   office?: string;
   specialties?: string[];
-  search?: string;
+  dateRange?: {
+    start: string;
+    end: string;
+  };
   ids?: string[];
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
-export enum CoordinatorType {
-  PERMANENT = 'PERMANENT',
-  PROJECT_BASED = 'PROJECT_BASED'
-}
-
-export enum CoordinatorStatus {
-  PENDING = 'PENDING',
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  SUSPENDED = 'SUSPENDED'
-}
+export { CoordinatorStatus, CoordinatorType };
 
 export interface BlockResponse {
   success: boolean;
@@ -126,4 +126,46 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   type: string;
-} 
+}
+
+export enum AssignmentStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
+
+export interface CoordinatorAssignment {
+  id: string;
+  coordinatorId: string;
+  coordinator?: {
+    id: string;
+    user?: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
+  };
+  projectId: string;
+  project?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+  status: AssignmentStatus;
+  startDate: Date;
+  endDate?: Date;
+  notes?: string;
+  responseTime?: number;
+  clientRating?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AssignmentFilter {
+  status?: AssignmentStatus[];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}

@@ -6,6 +6,7 @@ import LawyerSidebar from '@/components/lawyer/Sidebar';
 import LawyerHeader from '@/components/lawyer/Header';
 import { TawkChatWidget } from '@/components/lawyer/TawkChatWidget';
 import { WelcomeWrapper } from '@/components/lawyer/WelcomeWrapper';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 async function getLawyerWithProfile(token: string) {
   try {
@@ -70,36 +71,33 @@ export default async function LawyerLayout({
   headers.set('x-lawyer-profile-id', lawyer.lawyerProfile.id);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <WelcomeWrapper lawyerName={lawyer.fullName} />
-      <LawyerHeader 
-        user={lawyer} 
-        office={lawyer.lawyerProfile.office}
-      />
-      <LawyerSidebar 
-        lawyerId={lawyer.id}
-        officeId={lawyer.lawyerProfile.office.id}
-      />
-      <main className="main-content p-6 pt-24 ml-64">
-        {children}
-      </main>
+    <NotificationProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <WelcomeWrapper lawyerName={lawyer.fullName} />
+        <LawyerHeader 
+          user={lawyer} 
+          office={lawyer.lawyerProfile.office}
+        />
+        <LawyerSidebar />
+        <main className="main-content p-6 pt-24 ml-64">
+          {children}
+        </main>
 
-      <TawkChatWidget 
-        lawyer={{
-          id: lawyer.id,
-          fullName: lawyer.fullName,
-          email: lawyer.email
-        }}
-      />
+        <TawkChatWidget 
+          lawyer={{
+            id: lawyer.id,
+            fullName: lawyer.fullName,
+            email: lawyer.email
+          }}
+        />
 
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 p-4 bg-black/80 text-white text-xs rounded-lg">
-          <p>Lawyer ID: {lawyer.id}</p>
-          <p>Office ID: {lawyer.lawyerProfile.office.id}</p>
-          <p>Profile ID: {lawyer.lawyerProfile.id}</p>
-        </div>
-      )}
-    </div>
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="fixed bottom-4 right-4 p-4 bg-black/80 text-white text-xs rounded-lg">
+         
+          </div>
+        )}
+      </div>
+    </NotificationProvider>
   );
 }

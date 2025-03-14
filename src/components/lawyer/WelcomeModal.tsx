@@ -6,8 +6,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Scale, Briefcase, Clock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import Lottie from 'react-lottie-player';
+import dynamic from 'next/dynamic';
 import welcomeAnimation from '@/animations/welcome.json';
+import { ErrorBoundary } from 'react-error-boundary';
+
+const Lottie = dynamic(() => import('react-lottie-player'), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-64 h-64 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-lg flex items-center justify-center">
+      <div className="text-sm text-gray-500 dark:text-gray-400">Loading animation...</div>
+    </div>
+  )
+});
+
+function FallbackComponent() {
+  return (
+    <div className="w-64 h-64 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+      <div className="text-sm text-gray-500 dark:text-gray-400">Failed to load animation</div>
+    </div>
+  );
+}
 
 interface Props {
   lawyerName: string;
@@ -38,12 +56,18 @@ export function WelcomeModal({ lawyerName, onStartTour, onClose, isOpen }: Props
           >
             <div className="text-center mb-6">
               <div className="w-64 h-64 mx-auto mb-4">
-                <Lottie
-                  loop
-                  animationData={welcomeAnimation}
-                  play
-                  style={{ width: '100%', height: '100%' }}
-                />
+                <ErrorBoundary FallbackComponent={FallbackComponent}>
+                  <Lottie
+                    loop
+                    animationData={welcomeAnimation}
+                    play
+                    style={{ width: '100%', height: '100%' }}
+                    rendererSettings={{
+                      preserveAspectRatio: 'xMidYMid slice',
+                      progressiveLoad: true,
+                    }}
+                  />
+                </ErrorBoundary>
               </div>
               <Dialog.Title className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Welcome, {lawyerName}!

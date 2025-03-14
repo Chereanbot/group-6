@@ -6,11 +6,9 @@ import { verifyAuth } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
-    // Try NextAuth session first
     const session = await getServerSession(authOptions);
     let userId = session?.user?.id;
 
-    // If no session, try JWT token
     if (!userId) {
       const token = request.headers.get('cookie')?.split(';')
         .find(c => c.trim().startsWith('auth-token='))
@@ -28,53 +26,116 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get all chats for the user
+    // Verify user is coordinator
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userRole: true, fullName: true }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (user.userRole !== 'COORDINATOR') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // Get all chats for the coordinator
     const userChats = await prisma.userChat.findMany({
       where: {
-        userId
+        userId: userId
       },
       include: {
         chat: {
           include: {
-            messages: {
-              take: 1,
-              orderBy: {
-                createdAt: 'desc'
-              }
-            },
             participants: {
               include: {
                 user: {
                   select: {
                     id: true,
                     fullName: true,
-                    email: true,
                     userRole: true,
-                    isOnline: true,
                     lastSeen: true,
+                    isOnline: true,
                     status: true
+                  }
+                }
+              }
+            },
+            messages: {
+              orderBy: {
+                createdAt: 'desc'
+              },
+              take: 1,
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    userRole: true
+                  }
+                },
+                recipient: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    userRole: true
                   }
                 }
               }
             }
           }
         }
+      },
+      orderBy: {
+        chat: {
+          updatedAt: 'desc'
+        }
       }
     });
 
-    // Transform the data to match the expected format
-    const transformedChats = userChats.map(userChat => ({
-      id: userChat.chatId,
-      user: userChat.chat.participants.find(p => p.userId !== userId)?.user,
-      unreadCount: userChat.unreadCount,
-      lastMessage: userChat.chat.messages[0] || null
-    }));
+    // Transform the response to match the expected format
+    const transformedChats = userChats.map(userChat => {
+      const chat = userChat.chat;
+      const otherParticipant = chat.participants.find(p => p.userId !== userId)?.user;
+      const lastMessage = chat.messages[0];
+
+      return {
+        id: chat.id,
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
+        lastMessage: lastMessage ? {
+          id: lastMessage.id,
+          text: lastMessage.text,
+          createdAt: lastMessage.createdAt,
+          sender: lastMessage.senderId === userId ? {
+            id: userId,
+            fullName: user.fullName,
+            userRole: user.userRole
+          } : {
+            id: lastMessage.sender.id,
+            fullName: lastMessage.sender.fullName,
+            userRole: lastMessage.sender.userRole
+          }
+        } : null,
+        user: otherParticipant ? {
+          id: otherParticipant.id,
+          fullName: otherParticipant.fullName,
+          userRole: otherParticipant.userRole,
+          lastSeen: otherParticipant.lastSeen,
+          isOnline: otherParticipant.isOnline,
+          status: otherParticipant.status
+        } : null,
+        unreadCount: userChat.unreadCount
+      };
+    });
 
     return NextResponse.json(transformedChats);
+
   } catch (error) {
     console.error('Error fetching chats:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch chats' },
+      { error: 'Failed to fetch chats', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -102,6 +163,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verify user is coordinator
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { userRole: true, fullName: true }
+    });
+
+    if (user?.userRole !== 'COORDINATOR') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
     const { participantId } = await request.json();
 
     if (!participantId) {
@@ -111,6 +182,86 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verify participant exists and is not the same as coordinator
+    const participant = await prisma.user.findUnique({
+      where: { id: participantId },
+      select: {
+        id: true,
+        fullName: true,
+        userRole: true,
+        lastSeen: true,
+        isOnline: true,
+        status: true
+      }
+    });
+
+    if (!participant) {
+      return NextResponse.json(
+        { error: 'Participant not found' },
+        { status: 404 }
+      );
+    }
+
+    if (participant.id === userId) {
+      return NextResponse.json(
+        { error: 'Cannot create chat with yourself' },
+        { status: 400 }
+      );
+    }
+
+    // Check if chat already exists
+    const existingChat = await prisma.userChat.findFirst({
+      where: {
+        userId: userId,
+        chat: {
+          participants: {
+            some: {
+              userId: participantId
+            }
+          }
+        }
+      },
+      include: {
+        chat: {
+          include: {
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    userRole: true,
+                    lastSeen: true,
+                    isOnline: true,
+                    status: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (existingChat) {
+      const otherParticipant = existingChat.chat.participants.find(p => p.userId !== userId)?.user;
+      return NextResponse.json({
+        id: existingChat.chat.id,
+        createdAt: existingChat.chat.createdAt,
+        updatedAt: existingChat.chat.updatedAt,
+        lastMessage: null,
+        user: otherParticipant ? {
+          id: otherParticipant.id,
+          fullName: otherParticipant.fullName,
+          userRole: otherParticipant.userRole,
+          lastSeen: otherParticipant.lastSeen,
+          isOnline: otherParticipant.isOnline,
+          status: otherParticipant.status
+        } : null,
+        unreadCount: existingChat.unreadCount
+      });
+    }
+
     // Create new chat
     const chat = await prisma.chat.create({
       data: {
@@ -118,11 +269,13 @@ export async function POST(request: Request) {
           create: [
             {
               userId: userId,
-              unreadCount: 0
+              unreadCount: 0,
+              isStarred: false
             },
             {
               userId: participantId,
-              unreadCount: 0
+              unreadCount: 0,
+              isStarred: false
             }
           ]
         }
@@ -134,10 +287,9 @@ export async function POST(request: Request) {
               select: {
                 id: true,
                 fullName: true,
-                email: true,
                 userRole: true,
-                isOnline: true,
                 lastSeen: true,
+                isOnline: true,
                 status: true
               }
             }
@@ -146,16 +298,23 @@ export async function POST(request: Request) {
       }
     });
 
-    // Transform the response to match the expected format
-    const otherParticipant = chat.participants.find(p => p.userId !== userId);
-    const transformedChat = {
+    const otherParticipant = chat.participants.find(p => p.userId !== userId)?.user;
+    return NextResponse.json({
       id: chat.id,
-      user: otherParticipant?.user,
-      unreadCount: 0,
-      lastMessage: null
-    };
+      createdAt: chat.createdAt,
+      updatedAt: chat.updatedAt,
+      lastMessage: null,
+      user: otherParticipant ? {
+        id: otherParticipant.id,
+        fullName: otherParticipant.fullName,
+        userRole: otherParticipant.userRole,
+        lastSeen: otherParticipant.lastSeen,
+        isOnline: otherParticipant.isOnline,
+        status: otherParticipant.status
+      } : null,
+      unreadCount: 0
+    });
 
-    return NextResponse.json(transformedChat);
   } catch (error) {
     console.error('Error creating chat:', error);
     return NextResponse.json(

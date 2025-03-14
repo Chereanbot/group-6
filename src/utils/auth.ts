@@ -21,6 +21,7 @@ export const loginUser = async (credentials: LoginCredentials) => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
@@ -28,11 +29,6 @@ export const loginUser = async (credentials: LoginCredentials) => {
 
     if (!response.ok) {
       throw new Error(data.message || 'Login failed');
-    }
-
-    // Store the token
-    if (data.token) {
-      localStorage.setItem('token', data.token);
     }
 
     return data;
@@ -89,25 +85,7 @@ export const showAuthLoading = (message: string) => {
 };
 
 export const getAuthHeaders = () => {
-  const headers: Record<string, string> = {
+  return {
     'Content-Type': 'application/json'
   };
-  
-  // Try to get token from localStorage first
-  let token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  
-  // If no token in localStorage, try to get from cookie
-  if (!token && typeof window !== 'undefined') {
-    const cookies = document.cookie.split(';');
-    const authCookie = cookies.find(c => c.trim().startsWith('auth-token='));
-    if (authCookie) {
-      token = authCookie.split('=')[1].trim();
-    }
-  }
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  return headers;
 }; 

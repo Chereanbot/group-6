@@ -5,51 +5,48 @@ import { authOptions } from '@/lib/auth';
 import { verifyAuth } from '@/lib/auth';
 import { NotificationStatus } from '@prisma/client';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Try NextAuth session first
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
+    const session = await getServerSession();
 
-    // If no session, try JWT token from cookie
-    if (!userId) {
-      const cookies = request.headers.get('cookie');
-      const token = cookies?.split(';')
-        .find(c => c.trim().startsWith('auth-token='))
-        ?.split('=')[1];
-
-      if (token) {
-        const authResult = await verifyAuth(token);
-        if (authResult.isAuthenticated && authResult.user) {
-          userId = authResult.user.id;
-        }
-      }
-    }
-
-    if (!userId) {
+    if (!session) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Fetch notifications for the user
+    // Get unread notifications count
+    const unreadCount = await prisma.notification.count({
+      where: {
+        userId: session.user.id,
+        status: 'UNREAD',
+      },
+    });
+
+    // Get recent notifications
     const notifications = await prisma.notification.findMany({
       where: {
-        userId,
-        status: NotificationStatus.UNREAD
+        userId: session.user.id,
       },
       orderBy: {
         createdAt: 'desc',
       },
-      take: 10, // Limit to 10 most recent notifications
+      take: 10,
     });
 
-    return NextResponse.json(notifications);
+    return NextResponse.json({
+      unreadCount,
+      notifications: notifications.map((n) => ({
+        ...n,
+        createdAt: n.createdAt.toISOString(),
+        updatedAt: n.updatedAt.toISOString(),
+      })),
+    });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -57,48 +54,49 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
+    const session = await getServerSession();
 
-    if (!userId) {
-      const cookies = request.headers.get('cookie');
-      const token = cookies?.split(';')
-        .find(c => c.trim().startsWith('auth-token='))
-        ?.split('=')[1];
-
-      if (token) {
-        const authResult = await verifyAuth(token);
-        if (authResult.isAuthenticated && authResult.user) {
-          userId = authResult.user.id;
-        }
-      }
-    }
-
-    if (!userId) {
+    if (!session) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const { message, recipientId } = await request.json();
+    const body = await request.json();
+    const { notificationId } = body;
 
-    // Create a new notification
-    const notification = await prisma.notification.create({
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: 'Notification ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Mark notification as read
+    const notification = await prisma.notification.update({
+      where: {
+        id: notificationId,
+        userId: session.user.id,
+      },
       data: {
-        message,
-        userId: recipientId,
-        type: 'CHAT_MESSAGE',
-        priority: 'NORMAL',
-        status: NotificationStatus.UNREAD
-      }
+        status: 'READ',
+        readAt: new Date(),
+      },
     });
 
-    return NextResponse.json(notification);
+    return NextResponse.json({
+      notification: {
+        ...notification,
+        createdAt: notification.createdAt.toISOString(),
+        updatedAt: notification.updatedAt.toISOString(),
+        readAt: notification.readAt?.toISOString(),
+      },
+    });
   } catch (error) {
-    console.error('Error creating notification:', error);
+    console.error('Error updating notification:', error);
     return NextResponse.json(
-      { error: 'Failed to create notification' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

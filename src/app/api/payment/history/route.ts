@@ -1,15 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions, verifyAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import { UserRoleEnum } from '@prisma/client';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
-    if (!session?.user?.id) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { isAuthenticated, user } = await verifyAuth(token);
+
+    if (!isAuthenticated || user.userRole !== UserRoleEnum.CLIENT) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -18,7 +30,7 @@ export async function GET() {
     const payments = await prisma.payment.findMany({
       where: {
         serviceRequest: {
-          clientId: session.user.id
+          clientId: user.id
         }
       },
       orderBy: {

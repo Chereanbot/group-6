@@ -74,7 +74,7 @@ const sidebarItems: SidebarItem[] = [
     ]
   },
   {
-    title: 'Case Management',
+    title: 'My Cases',
     icon: <HiOutlineScale className="w-6 h-6" />,
     path: '/client/cases',
     subItems: [
@@ -82,6 +82,11 @@ const sidebarItems: SidebarItem[] = [
          title: 'New Case',
          path: '/client/cases/register',
          icon: <HiOutlinePlusCircle className="w-5 h-5" />
+      },
+      {
+        title: 'Case Progress',
+        path: '/client/cases/progress',
+        icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
       {
         title: 'Raw Cases',
@@ -99,41 +104,33 @@ const sidebarItems: SidebarItem[] = [
         path: '/client/cases/waiting',
         icon: <HiOutlineClock className="w-5 h-5" />
       },
+    
       { 
-        title: 'Documents', 
-        path: '/client/cases/documents',
-        icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
-      },
-      { 
-        title: 'Court Dates', 
-        path: '/client/cases/court-dates',
+        title: 'My Cases Activities', 
+        path: '/client/cases/case-activity',
         icon: <HiOutlineCalendar className="w-5 h-5" />
       },
-      {
-        title: 'Evidence Manager',
-        path: '/client/cases/evidence',
-        icon: <HiOutlinePhotograph className="w-5 h-5" />
-      }
+   
     ]
   },
   {
-    title: 'Communication',
+    title: 'Communications',
     icon: <HiOutlineChatAlt2 className="w-6 h-6" />,
-    path: '/client/communication',
+    path: '/client/communications',
     subItems: [
       { 
         title: 'Message Lawyer', 
-        path: '/client/communication/messages',
+        path: '/client/communications/messages',
         icon: <HiOutlineMailOpen className="w-5 h-5" />
       },
       { 
         title: 'Submit Documents', 
-        path: '/client/communication/documents',
+        path: '/client/communications/documents',
         icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
       },
       { 
         title: 'Request Appointment', 
-        path: '/client/communication/appointments',
+        path: '/client/communications/appointments',
         icon: <HiOutlineCalendar className="w-5 h-5" />
       }
     ]

@@ -54,13 +54,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // For coordinators, check if they have a coordinator profile
-    if (user.userRole === UserRoleEnum.COORDINATOR && !user.coordinatorProfile) {
-      return NextResponse.json(
-        { success: false, message: 'Coordinator profile not found' },
-        { status: 200 }
-      );
-    }
+   
 
     // Generate JWT token using jose
     const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');

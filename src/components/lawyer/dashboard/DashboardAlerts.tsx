@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Calendar, MessageSquare, Clock, AlertTriangle, X, Check } from 'lucide-react';
-import { differenceInDays, differenceInHours, differenceInMinutes, differenceInSeconds, differenceInMilliseconds } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -23,6 +23,12 @@ interface TimeState {
   milliseconds: number;
 }
 
+interface StoredProgress {
+  timeLeft: TimeState;
+  completedTasks: string[];
+  lastVisit: string;
+}
+
 export function DashboardAlerts({ lawyerCreatedAt, appointments, messages, notifications }: Props) {
   const [showAlerts, setShowAlerts] = useState(true);
   const [timeLeft, setTimeLeft] = useState<TimeState>({
@@ -34,11 +40,7 @@ export function DashboardAlerts({ lawyerCreatedAt, appointments, messages, notif
   });
 
   // Use localStorage with a more specific key
-  const [storedProgress, setStoredProgress] = useLocalStorage<{
-    timeLeft: TimeState;
-    completedTasks: string[];
-    lastVisit: string;
-  }>('lawyer-onboarding-progress', {
+  const [storedProgress, setStoredProgress] = useLocalStorage<StoredProgress>('lawyer-onboarding-progress', {
     timeLeft: {
       days: 30,
       hours: 0,
@@ -58,8 +60,8 @@ export function DashboardAlerts({ lawyerCreatedAt, appointments, messages, notif
       
       if (now >= thirtyDaysFromCreation) {
         clearInterval(timer);
-        setStoredProgress(prev => ({
-          ...prev,
+        setStoredProgress({
+          ...storedProgress,
           timeLeft: {
             days: 0,
             hours: 0,
@@ -67,7 +69,7 @@ export function DashboardAlerts({ lawyerCreatedAt, appointments, messages, notif
             seconds: 0,
             milliseconds: 0
           }
-        }));
+        });
         return;
       }
 
@@ -81,24 +83,24 @@ export function DashboardAlerts({ lawyerCreatedAt, appointments, messages, notif
       };
 
       setTimeLeft(newTime);
-      setStoredProgress(prev => ({
-        ...prev,
+      setStoredProgress({
+        ...storedProgress,
         timeLeft: newTime,
         lastVisit: now.toISOString()
-      }));
+      });
     }, 10);
 
     return () => clearInterval(timer);
-  }, [lawyerCreatedAt, setStoredProgress]);
+  }, [lawyerCreatedAt, setStoredProgress, storedProgress]);
 
   // Track completed tasks
   const toggleTask = (taskId: string) => {
-    setStoredProgress(prev => ({
-      ...prev,
-      completedTasks: prev.completedTasks.includes(taskId)
-        ? prev.completedTasks.filter(id => id !== taskId)
-        : [...prev.completedTasks, taskId]
-    }));
+    setStoredProgress({
+      ...storedProgress,
+      completedTasks: storedProgress.completedTasks.includes(taskId)
+        ? storedProgress.completedTasks.filter(id => id !== taskId)
+        : [...storedProgress.completedTasks, taskId]
+    });
   };
 
   // Check if a task is completed

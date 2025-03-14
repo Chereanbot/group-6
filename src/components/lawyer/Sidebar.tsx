@@ -9,6 +9,8 @@ import {
   Clock, DollarSign, BookOpen, Scale, User, Settings,
   ChevronDown
 } from 'lucide-react';
+import { title } from 'process';
+import { path } from 'pdfkit';
 
 const menuItems = [
   {
@@ -24,16 +26,17 @@ const menuItems = [
     dataTour: 'cases',
     subItems: [
       { title: 'Active Cases', path: '/lawyer/cases/active' },
-      { title: 'Pending Cases', path: '/lawyer/cases/pending' },
-      { title: 'Completed Cases', path: '/lawyer/cases/completed' },
-      { title: 'Appeals', path: '/lawyer/cases/appeals' }
+      { title: 'Cases Progress', path: '/lawyer/cases/progress' },
+      { title: 'Case Activities', path: '/lawyer/cases/case-activity' },
+      { title: 'Appeals', path: '/lawyer/cases/appeals' },
+      { title: 'Case Activities', path: '/lawyer/cases/activities' }
     ]
   },
   {
-    title: 'Calendar',
+    title: 'Appointments',
     icon: Calendar,
-    path: '/lawyer/calendar',
-    dataTour: 'calendar'
+    path: '/lawyer/appointments',
+    dataTour: 'appointments'
   },
   {
     title: 'Documents',
@@ -47,32 +50,27 @@ const menuItems = [
     ]
   },
   {
-    title: 'Client Communications',
+    title: 'Communications',
     icon: MessageSquare,
     path: '/lawyer/communications',
     dataTour: 'communications',
     subItems: [
       { title: 'Messages', path: '/lawyer/communications/messages' },
       { title: 'Appointments', path: '/lawyer/communications/appointments' },
-      { title: 'Client Portal', path: '/lawyer/communications/portal' }
+      { title: 'Sms', path: '/lawyer/communications/sms' }
     ]
   },
   {
-    title: 'Time Tracking',
+    title: 'Client Management',
     icon: Clock,
-    path: '/lawyer/time-tracking',
-    dataTour: 'time-tracking'
+    path: '/lawyer/clients',
+    dataTour: 'client-management'
   },
   {
-    title: 'Billing',
-    icon: DollarSign,
-    path: '/lawyer/billing',
-    dataTour: 'billing',
-    subItems: [
-      { title: 'Time Sheets', path: '/lawyer/billing/timesheets' },
-      { title: 'Invoices', path: '/lawyer/billing/invoices' },
-      { title: 'Expenses', path: '/lawyer/billing/expenses' }
-    ]
+    title: 'Time Entry',
+    icon: Clock,
+    path: '/lawyer/time-entry',
+    dataTour: 'time-entry'
   },
   {
     title: 'Legal Research',
@@ -101,6 +99,21 @@ const menuItems = [
     icon: User,
     path: '/lawyer/profile',
     dataTour: 'profile'
+  },
+ 
+  {
+    title: 'Reports',
+    icon: FileText,
+    path: '/lawyer/reports',
+    dataTour: 'reports',
+    subItems: [
+      { title: 'Performance', path: '/lawyer/reports/performance' },
+      { title:  'analaytics', path: '/lawyer/reports/analytics' },
+      { title: 'Workload', path: '/lawyer/reports/workload' },
+      
+      { title: 'Case Activity', path: '/lawyer/reports/case-activity' },
+      { title: 'Case Summary', path: '/lawyer/reports/case-summary' }
+    ]
   },
   {
     title: 'Settings',

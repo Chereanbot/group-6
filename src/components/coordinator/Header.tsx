@@ -21,7 +21,9 @@ import {
   Building2,
   Database,
   Shield,
-  HelpCircle
+  HelpCircle,
+  ChevronDown,
+  X
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -31,7 +33,20 @@ interface Notification {
   timestamp: string;
 }
 
-export default function Header() {
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+}
+
+interface HeaderProps {
+  user: User;
+  toggleSidebar: () => void;
+}
+
+export default function Header({ user, toggleSidebar }: HeaderProps) {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -40,8 +55,16 @@ export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showQuickAccess, setShowQuickAccess] = useState(false);
 
+  // Default user data if none provided
+  const userData = user || {
+    id: 'default',
+    name: 'Cordinator User',
+    email: 'cherinetcoordinator@gmail.com',
+    role: 'coordinator',
+    avatar: undefined
+  };
+
   useEffect(() => {
-    // Check system preference for dark mode
     if (typeof window !== 'undefined') {
       const darkModePreference = localStorage.getItem('darkMode');
       setIsDarkMode(darkModePreference === 'true');
@@ -95,13 +118,13 @@ export default function Header() {
   ];
 
   return (
-    <header className="bg-white dark:bg-gray-800 shadow-md transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo and Brand */}
+    <header className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left Section */}
           <div className="flex items-center">
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={toggleSidebar}
               className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 lg:hidden"
             >
               <Menu className="h-6 w-6" />
@@ -114,7 +137,7 @@ export default function Header() {
                 height={40}
                 className="rounded-full"
               />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Legal Aid Services</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-white">Du Las</span>
             </Link>
           </div>
 
@@ -181,6 +204,9 @@ export default function Header() {
 
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">Notifications</h3>
+                  </div>
                   {notifications.length > 0 ? (
                     notifications.map((notification) => (
                       <div key={notification.id} className="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -201,14 +227,28 @@ export default function Header() {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="flex items-center space-x-2 p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <User className="h-6 w-6" />
+                {userData.avatar ? (
+                  <Image
+                    src={userData.avatar}
+                    alt={userData.name}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                  </div>
+                )}
+                <span className="hidden md:block text-sm font-medium">{userData.name}</span>
+                <ChevronDown className="h-4 w-4" />
               </button>
 
               {isMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
                   <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">John Doe</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">coordinator@legalaid.com</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{userData.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{userData.email}</p>
                   </div>
                   
                   <Link href="/coordinator/profiles" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">

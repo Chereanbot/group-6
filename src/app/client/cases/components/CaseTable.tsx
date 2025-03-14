@@ -17,6 +17,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from 'date-fns';
 import { translate } from '@/utils/translations';
 import { 
@@ -26,24 +36,30 @@ import {
   ChevronDown,
   FileText,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { CaseDetailsDialog } from './CaseDetailsDialog';
+import { toast } from '@/components/ui/use-toast';
 import type { Case } from '../types';
 
 interface CaseTableProps {
   cases: Case[];
   isAmharic: boolean;
+  onCaseDeleted?: () => void;
 }
 
 type SortField = 'title' | 'status' | 'priority' | 'category' | 'updatedAt';
 type SortOrder = 'asc' | 'desc';
 
-export function CaseTable({ cases, isAmharic }: CaseTableProps) {
+export function CaseTable({ cases, isAmharic, onCaseDeleted }: CaseTableProps) {
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [caseToDelete, setCaseToDelete] = useState<Case | null>(null);
   const [sortField, setSortField] = useState<SortField>('updatedAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [page, setPage] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 10;
 
   const getPriorityColor = (priority: string) => {
@@ -133,6 +149,38 @@ export function CaseTable({ cases, isAmharic }: CaseTableProps) {
     }
   };
 
+  const handleDeleteCase = async (case_: Case) => {
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/client/cases?id=${case_.id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete case');
+      }
+
+      toast({
+        title: translate('Success', isAmharic),
+        description: translate('Case deleted successfully', isAmharic),
+      });
+
+      setCaseToDelete(null);
+      onCaseDeleted?.();
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      toast({
+        title: translate('Error', isAmharic),
+        description: translate(error instanceof Error ? error.message : 'Failed to delete case', isAmharic),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <>
       <div className="rounded-md border dark:border-gray-800">
@@ -185,9 +233,16 @@ export function CaseTable({ cases, isAmharic }: CaseTableProps) {
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{case_.title}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {case_.assignedLawyer?.fullName || translate('Not Assigned', isAmharic)}
-                      </span>
+                      <div className="text-sm text-muted-foreground">
+                        {case_.assignedCoordinator ? (
+                          <div className="flex flex-col">
+                            <span>{translate('Coordinator', isAmharic)}: {case_.assignedCoordinator.fullName}</span>
+                            <span className="text-xs">{case_.assignedCoordinator.coordinator?.office.name}</span>
+                          </div>
+                        ) : (
+                          translate('Pending Assignment', isAmharic)
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -232,15 +287,30 @@ export function CaseTable({ cases, isAmharic }: CaseTableProps) {
                           <Eye className="mr-2 h-4 w-4" />
                           {translate('View Details', isAmharic)}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/documents`}>
                           <FileText className="mr-2 h-4 w-4" />
                           {translate('View Documents', isAmharic)}
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/events`}>
                           <Calendar className="mr-2 h-4 w-4" />
                           {translate('View Events', isAmharic)}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/messages`}>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          {translate('Messages', isAmharic)}
+                        </DropdownMenuItem>
+                        {case_.status === 'PENDING' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => setCaseToDelete(case_)}
+                              className="text-red-600 dark:text-red-400"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {translate('Delete Case', isAmharic)}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -282,6 +352,43 @@ export function CaseTable({ cases, isAmharic }: CaseTableProps) {
         onClose={() => setSelectedCase(null)}
         isAmharic={isAmharic}
       />
+
+      <AlertDialog open={!!caseToDelete} onOpenChange={() => !isDeleting && setCaseToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {translate('Delete Case', isAmharic)}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <div className="space-y-2">
+                <span className="block">{translate('Are you sure you want to delete this case?', isAmharic)}</span>
+                <div className="flex items-center text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/10 p-3 rounded-md">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  <span className="text-sm">
+                    {translate('This action cannot be undone. All case documents and history will be permanently deleted.', isAmharic)}
+                  </span>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>
+              {translate('Cancel', isAmharic)}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => caseToDelete && handleDeleteCase(caseToDelete)}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-900 dark:hover:bg-red-800 text-white"
+            >
+              {isDeleting ? (
+                translate('Deleting...', isAmharic)
+              ) : (
+                translate('Delete', isAmharic)
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 } 

@@ -134,7 +134,7 @@ export default function NotFound() {
           className="mt-8 text-sm"
         >
           <button
-            onClick={() => router.push('/support')}
+            onClick={() => router.push('/dulasdev.vercel.app')}
             className="text-primary-600 hover:text-primary-700 dark:text-primary-400 
               dark:hover:text-primary-300 inline-flex items-center"
           >

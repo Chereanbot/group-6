@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { HiOutlinePencilAlt, HiOutlineTrash, HiOutlineEye, HiOutlinePlus, 
-  HiOfficeBuilding, HiUsers, HiLocationMarker, HiSearch } from 'react-icons/hi';
+  HiOfficeBuilding, HiUsers, HiLocationMarker, HiSearch, HiOutlineBriefcase, HiOutlineUserGroup, HiOutlineClipboardList } from 'react-icons/hi';
 import { OfficeType, OfficeStatus } from '@prisma/client';
 import EditOfficeModal from '@/components/admin/offices/EditOfficeModal';
 import OfficeDetailsModal from '@/components/admin/offices/OfficeDetailsModal';
@@ -20,10 +20,37 @@ interface Office {
   contactPhone: string;
   address: string;
   capacity: number;
-  _count?: {
-    lawyers: number;
-    coordinators: number;
+  metrics: {
+    lawyers: {
+      total: number;
+      active: number;
+    };
+    coordinators: {
+      total: number;
+      active: number;
+      capacity: number;
+      available: number;
+    };
+    clients: number;
+    cases: {
+      total: number;
+      active: number;
+      completed: number;
+      pending: number;
+    };
   };
+  coordinators: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    status: string;
+  }>;
+  lawyers: Array<{
+    id: string;
+    fullName: string;
+    status: string;
+    caseCount: number;
+  }>;
 }
 
 export default function OfficesPage() {
@@ -43,11 +70,13 @@ export default function OfficesPage() {
     totalOffices: 0,
     activeOffices: 0,
     totalStaff: 0,
-    totalCapacity: 0
+    totalCapacity: 0,
+    totalCases: 0,
+    totalClients: 0
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('auth-token');
     if (!token) {
       toast.error('Please log in to access this page');
       router.push('/auth/login');
@@ -57,7 +86,7 @@ export default function OfficesPage() {
 
   const fetchOffices = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       if (!token) {
         toast.error('Authentication token not found');
         return;
@@ -70,9 +99,20 @@ export default function OfficesPage() {
 
       const response = await fetch(`/api/offices?${queryParams.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Cookie': `auth-token=${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Please log in to continue');
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error('Failed to fetch offices');
+      }
 
       const data = await response.json();
 
@@ -81,15 +121,21 @@ export default function OfficesPage() {
         // Calculate stats
         const activeOffices = data.data.offices.filter((o: Office) => o.status === 'ACTIVE');
         const totalStaff = data.data.offices.reduce((acc: number, o: Office) => 
-          acc + (o._count?.lawyers || 0) + (o._count?.coordinators || 0), 0);
+          acc + (o.metrics.lawyers.total || 0) + (o.metrics.coordinators.total || 0), 0);
         const totalCapacity = data.data.offices.reduce((acc: number, o: Office) => 
           acc + (o.capacity || 0), 0);
+        const totalCases = data.data.offices.reduce((acc: number, o: Office) => 
+          acc + (o.metrics.cases.total || 0), 0);
+        const totalClients = data.data.offices.reduce((acc: number, o: Office) => 
+          acc + (o.metrics.clients || 0), 0);
         
         setStats({
           totalOffices: data.data.offices.length,
           activeOffices: activeOffices.length,
           totalStaff,
-          totalCapacity
+          totalCapacity,
+          totalCases,
+          totalClients
         });
       } else {
         toast.error(data.error || 'Failed to fetch offices');
@@ -110,7 +156,7 @@ export default function OfficesPage() {
     if (!confirm('Are you sure you want to delete this office?')) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       if (!token) {
         toast.error('Authentication token not found');
         return;
@@ -119,9 +165,20 @@ export default function OfficesPage() {
       const response = await fetch(`/api/offices/${officeId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Cookie': `auth-token=${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
       });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Please log in to continue');
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error('Failed to delete office');
+      }
 
       const data = await response.json();
 
@@ -161,7 +218,7 @@ export default function OfficesPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-primary-100 dark:bg-primary-900">
@@ -176,11 +233,11 @@ export default function OfficesPage() {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
-              <HiOfficeBuilding className="h-6 w-6 text-green-600 dark:text-green-300" />
+              <HiOutlineBriefcase className="h-6 w-6 text-green-600 dark:text-green-300" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Offices</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.activeOffices}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cases</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalCases}</p>
             </div>
           </div>
         </div>
@@ -198,11 +255,24 @@ export default function OfficesPage() {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
-              <HiLocationMarker className="h-6 w-6 text-purple-600 dark:text-purple-300" />
+              <HiOutlineUserGroup className="h-6 w-6 text-purple-600 dark:text-purple-300" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Capacity</p>
-              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalCapacity}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Clients</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalClients}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
+              <HiOutlineClipboardList className="h-6 w-6 text-yellow-600 dark:text-yellow-300" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Cases</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                {offices.reduce((sum, o) => sum + o.metrics.cases.active, 0)}
+              </p>
             </div>
           </div>
         </div>
@@ -302,6 +372,22 @@ export default function OfficesPage() {
                 </th>
                 <th scope="col" className="px-6 py-4 text-left">
                   <div className="flex items-center gap-2">
+                    <HiOutlineBriefcase className="h-5 w-5 text-gray-400" />
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Cases
+                    </span>
+                  </div>
+                </th>
+                <th scope="col" className="px-6 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <HiOutlineUserGroup className="h-5 w-5 text-gray-400" />
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Clients
+                    </span>
+                  </div>
+                </th>
+                <th scope="col" className="px-6 py-4 text-left">
+                  <div className="flex items-center gap-2">
                     <HiUsers className="h-5 w-5 text-gray-400" />
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Staff Count
@@ -345,12 +431,18 @@ export default function OfficesPage() {
                       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                    </td>
+                  </tr>
                 ))
               ) : offices.length === 0 ? (
                 <tr>
@@ -403,21 +495,38 @@ export default function OfficesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <HiOutlineBriefcase className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {office.metrics.cases.total} Total Cases
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {office.metrics.cases.active} Active • {office.metrics.cases.completed} Completed
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <HiOutlineUserGroup className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {office.metrics.clients} Clients
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       <div className="flex flex-col space-y-1">
-                      {office._count ? (
-                        <>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                              <HiUsers className="h-4 w-4 mr-1" />
-                              {office._count.lawyers} Lawyers
-                            </span>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                              <HiUsers className="h-4 w-4 mr-1" />
-                              {office._count.coordinators} Coordinators
-                            </span>
-                        </>
-                      ) : (
-                          <span className="text-sm text-gray-500 dark:text-gray-400">N/A</span>
-                      )}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          <HiUsers className="h-4 w-4 mr-1" />
+                          {office.metrics.lawyers.active} Lawyers
+                        </span>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                          <HiUsers className="h-4 w-4 mr-1" />
+                          {office.metrics.coordinators.active} / {office.metrics.coordinators.capacity} Coordinators
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

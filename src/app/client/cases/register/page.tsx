@@ -15,7 +15,9 @@ import {
   HiOutlineCheck,
   HiChevronRight,
   HiChevronLeft,
-  HiOutlineX
+  HiOutlineX,
+  HiOutlineOfficeBuilding,
+  HiOutlineUser
 } from 'react-icons/hi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,24 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
+// Add office and coordinator types
+interface Office {
+  id: string;
+  name: string;
+  location: string;
+  description: string;
+  coordinators: Coordinator[];
+}
+
+interface Coordinator {
+  id: string;
+  fullName: string;
+  type: string;
+  specialties: string[];
+  status: string;
+}
 
 // Form schema for case registration
 const caseSchema = z.object({
@@ -34,19 +54,22 @@ const caseSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
   description: z.string().min(20, 'Description must be at least 20 characters'),
 
-  // Step 2: Personal Information
-  fullName: z.string().min(2, 'Full name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Invalid phone number'),
-  address: z.string().min(5, 'Address is required'),
+  // Step 2: Office Selection
+  officeId: z.string().min(1, 'Please select an office'),
 
-  // Step 3: Case Details
+  // Step 3: Personal Information (readonly)
+  fullName: z.string(),
+  email: z.string().email(),
+  phone: z.string(),
+  address: z.string(),
+
+  // Step 4: Case Details
   incidentDate: z.string(),
   location: z.string().min(3, 'Location is required'),
   witnesses: z.array(z.string()).optional(),
   evidenceDescription: z.string().optional(),
   
-  // Step 4: Additional Information
+  // Step 5: Additional Information
   preferredLanguage: z.string(),
   urgencyReason: z.string().optional(),
   additionalNotes: z.string().optional(),
@@ -61,6 +84,12 @@ const steps = [
     name: 'Basic Information',
     icon: HiOutlineDocumentText,
     fields: ['title', 'category', 'priority', 'description']
+  },
+  {
+    id: 'office-selection',
+    name: 'Office Selection',
+    icon: HiOutlineOfficeBuilding,
+    fields: ['officeId']
   },
   {
     id: 'personal-info',
@@ -90,6 +119,10 @@ export default function CaseRegistrationPage() {
   const [uploadError, setUploadError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [selectedOffice, setSelectedOffice] = useState<Office | null>(null);
+  const [isLoadingOffices, setIsLoadingOffices] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -113,53 +146,61 @@ export default function CaseRegistrationPage() {
     }
   });
 
-  const fetchClientInfo = async () => {
+  const fetchUserProfile = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/client/profile', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
+      const response = await fetch('/api/client/profile');
       const data = await response.json();
-      console.log('Raw API Response:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch client information');
+        if (response.status === 401) {
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error(data.message || 'Failed to fetch profile');
       }
 
-      // Check if data exists and has the user property
-      if (data && data.user) {
-        const userData = data.user;
-        console.log('User Data:', userData);
+      if (data.data) {
+        // Create profile data object
+        const profileData = {
+          fullName: data.data.fullName || '',
+          email: data.data.email || '',
+          phone: data.data.phone || '',
+          address: [
+            data.data.address?.region,
+            data.data.address?.zone,
+            data.data.address?.wereda,
+            data.data.address?.kebele,
+            data.data.address?.houseNumber
+          ].filter(Boolean).join(', ') || ''
+        };
 
-        // Set form values with fallbacks
-        form.setValue('fullName', userData.fullName || '');
-        form.setValue('email', userData.email || '');
-        form.setValue('phone', userData.phone || '');
-        form.setValue('address', userData.address || '');
+        // Set form values and validate immediately
+        await Promise.all(
+          Object.entries(profileData).map(async ([key, value]) => {
+            form.setValue(key as keyof typeof profileData, value, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true
+            });
+          })
+        );
 
-        console.log('Form values set:', {
-          fullName: form.getValues('fullName'),
-          email: form.getValues('email'),
-          phone: form.getValues('phone'),
-          address: form.getValues('address')
-        });
-      } else {
-        console.log('No user data in response:', data);
-        toast({
-          title: "Notice",
-          description: "Could not load your information. Please fill in the details manually.",
-          variant: "default"
-        });
+        // Force validation of all fields
+        await form.trigger(['fullName', 'email', 'phone', 'address']);
+
+        // Set preferred language if available
+        if (data.data.preferredLanguage) {
+          form.setValue('preferredLanguage', data.data.preferredLanguage, {
+            shouldValidate: true
+          });
+        }
       }
     } catch (error) {
-      console.error('Error fetching client info:', error);
+      console.error('Error fetching profile:', error);
       toast({
         title: "Error",
-        description: "Failed to load your information. Please fill in the details manually.",
+        description: "Failed to load your profile. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -167,9 +208,64 @@ export default function CaseRegistrationPage() {
     }
   };
 
+  const fetchOffices = async () => {
+    try {
+      setIsLoadingOffices(true);
+      setError(null);
+      const response = await fetch('/api/offices/client');
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/auth/login'); // Redirect to login if unauthorized
+          return;
+        }
+        throw new Error(data.message || 'Failed to fetch offices');
+      }
+
+      if (!data.success || !Array.isArray(data.data)) {
+        throw new Error('Invalid response format from server');
+      }
+
+      // Filter out offices with no active coordinators
+      const availableOffices = data.data.filter(
+        office => office.coordinators && office.coordinators.length > 0
+      );
+
+      if (availableOffices.length === 0) {
+        toast({
+          title: "Notice",
+          description: "No offices with available coordinators found in your region.",
+          variant: "default"
+        });
+      }
+
+      setOffices(availableOffices);
+    } catch (error) {
+      console.error('Error fetching offices:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load offices');
+      toast({
+        title: "Error",
+        description: "Failed to load offices. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingOffices(false);
+    }
+  };
+
   useEffect(() => {
-    fetchClientInfo();
+    // Fetch both profile and offices data when component mounts
+    Promise.all([fetchUserProfile(), fetchOffices()]).catch(error => {
+      console.error('Error initializing page:', error);
+    });
   }, []);
+
+  const handleOfficeSelect = (officeId: string) => {
+    const office = offices.find(o => o.id === officeId);
+    setSelectedOffice(office || null);
+    form.setValue('officeId', officeId);
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -217,21 +313,67 @@ export default function CaseRegistrationPage() {
 
   const handleNext = async () => {
     const fields = steps[currentStep].fields;
-    const isValid = await form.trigger(fields as any);
     
-    if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
-    } else {
-      // Show validation errors
-      const errors = form.formState.errors;
-      const errorMessages = Object.values(errors).map(error => error.message);
-      if (errorMessages.length > 0) {
-        toast({
-          title: "Validation Error",
-          description: errorMessages[0],
-          variant: "destructive"
-        });
+    try {
+      // Special handling for personal information step
+      if (currentStep === 2) {
+        const values = form.getValues();
+        console.log('Personal info values:', values); // Debug log
+        
+        // Check if all required fields are filled
+        const requiredFields = ['fullName', 'email', 'phone', 'address'];
+        const missingFields = requiredFields.filter(field => !values[field]?.trim());
+        
+        if (missingFields.length > 0) {
+          toast({
+            title: "Missing Information",
+            description: `Please ensure all personal information fields are filled: ${missingFields.join(', ')}`,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // If all fields are filled, proceed to next step
+        setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+        return;
       }
+
+      // For other steps, validate the fields
+      const isValid = await form.trigger(fields as any);
+      
+      if (isValid) {
+        // Special handling for office selection step
+        if (currentStep === 1 && !selectedOffice) {
+          toast({
+            title: "Required",
+            description: "Please select an office to continue",
+            variant: "destructive"
+          });
+          return;
+        }
+        setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+      } else {
+        // Show validation errors
+        const errors = form.formState.errors;
+        const errorMessages = Object.values(errors)
+          .filter(error => error && error.message)
+          .map(error => error.message);
+        
+        if (errorMessages.length > 0) {
+          toast({
+            title: "Validation Error",
+            description: errorMessages[0],
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while validating the form",
+        variant: "destructive"
+      });
     }
   };
 
@@ -298,7 +440,14 @@ export default function CaseRegistrationPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to register case');
+        // Handle validation errors
+        if (result.errors) {
+          const errorMessage = Array.isArray(result.errors) 
+            ? result.errors.join('\n') 
+            : result.message || 'Failed to register case';
+          throw new Error(errorMessage);
+        }
+        throw new Error(result.message || 'Failed to register case');
       }
 
       toast({
@@ -480,95 +629,157 @@ export default function CaseRegistrationPage() {
                     </div>
                   )}
 
-                  {/* Step 2: Personal Information */}
+                  {/* Step 2: Office Selection */}
                   {currentStep === 1 && (
+                    <div className="space-y-6">
+                      {isLoadingOffices ? (
+                        <div className="flex justify-center items-center py-12">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                        </div>
+                      ) : error ? (
+                        <div className="text-center py-12">
+                          <p className="text-red-500 dark:text-red-400">{error}</p>
+                          <Button
+                            onClick={fetchOffices}
+                            variant="outline"
+                            className="mt-4"
+                          >
+                            Retry Loading Offices
+                          </Button>
+                        </div>
+                      ) : offices.length === 0 ? (
+                        <div className="text-center py-12">
+                          <p className="text-gray-500 dark:text-gray-400">No offices available in your region.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                          {offices.map((office) => (
+                            <div
+                              key={office.id}
+                              className={cn(
+                                "relative rounded-lg border p-6 cursor-pointer transition-all",
+                                selectedOffice?.id === office.id
+                                  ? "border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-900/20"
+                                  : "border-gray-200 bg-white hover:border-primary-200 dark:border-gray-700 dark:bg-gray-800"
+                              )}
+                              onClick={() => handleOfficeSelect(office.id)}
+                            >
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                                    {office.name}
+                                  </h3>
+                                  {selectedOffice?.id === office.id && (
+                                    <HiOutlineCheck className="h-5 w-5 text-primary-500 dark:text-primary-400" />
+                                  )}
+                                </div>
+                                
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {office.description}
+                                </p>
+                                
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Location:
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {office.location}
+                                  </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Available Coordinators:
+                                  </p>
+                                  <div className="space-y-2">
+                                    {office.coordinators.map((coordinator) => (
+                                      <div
+                                        key={coordinator.id}
+                                        className="flex items-center space-x-2 text-sm"
+                                      >
+                                        <HiOutlineUser className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                        <span className="text-gray-900 dark:text-white">
+                                          {coordinator.fullName}
+                                        </span>
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                          ({coordinator.type})
+                                        </span>
+                                        <Badge variant="outline" className={
+                                          coordinator.status === 'ACTIVE'
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                                        }>
+                                          {coordinator.status}
+                                        </Badge>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Step 3: Personal Information */}
+                  {currentStep === 2 && (
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="fullName" className="text-gray-900 dark:text-gray-100">Full Name</Label>
+                        <Label htmlFor="fullName">Full Name</Label>
                         <Input
                           id="fullName"
                           {...form.register('fullName')}
-                          placeholder="Enter your full name"
-                          className={cn(
-                            "w-full bg-white dark:bg-gray-800",
-                            "text-gray-900 dark:text-gray-100",
-                            "border-gray-300 dark:border-gray-600",
-                            "focus:ring-primary-500 dark:focus:ring-primary-400",
-                            "focus:border-primary-500 dark:focus:border-primary-400",
-                            form.formState.errors.fullName ? 'border-red-500' : ''
-                          )}
+                          className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
+                          readOnly
                         />
-                        {form.formState.errors.fullName && (
-                          <p className="mt-1 text-sm text-red-500">{form.formState.errors.fullName.message}</p>
-                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="email" className="text-gray-900 dark:text-gray-100">Email Address</Label>
+                        <Label htmlFor="email">Email Address</Label>
                         <Input
                           id="email"
-                          type="email"
                           {...form.register('email')}
-                          placeholder="Enter your email address"
-                          className={cn(
-                            "w-full bg-white dark:bg-gray-800",
-                            "text-gray-900 dark:text-gray-100",
-                            "border-gray-300 dark:border-gray-600",
-                            "focus:ring-primary-500 dark:focus:ring-primary-400",
-                            "focus:border-primary-500 dark:focus:border-primary-400",
-                            form.formState.errors.email ? 'border-red-500' : ''
-                          )}
+                          className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
+                          readOnly
                         />
-                        {form.formState.errors.email && (
-                          <p className="mt-1 text-sm text-red-500">{form.formState.errors.email.message}</p>
-                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="phone" className="text-gray-900 dark:text-gray-100">Phone Number</Label>
+                        <Label htmlFor="phone">Phone Number</Label>
                         <Input
                           id="phone"
                           {...form.register('phone')}
-                          placeholder="Enter your phone number"
-                          className={cn(
-                            "w-full bg-white dark:bg-gray-800",
-                            "text-gray-900 dark:text-gray-100",
-                            "border-gray-300 dark:border-gray-600",
-                            "focus:ring-primary-500 dark:focus:ring-primary-400",
-                            "focus:border-primary-500 dark:focus:border-primary-400",
-                            form.formState.errors.phone ? 'border-red-500' : ''
-                          )}
+                          className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
+                          readOnly
                         />
-                        {form.formState.errors.phone && (
-                          <p className="mt-1 text-sm text-red-500">{form.formState.errors.phone.message}</p>
-                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="address" className="text-gray-900 dark:text-gray-100">Full Address</Label>
+                        <Label htmlFor="address">Address</Label>
                         <Textarea
                           id="address"
                           {...form.register('address')}
-                          placeholder="Enter your full address"
-                          className={cn(
-                            "w-full bg-white dark:bg-gray-800",
-                            "text-gray-900 dark:text-gray-100",
-                            "border-gray-300 dark:border-gray-600",
-                            "focus:ring-primary-500 dark:focus:ring-primary-400",
-                            "focus:border-primary-500 dark:focus:border-primary-400",
-                            form.formState.errors.address ? 'border-red-500' : ''
-                          )}
+                          className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
+                          readOnly
                           rows={3}
                         />
-                        {form.formState.errors.address && (
-                          <p className="mt-1 text-sm text-red-500">{form.formState.errors.address.message}</p>
-                        )}
+                      </div>
+
+                      <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center space-x-2">
+                          <HiOutlineCheck className="h-5 w-5 text-green-500" />
+                          <p className="text-sm text-green-700 dark:text-green-300">
+                            Your personal information has been automatically filled from your profile.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Step 3: Case Details */}
-                  {currentStep === 2 && (
+                  {/* Step 4: Case Details */}
+                  {currentStep === 3 && (
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="incidentDate">Date of Incident</Label>
@@ -687,8 +898,8 @@ export default function CaseRegistrationPage() {
                     </div>
                   )}
 
-                  {/* Step 4: Additional Information */}
-                  {currentStep === 3 && (
+                  {/* Step 5: Additional Information */}
+                  {currentStep === 4 && (
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="preferredLanguage">Preferred Language</Label>
