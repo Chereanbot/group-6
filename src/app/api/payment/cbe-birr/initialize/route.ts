@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         data: {
           name: metadata?.planId || 'BASIC',
           description: 'Basic Legal Service Package',
-          serviceType: ServiceType.BASIC,
+          serviceType: ServiceType.CONSULTATION,
           category: 'OTHER',
           price: parseFloat(amount),
           features: ['Basic legal consultation', 'Document review'],

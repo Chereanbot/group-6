@@ -2489,3 +2489,34 @@ model notificationSettings {
   @@index([userType])
 }
 
+model SystemSettings {
+  id                            String   @id @default(cuid()) @map("_id")
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+  
+  // System Settings
+  automaticUpdates             Boolean  @default(true)
+  updateInterval               Int      @default(30)
+  emailNotifications           Boolean  @default(true)
+  workloadAlerts               Boolean  @default(true)
+  maxCaseLoad                  Int      @default(50)
+  defaultOffice                String   @default("main")
+  language                     String   @default("en")
+  timezone                     String   @default("UTC")
+  
+  // Notification Settings
+  notificationCaseAssignments  Boolean  @default(true)
+  notificationCaseUpdates      Boolean  @default(true)
+  notificationWorkloadAlerts   Boolean  @default(true)
+  notificationPerformanceReports Boolean @default(true)
+  notificationSystemUpdates    Boolean  @default(true)
+  emailDigestFrequency        String   @default("daily")
+  
+  // Security Settings
+  twoFactorAuthRequired       Boolean  @default(false)
+  sessionTimeoutMinutes       Int      @default(30)
+  passwordExpiryDays         Int      @default(90)
+  maxLoginAttempts           Int      @default(5)
+  ipWhitelist               String[] @default([])
+}
+

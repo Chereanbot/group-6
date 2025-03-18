@@ -1,5 +1,6 @@
-import { ServiceType, ServiceStatus, PaymentStatus, Priority } from '@prisma/client';
+import { ServiceType as PrismaServiceType, PaymentStatus as PrismaPaymentStatus, Priority } from '@prisma/client';
 
+// Define our own ServiceStatus enum since it's not in @prisma/client
 export enum ServiceStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
@@ -9,18 +10,9 @@ export enum ServiceStatus {
   CANCELLED = 'CANCELLED'
 }
 
-export enum ServiceType {
-  LEGAL_AID = 'LEGAL_AID',
-  PAID = 'PAID',
-  CONSULTATION = 'CONSULTATION'
-}
-
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  PAID = 'PAID',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED'
-}
+// Re-export Prisma types with our own names
+export type ServiceType = PrismaServiceType;
+export type PaymentStatus = PrismaPaymentStatus;
 
 export interface ServiceRequest {
   id: string;

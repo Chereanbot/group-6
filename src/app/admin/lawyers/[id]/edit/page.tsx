@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'react-hot-toast';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import React from 'react';
+
+interface Office {
+  id: string;
+  name: string;
+}
+
+interface Specialization {
+  id: string;
+  name: string;
+  category: string;
+}
 
 const steps = [
   { id: 0, title: 'Personal Information', description: 'Basic details and credentials' },
@@ -19,18 +31,19 @@ const steps = [
   { id: 2, title: 'Academic Information', description: 'Teaching and department details' }
 ];
 
-export default function NewLawyerPage() {
+export default function EditLawyerPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
     yearsOfExperience: '',
     yearsOfPractice: '',
     specialization: '',
@@ -43,8 +56,92 @@ export default function NewLawyerPage() {
       endTime: '',
     },
     bio: '',
-    officeName: 'DILLA' // Changed from officeId to officeName
+    officeName: ''
   });
+
+  // Fetch lawyer data
+  useEffect(() => {
+    const fetchLawyer = async () => {
+      try {
+        setPageLoading(true);
+        const response = await fetch(`/api/lawyers/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch lawyer data');
+        const { data } = await response.json();
+        
+        if (!data) throw new Error('No data received');
+        
+        setFormData({
+          fullName: data.user?.fullName || '',
+          email: data.user?.email || '',
+          phone: data.user?.phone || '',
+          yearsOfExperience: data.experience?.toString() || '',
+          yearsOfPractice: data.yearsOfPractice?.toString() || '',
+          specialization: data.specializations?.[0]?.specialization?.name || '',
+          languages: data.languages || ['Amharic', 'English'],
+          certifications: data.certifications?.join(', ') || '',
+          academicRank: data.academicRank || '',
+          department: data.department || '',
+          teachingSchedule: {
+            startTime: data.teachingSchedule?.startTime || '',
+            endTime: data.teachingSchedule?.endTime || '',
+          },
+          bio: data.bio || '',
+          officeName: data.office?.name || ''
+        });
+      } catch (error) {
+        console.error('Error fetching lawyer:', error);
+        toast.error('Failed to fetch lawyer data');
+        router.push('/admin/lawyers');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    fetchLawyer();
+  }, [params.id, router]);
+
+  // Fetch offices
+  useEffect(() => {
+    const fetchOffices = async () => {
+      try {
+        const response = await fetch('/api/offices');
+        if (!response.ok) throw new Error('Failed to fetch offices');
+        const { data } = await response.json();
+        if (data && data.offices) {
+          // Map the complex office data to the simple format we need
+          const simpleOffices = data.offices.map((office: any) => ({
+            id: office.id,
+            name: office.name
+          }));
+          setOffices(simpleOffices);
+        }
+      } catch (error) {
+        console.error('Error fetching offices:', error);
+        toast.error('Failed to fetch offices');
+      }
+    };
+
+    fetchOffices();
+  }, []);
+
+  // Fetch specializations
+  useEffect(() => {
+    const fetchSpecializations = async () => {
+      try {
+        const response = await fetch('/api/specializations');
+        if (!response.ok) throw new Error('Failed to fetch specializations');
+        const { data } = await response.json();
+        if (Array.isArray(data)) {
+          setSpecializations(data);
+        }
+      } catch (error) {
+        console.error('Error fetching specializations:', error);
+        toast.error('Failed to fetch specializations');
+      }
+    };
+
+    fetchSpecializations();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -63,16 +160,8 @@ export default function NewLawyerPage() {
 
   const handleNext = () => {
     if (currentStep === 0) {
-      if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+      if (!formData.fullName || !formData.email || !formData.phone) {
         toast.error('Please fill in all required personal information');
-        return;
-      }
-      if (formData.password !== formData.confirmPassword) {
-        toast.error('Passwords do not match');
-        return;
-      }
-      if (formData.password.length < 8) {
-        toast.error('Password must be at least 8 characters long');
         return;
       }
     }
@@ -95,15 +184,13 @@ export default function NewLawyerPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Prepare the data according to backend requirements
       const submitData = {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        password: formData.password,
-        officeName: formData.officeName, // Changed from officeId to officeName
+        officeName: formData.officeName,
         yearsOfExperience: parseInt(formData.yearsOfExperience) || 0,
-        specializations: [formData.specialization], // Changed to array as expected by backend
+        specializations: [formData.specialization],
         languages: formData.languages,
         certifications: formData.certifications ? formData.certifications.split(',').map(cert => cert.trim()) : [],
         academicRank: formData.academicRank,
@@ -115,8 +202,8 @@ export default function NewLawyerPage() {
         } : undefined
       };
 
-      const response = await fetch('/api/lawyers', {
-        method: 'POST',
+      const response = await fetch(`/api/lawyers/${params.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -126,25 +213,36 @@ export default function NewLawyerPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create lawyer profile');
+        throw new Error(data.message || 'Failed to update lawyer profile');
       }
 
-      toast.success('Faculty lawyer profile created successfully');
+      toast.success('Lawyer profile updated successfully');
       router.push('/admin/lawyers');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create lawyer profile');
+      toast.error(error.message || 'Failed to update lawyer profile');
     } finally {
       setLoading(false);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Loading lawyer profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Add New Faculty Lawyer</h1>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2">Register a new faculty member as legal counsel</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Edit Faculty Lawyer</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2">Update faculty member information</p>
           </div>
           <Button variant="outline" onClick={() => router.back()}>
             Cancel
@@ -239,28 +337,19 @@ export default function NewLawyerPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter password"
-                    required
-                    className="border-gray-300 dark:border-gray-600 focus:border-primary focus:ring-primary dark:bg-gray-800 dark:text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-300">Confirm Password</Label>
-                  <Input 
-                    id="confirmPassword" 
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm password"
-                    required
-                    className="border-gray-300 dark:border-gray-600 focus:border-primary focus:ring-primary dark:bg-gray-800 dark:text-white"
-                  />
+                  <Label htmlFor="officeName" className="text-gray-700 dark:text-gray-300">Office</Label>
+                  <Select value={formData.officeName} onValueChange={(value) => handleSelectChange('officeName', value)}>
+                    <SelectTrigger className="border-gray-300 dark:border-gray-600 focus:border-primary focus:ring-primary dark:bg-gray-800 dark:text-white">
+                      <SelectValue placeholder="Select Office" />
+                    </SelectTrigger>
+                    <SelectContent className="dark:bg-gray-800 dark:text-white">
+                      {offices.map((office) => (
+                        <SelectItem key={office.id} value={office.name}>
+                          {office.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
@@ -287,12 +376,11 @@ export default function NewLawyerPage() {
                       <SelectValue placeholder="Select Specialization" />
                     </SelectTrigger>
                     <SelectContent className="dark:bg-gray-800 dark:text-white">
-                      <SelectItem value="criminal">Criminal Law</SelectItem>
-                      <SelectItem value="civil">Civil Law</SelectItem>
-                      <SelectItem value="corporate">Corporate Law</SelectItem>
-                      <SelectItem value="family">Family Law</SelectItem>
-                      <SelectItem value="humanRights">Human Rights Law</SelectItem>
-                      <SelectItem value="labor">Labor Law</SelectItem>
+                      {specializations.map((spec) => (
+                        <SelectItem key={spec.id} value={spec.name}>
+                          {spec.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -413,7 +501,7 @@ export default function NewLawyerPage() {
                 disabled={loading}
                 className="w-full sm:w-auto px-6"
               >
-                {loading ? 'Creating...' : 'Register Faculty Lawyer'}
+                {loading ? 'Updating...' : 'Update Faculty Lawyer'}
               </Button>
             )}
           </div>
@@ -421,4 +509,4 @@ export default function NewLawyerPage() {
       </div>
     </div>
   );
-}
+} 

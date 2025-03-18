@@ -155,13 +155,40 @@ export async function POST(req: Request) {
 
     const data = await req.json();
 
-    if (!data.fullName || !data.email || !data.password || !data.phone || !data.officeId) {
+    // Validate required fields with specific messages
+    const requiredFields = {
+      fullName: "Full Name",
+      email: "Email",
+      password: "Password",
+      phone: "Phone Number",
+      officeName: "Office Name"
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([field]) => !data[field])
+      .map(([, label]) => label);
+
+    if (missingFields.length > 0) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields" },
+        { 
+          success: false, 
+          message: "Missing required fields", 
+          details: `Please provide: ${missingFields.join(", ")}`
+        },
         { status: 400 }
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.email)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
     });
@@ -173,9 +200,39 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate phone number format (assuming Ethiopian format)
+    const phoneRegex = /^\+251[0-9]{9}$/;
+    if (!phoneRegex.test(data.phone)) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Invalid phone number format", 
+          details: "Phone number should be in Ethiopian format: +251xxxxxxxxx"
+        },
+        { status: 400 }
+      );
+    }
+
+    // Find office by name
+    const office = await prisma.office.findUnique({
+      where: { name: data.officeName }
+    });
+
+    if (!office) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Office not found",
+          details: `No office found with name "${data.officeName}"`
+        },
+        { status: 404 }
+      );
+    }
+
     const hashedPassword = await bcryptjs.hash(data.password, 10);
 
     const result = await prisma.$transaction(async (tx) => {
+      // Create user first
       const newUser = await tx.user.create({
         data: {
           fullName: data.fullName,
@@ -189,11 +246,12 @@ export async function POST(req: Request) {
         }
       });
 
+      // Create lawyer profile with proper office ID
       const lawyer = await tx.lawyerProfile.create({
         data: {
           userId: newUser.id,
           experience: data.yearsOfExperience || 0,
-          officeId: data.officeId,
+          officeId: office.id,
           availability: true,
           caseLoad: 0,
           specializations: {
@@ -238,8 +296,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      message: "Lawyer profile created successfully",
       data: result
     });
+
   } catch (error) {
     console.error('Error creating lawyer:', error);
     return NextResponse.json(

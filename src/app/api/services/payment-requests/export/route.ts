@@ -2,36 +2,10 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
-import { UserRoleEnum, RequestStatus } from '@prisma/client';
-import * as XLSX from 'xlsx';
-
-interface ServiceRequest {
-  id: string;
-  title: string;
-  description: string;
-  status: RequestStatus;
-  metadata: {
-    price: number;
-    [key: string]: any;
-  };
-  submittedAt: Date;
-  updatedAt: Date;
-  client: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-  };
-}
-
-// Format currency in ETB
-const formatETB = (amount: number) => {
-  return new Intl.NumberFormat('en-ET', {
-    style: 'currency',
-    currency: 'ETB',
-    minimumFractionDigits: 2,
-  }).format(amount);
-};
+import { UserRoleEnum, PaymentStatus } from '@prisma/client';
+import ExcelJS from 'exceljs';
+import { Parser } from 'json2csv';
+import { format as formatDate } from 'date-fns';
 
 export async function GET(req: Request) {
   try {
@@ -54,102 +28,110 @@ export async function GET(req: Request) {
       );
     }
 
-    // Get query parameters for filtering
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const minAmount = searchParams.get('minAmount');
-    const maxAmount = searchParams.get('maxAmount');
+    const exportFormat = searchParams.get('format') || 'csv';
 
-    // Fetch payment requests with filters
+    // Fetch all payment requests with related data
     const requests = await prisma.serviceRequest.findMany({
       where: {
-        paymentStatus: { not: null },
-        ...(status && status !== 'all' ? { status: status as RequestStatus } : {}),
-        ...(search ? {
-          OR: [
-            { client: { fullName: { contains: search, mode: 'insensitive' } } },
-            { client: { email: { contains: search, mode: 'insensitive' } } },
-            { id: { contains: search, mode: 'insensitive' } }
-          ]
-        } : {}),
-        ...(startDate && endDate ? {
-          submittedAt: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
-          }
-        } : {})
+        paymentStatus: { not: null }
       },
       include: {
         client: {
+          include: {
+            clientProfile: {
+              select: {
+                region: true,
+                zone: true,
+                wereda: true,
+                kebele: true
+              }
+            }
+          }
+        },
+        assignedLawyer: {
           select: {
             fullName: true,
-            email: true,
-            phone: true
+            email: true
           }
         }
       },
       orderBy: {
         submittedAt: 'desc'
       }
-    }) as unknown as ServiceRequest[];
-
-    // Filter results by amount in memory since Prisma JSON filtering is limited
-    const filteredRequests = requests.filter(request => {
-      const price = request.metadata?.price || 0;
-      if (minAmount && price < parseFloat(minAmount)) return false;
-      if (maxAmount && price > parseFloat(maxAmount)) return false;
-      return true;
     });
 
-    // Transform data for Excel
-    const excelData = filteredRequests.map(request => ({
-      'Reference Number': request.id,
-      'Client Name': request.client.fullName,
-      'Client Email': request.client.email,
-      'Client Phone': request.client.phone,
-      'Service': request.title,
-      'Description': request.description,
-      'Amount (ETB)': formatETB(request.metadata?.price || 0),
-      'Status': request.status,
-      'Submitted At': request.submittedAt.toLocaleString(),
-      'Updated At': request.updatedAt.toLocaleString()
+    // Transform data for export
+    const exportData = requests.map(request => ({
+      referenceNumber: request.id,
+      clientName: request.client.fullName,
+      clientEmail: request.client.email,
+      clientPhone: request.client.phone,
+      region: request.client.clientProfile?.region || 'N/A',
+      zone: request.client.clientProfile?.zone || 'N/A',
+      wereda: request.client.clientProfile?.wereda || 'N/A',
+      kebele: request.client.clientProfile?.kebele || 'N/A',
+      serviceName: request.title,
+      amount: (request.metadata as any)?.price || request.quotedPrice || 0,
+      status: request.paymentStatus,
+      assignedLawyer: request.assignedLawyer?.fullName || 'Unassigned',
+      createdAt: request.submittedAt ? formatDate(request.submittedAt, 'yyyy-MM-dd HH:mm:ss') : 'N/A',
+      processedAt: request.completedAt ? formatDate(request.completedAt, 'yyyy-MM-dd HH:mm:ss') : 'Pending'
     }));
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelData);
+    if (exportFormat === 'excel') {
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Payment Requests');
 
-    // Add column widths
-    const colWidths = [
-      { wch: 15 }, // Reference Number
-      { wch: 20 }, // Client Name
-      { wch: 25 }, // Client Email
-      { wch: 15 }, // Client Phone
-      { wch: 20 }, // Service
-      { wch: 30 }, // Description
-      { wch: 15 }, // Amount
-      { wch: 10 }, // Status
-      { wch: 20 }, // Submitted At
-      { wch: 20 }  // Updated At
-    ];
-    ws['!cols'] = colWidths;
+      // Add headers
+      worksheet.columns = [
+        { header: 'Reference', key: 'referenceNumber' },
+        { header: 'Client Name', key: 'clientName' },
+        { header: 'Client Email', key: 'clientEmail' },
+        { header: 'Client Phone', key: 'clientPhone' },
+        { header: 'Region', key: 'region' },
+        { header: 'Zone', key: 'zone' },
+        { header: 'Wereda', key: 'wereda' },
+        { header: 'Kebele', key: 'kebele' },
+        { header: 'Service', key: 'serviceName' },
+        { header: 'Amount', key: 'amount' },
+        { header: 'Status', key: 'status' },
+        { header: 'Assigned Lawyer', key: 'assignedLawyer' },
+        { header: 'Created At', key: 'createdAt' },
+        { header: 'Processed At', key: 'processedAt' }
+      ];
 
-    // Add the worksheet to the workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Payment Requests');
+      // Add data
+      worksheet.addRows(exportData);
 
-    // Generate buffer
-    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      // Style the worksheet
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.columns.forEach(column => {
+        column.width = 15;
+      });
 
-    // Return as Excel file
-    return new Response(buf, {
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename=payment-requests-${new Date().toISOString().split('T')[0]}.xlsx`
-      }
-    });
+      // Generate Excel buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      return new NextResponse(buffer, {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Disposition': `attachment; filename="payment-requests-${new Date().toISOString().split('T')[0]}.xlsx"`
+        }
+      });
+    } else {
+      // Generate CSV
+      const parser = new Parser();
+      const csv = parser.parse(exportData);
+
+      return new NextResponse(csv, {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename="payment-requests-${new Date().toISOString().split('T')[0]}.csv"`
+        }
+      });
+    }
 
   } catch (error) {
     console.error('Error exporting payment requests:', error);

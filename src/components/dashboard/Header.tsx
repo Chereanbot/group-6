@@ -73,11 +73,6 @@ const bellRingAnimation = `
 }
 `;
 
-// Add style tag to head
-const styleTag = document.createElement('style');
-styleTag.textContent = bellRingAnimation;
-document.head.appendChild(styleTag);
-
 const Header = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -345,6 +340,17 @@ const Header = () => {
       console.error('Error deleting notification:', error);
     }
   };
+
+  // Add style tag to head only on client side
+  useEffect(() => {
+    const styleTag = document.createElement('style');
+    styleTag.textContent = bellRingAnimation;
+    document.head.appendChild(styleTag);
+    
+    return () => {
+      styleTag.remove();
+    };
+  }, []);
 
   if (!mounted) return null;
 

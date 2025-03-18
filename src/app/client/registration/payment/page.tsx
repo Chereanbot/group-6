@@ -7,15 +7,14 @@ import { toast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ServiceType } from '@prisma/client';
 
-const CHAPA_PUBLIC_KEY = 'CHAPUBK_TEST-40nSrRkEurW5fh4da1PD4YbDEnAEDgxg';
+const CHAPA_PUBLIC_KEY = process.env.NEXT_PUBLIC_CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-40nSrRkEurW5fh4da1PD4YbDEnAEDgxg';
 
 interface ClientProfile {
   fullName: string;
   email: string;
   phone: string;
-  address: string;
-  idNumber: string;
 }
 
 interface PaymentPlan {
@@ -29,6 +28,8 @@ interface PaymentPlan {
   savings?: number;
   billingPeriod?: string;
   initialPayment: number;
+  serviceType: ServiceType;
+  description?: string;
 }
 
 const paymentPlans: PaymentPlan[] = [
@@ -40,6 +41,8 @@ const paymentPlans: PaymentPlan[] = [
     billingPeriod: 'month',
     color: 'bg-gradient-to-br from-blue-500 to-blue-600',
     icon: '🔹',
+    serviceType: ServiceType.CONSULTATION,
+    description: 'Basic legal consultation and document review services',
     features: [
       'Standard case handling',
       'Email support',
@@ -62,6 +65,8 @@ const paymentPlans: PaymentPlan[] = [
     color: 'bg-gradient-to-br from-purple-500 to-purple-600',
     icon: '⭐',
     savings: 500,
+    serviceType: ServiceType.DOCUMENT_PREPARATION,
+    description: 'Comprehensive document preparation and legal assistance',
     features: [
       'Priority case handling',
       'Phone & email support',
@@ -85,6 +90,8 @@ const paymentPlans: PaymentPlan[] = [
     color: 'bg-gradient-to-br from-yellow-500 to-amber-600',
     icon: '👑',
     savings: 1000,
+    serviceType: ServiceType.COURT_APPEARANCE,
+    description: 'Full legal representation and court appearance services',
     features: [
       'VIP case handling',
       '24/7 support access',
@@ -146,71 +153,94 @@ export default function PaymentPage() {
   const [clientProfile, setClientProfile] = useState<ClientProfile>({
     fullName: '',
     email: '',
-    phone: '',
-    address: '',
-    idNumber: ''
+    phone: ''
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('chapa');
+  const [serviceType, setServiceType] = useState<ServiceType | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPaymentHistory();
-    fetchUserProfile();
+    const fetchData = async () => {
+      await fetchUserProfile();
+      await fetchPaymentHistory();
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('error')) {
-      setError('Payment failed. Please try again.');
-      toast({
-        title: "Payment Failed",
-        description: "Your payment could not be processed. Please try again.",
-        variant: "destructive"
-      });
-    }
+      // Check for error in URL params
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('error')) {
+        setError('Payment failed. Please try again.');
+        toast({
+          title: "Payment Failed",
+          description: "Your payment could not be processed. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchData();
   }, []);
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch('/api/client/profile');
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.success && data?.data) {
-          // Safely access nested properties with optional chaining and nullish coalescing
-          const user = data.data.user || {};
-          const location = data.data;
-          
-          setClientProfile(prev => ({
-            ...prev,
-            fullName: user?.fullName || '',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            address: [
-              location?.region,
-              location?.zone,
-              location?.wereda,
-              location?.kebele
-            ].filter(Boolean).join(', ') || '',
-            idNumber: location?.idNumber || ''
-          }));
-        } else {
-          throw new Error('Invalid profile data structure');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setProfileError('Authentication token not found');
+        router.push('/login'); // Redirect to login if no token
+        return;
+      }
+
+      const response = await fetch('/api/client/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } else {
+      });
+
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!response.ok) {
         throw new Error('Failed to fetch profile');
+      }
+
+      const data = await response.json();
+      
+      if (data?.success && data?.data) {
+        const user = data.data.user || {};
+        const profile = data.data.clientProfile || {};
+        
+        // Set client profile with user data
+        setClientProfile({
+          fullName: user.fullName || profile.fullName || '',
+          email: user.email || profile.email || '',
+          phone: user.phone || profile.phone || ''
+        });
+
+        // If there's a service type in the data, set it
+        if (profile.serviceType) {
+          setServiceType(profile.serviceType as ServiceType);
+        } else if (user.serviceType) {
+          setServiceType(user.serviceType as ServiceType);
+        }
+
+        // If profile is fetched successfully, pre-select the plan based on service type
+        if (profile.serviceType || user.serviceType) {
+          const matchingPlan = paymentPlans.find(plan => 
+            plan.serviceType === (profile.serviceType || user.serviceType)
+          );
+          if (matchingPlan) {
+            setSelectedPlan(matchingPlan);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
+      setProfileError('Failed to load profile data');
       toast({
         title: "Profile Error",
         description: "Unable to load your profile. Please try again or contact support.",
         variant: "destructive"
-      });
-      
-      // Set default empty values to prevent undefined errors
-      setClientProfile({
-        fullName: '',
-        email: '',
-        phone: '',
-        address: '',
-        idNumber: ''
       });
     }
   };
@@ -220,15 +250,50 @@ export default function PaymentPage() {
     if (!validateProfile()) {
       return;
     }
+    
+    if (!selectedPlan) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a plan first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Ensure service type matches the selected plan
+    if (serviceType !== selectedPlan.serviceType) {
+      toast({
+        title: "Validation Error",
+        description: `This plan only supports ${selectedPlan.serviceType} service type`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setShowProfileDialog(false);
     setShowConfirmDialog(true);
   };
 
   const validateProfile = () => {
-    if (!clientProfile.fullName || !clientProfile.email || !clientProfile.phone) {
+    const requiredFields = ['fullName', 'email', 'phone'];
+    
+    const missingFields = requiredFields.filter(
+      field => !clientProfile[field as keyof ClientProfile]
+    );
+    
+    if (missingFields.length > 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields",
+        description: `Please fill in all required fields: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!serviceType) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a service type",
         variant: "destructive"
       });
       return false;
@@ -238,6 +303,8 @@ export default function PaymentPage() {
 
   const handlePlanSelect = (plan: PaymentPlan) => {
     setSelectedPlan(plan);
+    // Set the service type based on the selected plan
+    setServiceType(plan.serviceType);
     setShowProfileDialog(true);
   };
 
@@ -273,62 +340,166 @@ export default function PaymentPage() {
     setError(null);
 
     try {
+      const [firstName, ...lastNameParts] = clientProfile.fullName.split(' ');
+      const lastName = lastNameParts.join(' ');
+
+      // Ensure we're using the plan's service type
       const payload = {
         amount: plan.initialPayment,
         currency: 'ETB',
         email: clientProfile.email,
-        first_name: clientProfile.fullName.split(' ')[0],
-        last_name: clientProfile.fullName.split(' ').slice(1).join(' '),
+        first_name: firstName,
+        last_name: lastName || firstName,
         phone: clientProfile.phone,
-        customization: {
-          title: 'Legal Payment',
-          description: `${plan.name} Initial Payment`
-        },
         metadata: {
           planId: plan.id,
+          serviceType: plan.serviceType, // Use the plan's service type
           billingPeriod: isYearly ? 'yearly' : 'monthly',
-          clientProfile: clientProfile
+          title: `${plan.name} Service Request`,
+          description: plan.description,
+          priority: 'MEDIUM',
+          requirements: plan.features.filter(f => f.includes('document') || f.includes('consultation')),
+          additionalNotes: `Initial payment for ${plan.name} - ${isYearly ? 'Yearly' : 'Monthly'} billing`
         }
       };
+
+      // Log the request payload for debugging
+      console.log('Payment initialization request:', {
+        ...payload,
+        metadata: {
+          ...payload.metadata,
+          serviceType: plan.serviceType
+        }
+      });
 
       const response = await fetch('/api/payment/initialize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(payload)
       });
 
       const data = await response.json();
 
+      // Log the full response for debugging
+      console.log('Payment initialization response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: data
+      });
+
       if (!response.ok) {
-        const errorMessage = typeof data.message === 'object' 
-          ? JSON.stringify(data.message) 
-          : data.message || 'Failed to initialize payment';
+        let errorMessage = 'Failed to initialize payment';
+        let errorDetails = {};
+        
+        try {
+          if (data.error) {
+            errorDetails = data.error;
+            if (data.error.missingFields) {
+              errorMessage = `Missing required fields: ${data.error.missingFields.join(', ')}`;
+            } else if (data.error.field) {
+              if (data.error.field === 'metadata.planId') {
+                errorMessage = `Selected plan "${plan.name}" is not available. Please try again or contact support.`;
+              } else {
+                errorMessage = `Invalid ${data.error.field}: ${data.error.details}`;
+              }
+            } else if (data.error.details) {
+              errorMessage = data.error.details;
+            } else if (typeof data.error === 'string') {
+              errorMessage = data.error;
+            } else if (typeof data.error === 'object') {
+              errorMessage = data.error.message || Object.values(data.error).join(', ');
+            }
+          } else if (data.message) {
+            errorMessage = typeof data.message === 'string'
+              ? data.message
+              : typeof data.message === 'object'
+              ? data.message.message || Object.values(data.message).join(', ')
+              : 'Unknown error occurred';
+          }
+
+          // Log detailed error information for debugging
+          console.error('Payment initialization error:', {
+            status: response.status,
+            statusText: response.statusText,
+            data: data,
+            errorMessage,
+            errorDetails,
+            requestPayload: {
+              ...payload,
+              metadata: {
+                ...payload.metadata,
+                serviceType: plan.serviceType
+              }
+            }
+          });
+
+          // Set error state with detailed message
+          setError(errorMessage);
+          toast({
+            title: "Payment Error",
+            description: errorMessage,
+            variant: "destructive",
+            duration: 5000
+          });
+        } catch (parseError) {
+          console.error('Error parsing error message:', parseError);
+          errorMessage = 'An unexpected error occurred during payment initialization';
+          setError(errorMessage);
+          toast({
+            title: "Payment Error",
+            description: errorMessage,
+            variant: "destructive",
+            duration: 5000
+          });
+        }
+
         throw new Error(errorMessage);
       }
 
-      if (!data.success || !data.data?.checkout_url) {
+      if (!data.success || !data.data?.checkoutUrl) {
         throw new Error('Failed to get checkout URL');
       }
 
+      // Store selected plan details
       localStorage.setItem('selectedPlan', JSON.stringify({
         ...plan,
-        tx_ref: data.data.tx_ref,
+        paymentId: data.data.paymentId,
+        serviceRequestId: data.data.serviceRequestId,
         isYearly,
         clientProfile
       }));
       
-      window.location.href = data.data.checkout_url;
+      window.location.href = data.data.checkoutUrl;
 
     } catch (error) {
       console.error('Payment error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to process payment';
-      setError(errorMessage);
+      
+      // Improved error message handling
+      let displayError = 'Failed to process payment';
+      let errorDetails = {};
+      
+      if (error instanceof Error) {
+        displayError = error.message;
+        errorDetails = { stack: error.stack };
+      } else if (error && typeof error === 'object') {
+        try {
+          displayError = error.message || JSON.stringify(error);
+          errorDetails = error;
+        } catch (e) {
+          displayError = 'An unexpected error occurred';
+          errorDetails = { parseError: e };
+        }
+      }
+
+      setError(displayError);
       toast({
         title: "Payment Error",
-        description: errorMessage,
-        variant: "destructive"
+        description: displayError,
+        variant: "destructive",
+        duration: 5000
       });
     } finally {
       setIsProcessing(false);
@@ -557,21 +728,24 @@ export default function PaymentPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Address</label>
-              <Input
-                value={clientProfile.address}
-                onChange={(e) => setClientProfile(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Enter your address"
-              />
+              <label className="text-sm font-medium">Service Type</label>
+              <select
+                required
+                value={serviceType || ''}
+                onChange={(e) => setServiceType(e.target.value as ServiceType)}
+                className="w-full px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-700"
+              >
+                <option value="">Select Service Type</option>
+                {Object.values(ServiceType).map((type) => (
+                  <option key={type} value={type}>
+                    {type.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">ID Number</label>
-              <Input
-                value={clientProfile.idNumber}
-                onChange={(e) => setClientProfile(prev => ({ ...prev, idNumber: e.target.value }))}
-                placeholder="Enter your ID number"
-              />
-            </div>
+            {profileError && (
+              <div className="text-red-500 text-sm">{profileError}</div>
+            )}
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowProfileDialog(false)}>
                 Cancel
@@ -613,7 +787,6 @@ export default function PaymentPage() {
                   <p>{clientProfile.fullName}</p>
                   <p>{clientProfile.email}</p>
                   <p>{clientProfile.phone}</p>
-                  <p>{clientProfile.address}</p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="font-medium">Payment Method</h4>
