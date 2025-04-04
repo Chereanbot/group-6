@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { cookies, headers } from 'next/headers';
+import { verifyAuth } from '@/lib/auth';
+import { UserRoleEnum } from '@prisma/client';
 
 // Helper function to check upcoming appointments and send notifications
 async function checkAndSendAppointmentNotifications(userId: string, userType: string) {
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const threeDaysFromNow = new Date(now);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
 
   // Get user's notification settings
   const settings = await prisma.notificationSettings.findUnique({
@@ -23,7 +24,7 @@ async function checkAndSendAppointmentNotifications(userId: string, userType: st
     return;
   }
 
-  // Get upcoming appointments based on user type
+  // Get upcoming appointments for next 3 days with related users
   const appointments = await prisma.appointment.findMany({
     where: {
       ...(userType === 'COORDINATOR' 
@@ -31,7 +32,7 @@ async function checkAndSendAppointmentNotifications(userId: string, userType: st
         : { clientId: userId }),
       scheduledTime: {
         gte: now,
-        lte: tomorrow
+        lte: threeDaysFromNow
       },
       status: 'SCHEDULED'
     },
@@ -41,6 +42,9 @@ async function checkAndSendAppointmentNotifications(userId: string, userType: st
     }
   });
 
+  // Standard reminder intervals (in hours)
+  const reminderIntervals = [72, 48, 24, 2]; // 3 days, 2 days, 1 day, and 2 hours before
+
   // Send notifications for each upcoming appointment
   for (const appointment of appointments) {
     const hoursUntilAppointment = Math.round(
@@ -48,48 +52,111 @@ async function checkAndSendAppointmentNotifications(userId: string, userType: st
     );
 
     // Check if we should send notification based on reminder timing
-    const reminderTiming = settings.reminderTiming as { before: number };
-    if (reminderTiming.before === hoursUntilAppointment) {
-      // Create notification
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: 'Upcoming Appointment Reminder',
-          message: `You have an appointment ${
-            userType === 'COORDINATOR' 
-              ? `with ${appointment.client.fullName}`
-              : `with your coordinator`
-          } scheduled for ${appointment.scheduledTime.toLocaleString()}`,
-          type: 'APPOINTMENT',
-          priority: 'NORMAL',
-          status: 'UNREAD',
-          metadata: {
-            appointmentId: appointment.id,
-            purpose: appointment.purpose,
-            duration: appointment.duration
-          }
-        }
-      });
+    const reminderTiming = settings.reminderTiming as { before: number; frequency: string; customIntervals?: number[] };
+    const intervalsToCheck = reminderTiming.frequency === 'custom' && reminderTiming.customIntervals 
+      ? reminderTiming.customIntervals 
+      : reminderIntervals;
 
-      // Send SMS if enabled
-      if (settings.smsEnabled) {
-        await prisma.smsMessage.create({
+    // Find the closest reminder interval
+    const shouldSendReminder = intervalsToCheck.some(interval => 
+      Math.abs(interval - hoursUntilAppointment) < 1 // Within 1 hour of the interval
+    );
+
+    if (shouldSendReminder) {
+      // Get notification settings for both users
+      const [coordinatorSettings, clientSettings] = await Promise.all([
+        prisma.notificationSettings.findUnique({
+          where: {
+            userId_userType: {
+              userId: appointment.coordinatorId,
+              userType: 'COORDINATOR'
+            }
+          }
+        }),
+        prisma.notificationSettings.findUnique({
+          where: {
+            userId_userType: {
+              userId: appointment.clientId,
+              userType: 'CLIENT'
+            }
+          }
+        })
+      ]);
+
+      // Send notification to coordinator if enabled
+      if (coordinatorSettings?.automaticNotifications) {
+        // Create notification
+        await prisma.notification.create({
           data: {
-            recipientId: userId,
-            recipientName: userType === 'COORDINATOR' 
-              ? appointment.coordinator.fullName 
-              : appointment.client.fullName,
-            recipientPhone: userType === 'COORDINATOR'
-              ? appointment.coordinator.phone
-              : appointment.client.phone,
-            content: `Reminder: You have an appointment ${
-              userType === 'COORDINATOR'
-                ? `with ${appointment.client.fullName}`
-                : `with your coordinator`
-            } scheduled for ${appointment.scheduledTime.toLocaleString()}`,
-            status: 'PENDING'
+            user: {
+              connect: {
+                id: appointment.coordinatorId
+              }
+            },
+            title: 'Upcoming Appointment Reminder',
+            message: `You have an appointment with ${appointment.client.fullName} scheduled for ${appointment.scheduledTime.toLocaleString()}`,
+            type: 'APPOINTMENT',
+            priority: hoursUntilAppointment <= 2 ? 'URGENT' : 'NORMAL',
+            status: 'UNREAD',
+            metadata: {
+              appointmentId: appointment.id,
+              purpose: appointment.purpose,
+              duration: appointment.duration,
+              hoursUntil: hoursUntilAppointment
+            }
           }
         });
+
+        // Send SMS if enabled
+        if (coordinatorSettings.smsEnabled && appointment.coordinator.phone) {
+          await prisma.smsMessage.create({
+            data: {
+              recipientId: appointment.coordinatorId,
+              recipientName: appointment.coordinator.fullName,
+              recipientPhone: appointment.coordinator.phone,
+              content: `Reminder: You have an appointment with ${appointment.client.fullName} scheduled for ${appointment.scheduledTime.toLocaleString()}`,
+              status: 'PENDING'
+            }
+          });
+        }
+      }
+
+      // Send notification to client if enabled
+      if (clientSettings?.automaticNotifications) {
+        // Create notification
+        await prisma.notification.create({
+          data: {
+            user: {
+              connect: {
+                id: appointment.clientId
+              }
+            },
+            title: 'Upcoming Appointment Reminder',
+            message: `You have an appointment with your coordinator scheduled for ${appointment.scheduledTime.toLocaleString()}`,
+            type: 'APPOINTMENT',
+            priority: hoursUntilAppointment <= 2 ? 'URGENT' : 'NORMAL',
+            status: 'UNREAD',
+            metadata: {
+              appointmentId: appointment.id,
+              purpose: appointment.purpose,
+              duration: appointment.duration,
+              hoursUntil: hoursUntilAppointment
+            }
+          }
+        });
+
+        // Send SMS if enabled
+        if (clientSettings.smsEnabled && appointment.client.phone) {
+          await prisma.smsMessage.create({
+            data: {
+              recipientId: appointment.clientId,
+              recipientName: appointment.client.fullName,
+              recipientPhone: appointment.client.phone,
+              content: `Reminder: You have an appointment with your coordinator scheduled for ${appointment.scheduledTime.toLocaleString()}`,
+              status: 'PENDING'
+            }
+          });
+        }
       }
     }
   }
@@ -97,64 +164,86 @@ async function checkAndSendAppointmentNotifications(userId: string, userType: st
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      );
     }
 
-    const settings = await prisma.notificationSettings.findUnique({
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Invalid role' },
+        { status: 401 }
+      );
+    }
+
+    let settings = await prisma.notificationSettings.findUnique({
       where: {
         userId_userType: {
-          userId: session.user.id,
+          userId: authResult.user.id,
           userType: 'COORDINATOR'
         }
       }
     });
 
+    // If no settings exist, create default settings
     if (!settings) {
-      // Return default settings if none exist
-      return NextResponse.json({
-        success: true,
-        settings: {
+      settings = await prisma.notificationSettings.create({
+        data: {
+          userId: authResult.user.id,
+          userType: 'COORDINATOR',
           automaticNotifications: true,
           emailEnabled: true,
           smsEnabled: true,
           pushEnabled: true,
           reminderTiming: {
             before: 24,
-            frequency: 'once',
-            customIntervals: [24, 12, 1],
+            frequency: 'once'
           },
           priorityLevels: {
             urgent: true,
             high: true,
             medium: true,
-            low: true,
+            low: true
           },
+          workingHours: {
+            start: '09:00',
+            end: '17:00'
+          },
+          blackoutDates: [],
+          customRules: [],
           templates: {
             confirmation: 'Your appointment has been confirmed for {date} at {time}.',
             reminder: 'Reminder: You have an appointment scheduled for {date} at {time}.',
             cancellation: 'Your appointment for {date} at {time} has been cancelled.',
-            rescheduling: 'Your appointment has been rescheduled to {date} at {time}.',
-          },
-          workingHours: {
-            start: '09:00',
-            end: '17:00',
-          },
-          blackoutDates: [],
-          customRules: [],
+            rescheduling: 'Your appointment has been rescheduled to {date} at {time}.'
+          }
         }
       });
     }
 
-    // Check and send notifications for upcoming appointments
-    await checkAndSendAppointmentNotifications(session.user.id, 'COORDINATOR');
-
-    return NextResponse.json({ success: true, settings });
+    return NextResponse.json({
+      success: true,
+      settings: {
+        ...settings,
+        reminderTiming: settings.reminderTiming as any,
+        priorityLevels: settings.priorityLevels as any,
+        workingHours: settings.workingHours as any,
+        blackoutDates: settings.blackoutDates as any,
+        customRules: settings.customRules as any,
+        templates: settings.templates as any
+      }
+    });
   } catch (error) {
-    console.error('Failed to fetch notification settings:', error);
+    console.error('Error fetching notification settings:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch notification settings' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -162,66 +251,95 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const data = await request.json();
-
-    // Validate required fields
-    if (!data.automaticNotifications || !data.templates) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
       );
     }
 
-    // Update or create settings
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Invalid role' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const {
+      automaticNotifications,
+      emailEnabled,
+      smsEnabled,
+      pushEnabled,
+      reminderTiming,
+      priorityLevels,
+      workingHours,
+      blackoutDates,
+      customRules,
+      templates
+    } = body;
+
     const settings = await prisma.notificationSettings.upsert({
       where: {
         userId_userType: {
-          userId: session.user.id,
+          userId: authResult.user.id,
           userType: 'COORDINATOR'
         }
       },
       update: {
-        automaticNotifications: data.automaticNotifications,
-        emailEnabled: data.emailEnabled,
-        smsEnabled: data.smsEnabled,
-        pushEnabled: data.pushEnabled,
-        reminderTiming: data.reminderTiming,
-        priorityLevels: data.priorityLevels,
-        templates: data.templates,
-        workingHours: data.workingHours,
-        blackoutDates: data.blackoutDates || [],
-        customRules: data.customRules || [],
-        updatedAt: new Date(),
+        automaticNotifications,
+        emailEnabled,
+        smsEnabled,
+        pushEnabled,
+        reminderTiming,
+        priorityLevels,
+        workingHours,
+        blackoutDates,
+        customRules,
+        templates
       },
       create: {
-        userId: session.user.id,
+        userId: authResult.user.id,
         userType: 'COORDINATOR',
-        automaticNotifications: data.automaticNotifications,
-        emailEnabled: data.emailEnabled,
-        smsEnabled: data.smsEnabled,
-        pushEnabled: data.pushEnabled,
-        reminderTiming: data.reminderTiming,
-        priorityLevels: data.priorityLevels,
-        templates: data.templates,
-        workingHours: data.workingHours,
-        blackoutDates: data.blackoutDates || [],
-        customRules: data.customRules || [],
-      },
+        automaticNotifications,
+        emailEnabled,
+        smsEnabled,
+        pushEnabled,
+        reminderTiming,
+        priorityLevels,
+        workingHours,
+        blackoutDates,
+        customRules,
+        templates: templates || {
+          confirmation: 'Your appointment has been confirmed for {date} at {time}.',
+          reminder: 'Reminder: You have an appointment scheduled for {date} at {time}.',
+          cancellation: 'Your appointment for {date} at {time} has been cancelled.',
+          rescheduling: 'Your appointment has been rescheduled to {date} at {time}.'
+        }
+      }
     });
 
-    // Check and send notifications for upcoming appointments after settings update
-    await checkAndSendAppointmentNotifications(session.user.id, 'COORDINATOR');
-
-    return NextResponse.json({ success: true, settings });
+    return NextResponse.json({
+      success: true,
+      settings: {
+        ...settings,
+        reminderTiming: settings.reminderTiming as any,
+        priorityLevels: settings.priorityLevels as any,
+        workingHours: settings.workingHours as any,
+        blackoutDates: settings.blackoutDates as any,
+        customRules: settings.customRules as any,
+        templates: settings.templates as any
+      }
+    });
   } catch (error) {
-    console.error('Failed to update notification settings:', error);
+    console.error('Error updating notification settings:', error);
     return NextResponse.json(
-      { error: 'Failed to update notification settings' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -7,8 +7,8 @@ import { UserRoleEnum } from '@prisma/client'
 
 async function verifyAdminPermissions() {
   const session = await getServerSession(authOptions)
-  if (!session?.user || session.user.role !== UserRoleEnum.ADMIN) {
-    throw new Error('Unauthorized: Admin access required')
+  if (!session?.user || (session.user.role !== UserRoleEnum.ADMIN && session.user.role !== UserRoleEnum.SUPER_ADMIN)) {
+    throw new Error('Unauthorized: Admin or Super Admin access required')
   }
 }
 

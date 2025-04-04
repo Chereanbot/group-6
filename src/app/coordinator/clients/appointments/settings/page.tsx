@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Card,
   CardContent,
@@ -29,7 +29,10 @@ import {
   HiOutlineClock,
   HiOutlineTemplate,
   HiOutlineCalendar,
+  HiOutlineX,
 } from 'react-icons/hi';
+import { Badge } from "@/components/ui/badge";
+import NotificationHistory from '@/components/NotificationHistory';
 
 interface NotificationTemplate {
   id: string;
@@ -40,6 +43,8 @@ interface NotificationTemplate {
 
 export default function AppointmentSettingsPage() {
   const { toast } = useToast();
+  const [showHistory, setShowHistory] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [settings, setSettings] = useState({
     automaticNotifications: true,
     emailEnabled: true,
@@ -47,8 +52,8 @@ export default function AppointmentSettingsPage() {
     pushEnabled: true,
     reminderTiming: {
       before: 24,
-      frequency: 'once', // once, daily, custom
-      customIntervals: [24, 12, 1], // hours before
+      frequency: 'once',
+      customIntervals: [24, 12, 1],
     },
     priorityLevels: {
       urgent: true,
@@ -72,34 +77,86 @@ export default function AppointmentSettingsPage() {
 
   const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [userType, setUserType] = useState<string>('');
 
   useEffect(() => {
     // Fetch settings from API
     fetchSettings();
     fetchTemplates();
+    // Fetch user info from local storage or context
+    const storedUserId = localStorage.getItem('userId');
+    const storedUserType = localStorage.getItem('userType');
+    if (storedUserId && storedUserType) {
+      setUserId(storedUserId);
+      setUserType(storedUserType);
+    }
+    updateUnreadCount();
+    const interval = setInterval(updateUnreadCount, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/coordinator/notification-settings');
+      const response = await fetch('/api/coordinator/notification-settings', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Please log in again to view your settings.",
+          });
+          return;
+        }
+        throw new Error('Failed to fetch settings');
+      }
+      
       const data = await response.json();
       if (data.success) {
         setSettings(data.settings);
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load notification settings.",
+      });
     }
   };
 
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('/api/notification-templates');
+      const response = await fetch('/api/notification-templates', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Please log in again to view templates.",
+          });
+          return;
+        }
+        throw new Error('Failed to fetch templates');
+      }
+      
       const data = await response.json();
       if (data.success) {
         setTemplates(data.templates);
       }
     } catch (error) {
       console.error('Failed to fetch templates:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load notification templates.",
+      });
     }
   };
 
@@ -107,16 +164,29 @@ export default function AppointmentSettingsPage() {
     try {
       const response = await fetch('/api/coordinator/notification-settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
         body: JSON.stringify(settings),
       });
       
-      if (response.ok) {
-        toast({
-          title: "Settings Saved",
-          description: "Your notification settings have been updated successfully.",
-        });
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Please log in again to save your settings.",
+          });
+          return;
+        }
+        throw new Error('Failed to save settings');
       }
+      
+      toast({
+        title: "Settings Saved",
+        description: "Your notification settings have been updated successfully.",
+      });
     } catch (error) {
       toast({
         variant: "destructive",
@@ -126,8 +196,77 @@ export default function AppointmentSettingsPage() {
     }
   };
 
+  const updateUnreadCount = async () => {
+    try {
+      const response = await fetch('/api/notifications/unread-count');
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count);
+      }
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  };
+
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-8 relative">
+      {/* Enhanced floating button for notification history */}
+      <motion.div
+        initial={{ x: 100, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        className="fixed right-8 top-24 z-50"
+      >
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Button
+            onClick={() => setShowHistory(!showHistory)}
+            variant={showHistory ? "secondary" : "default"}
+            className="flex items-center gap-3 shadow-lg hover:shadow-xl transition-all rounded-full px-6 py-6 relative overflow-hidden"
+          >
+            <motion.div
+              initial={false}
+              animate={showHistory ? { rotate: 360 } : { rotate: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative"
+            >
+              <HiOutlineBell className="h-6 w-6" />
+              {unreadCount > 0 && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", damping: 15, stiffness: 400 }}
+                >
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs rounded-full animate-pulse"
+                  >
+                    {unreadCount}
+                  </Badge>
+                </motion.div>
+              )}
+            </motion.div>
+            <motion.span
+              initial={false}
+              animate={showHistory ? { x: 5 } : { x: 0 }}
+              className="font-medium whitespace-nowrap"
+            >
+              {showHistory ? 'Close History' : 'Notifications History'}
+            </motion.span>
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 bg-primary/5 dark:bg-primary/10"
+                style={{ borderRadius: 9999 }}
+              />
+            )}
+          </Button>
+        </motion.div>
+      </motion.div>
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -397,6 +536,86 @@ export default function AppointmentSettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Enhanced Notification History Modal */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowHistory(false);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ 
+                type: "spring", 
+                damping: 30, 
+                stiffness: 400,
+                duration: 0.2 
+              }}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+            >
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-800/50">
+                <div className="flex items-center gap-4">
+                  <motion.div 
+                    initial={{ rotate: -30, scale: 0.9 }}
+                    animate={{ rotate: 0, scale: 1 }}
+                    className="bg-primary/10 p-3 rounded-full"
+                  >
+                    <HiOutlineBell className="h-7 w-7 text-primary" />
+                  </motion.div>
+                  <div>
+                    <motion.h2 
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      className="text-2xl font-semibold"
+                    >
+                      Notification History
+                    </motion.h2>
+                    <motion.p 
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 }}
+                      className="text-sm text-gray-500 dark:text-gray-400"
+                    >
+                      View and manage your notifications and messages
+                    </motion.p>
+                  </div>
+                </div>
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    onClick={() => setShowHistory(false)}
+                  >
+                    <HiOutlineX className="h-5 w-5" />
+                  </Button>
+                </motion.div>
+              </div>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]"
+              >
+                <NotificationHistory userId={userId} userType={userType} />
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 } 

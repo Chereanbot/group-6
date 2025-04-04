@@ -59,16 +59,22 @@ interface Appointment {
   caseType: string;
   venue: string;
   priority: string;
+  requiredDocuments?: string[];
+  reminderType?: string[];
+  reminderTiming?: number[];
+  cancellationReason?: string;
+  completionNotes?: string;
+  serviceRequestId?: string;
 }
 
 interface GridViewProps {
   appointments: Appointment[];
   onUpdateStatus: (id: string, status: string) => Promise<void>;
   onDeleteAppointment: (id: string) => Promise<void>;
-  onRefresh: () => void;
+  onOpenStatusDialog: (appointment: Appointment) => void;
 }
 
-export default function GridView({ appointments, onUpdateStatus, onDeleteAppointment, onRefresh }: GridViewProps) {
+export default function GridView({ appointments, onUpdateStatus, onDeleteAppointment, onOpenStatusDialog }: GridViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -101,17 +107,9 @@ export default function GridView({ appointments, onUpdateStatus, onDeleteAppoint
         throw new Error(data.message || 'Failed to send notification');
       }
 
-      toast({
-        title: "Success",
-        description: "Notification sent successfully",
-      });
-      onRefresh();
+      toast("Notification sent successfully");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send notification",
-        variant: "destructive",
-      });
+      toast("Failed to send notification");
     } finally {
       setSendingNotification(null);
     }
@@ -342,7 +340,7 @@ export default function GridView({ appointments, onUpdateStatus, onDeleteAppoint
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleSendNotification}
+                    onClick={() => handleSendNotification(selectedAppointment!)}
                     className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                     disabled={!notificationMessage.trim()}
                   >

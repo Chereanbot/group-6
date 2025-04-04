@@ -8,80 +8,82 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(auto()) @map("_id") @db.ObjectId
-  email            String            @unique
-  phone            String?           @unique
-  password         String
-  plainPassword    String?
-  fullName         String
-  username         String?
-  emailVerified    Boolean           @default(false)
-  phoneVerified    Boolean           @default(false)
-  userRole         UserRoleEnum      @default(CLIENT)
-  status           UserStatus        @default(ACTIVE)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  otpVerifications OTPVerification[]
-  isAdmin       Boolean        @default(false)
-  role          Role?          @relation(fields: [roleId], references: [id])
-  roleId        String?        @db.ObjectId
-  activities    Activity[]
-  notifications Notification[]
-  documents     Document[]
-  assignedCases  Case[]         @relation("AssignedCases")
-  clientCases    Case[]         @relation("ClientCases")
-  caseActivities CaseActivity[]
-  caseDocuments  CaseDocument[]
-  caseNotes      CaseNote[]
-  appeals        Appeal[]
-  assignedByCases CaseAssignment[] @relation("AssignedBy")
-  assignedToCases CaseAssignment[] @relation("AssignedTo")
-  lawyerProfile      LawyerProfile?
-  coordinatorProfile Coordinator?
-  serviceRequests   ServiceRequest[]         @relation("ClientRequests")
-  assignedServices  ServiceRequest[]         @relation("AssignedRequests")
-  serviceActivities ServiceActivity[]
-  serviceNotes      ServiceNote[]
-  notificationPrefs NotificationPreference[]
-  blockRecords BlockRecord[]
-  ratings Rating[]
-  authoredPackages ServicePackage[] @relation("AuthoredPackages")
-  createdPackages  ServicePackage[] @relation("CreatedPackages")
-  securityLogs SecurityLog[]
-  sessions     Session[]
-  verificationRequests VerificationRequest[] @relation("UserVerifications")
-  reviewedRequests     VerificationRequest[] @relation("ReviewedVerifications")
-  auditLogs AuditLog[]
-  sentMessages         Message[]             @relation("SentMessages")
-  receivedMessages     Message[]             @relation("ReceivedMessages")
-  threadParticipations ThreadParticipant[]
-  messageReactions     MessageReaction[]
-  messageNotifications MessageNotification[]
-  chats               UserChat[]
-  lastSeen            DateTime?
-  isOnline            Boolean               @default(false)
-  lawyerEvents     Event[]            @relation("LawyerEvents")
-  eventParticipant EventParticipant[] @relation("EventParticipants")
-  timeEntries TimeEntry[]
-  caseLaws    CaseLaw[]
-  senderTyping    TypingStatus[] @relation("SenderTyping")
-  recipientTyping TypingStatus[] @relation("RecipientTyping")
-  legalResources    LegalResource[]
-  sharedResources   ResourceShare[]     @relation("SharedByResources")
-  receivedResources ResourceShare[]     @relation("SharedWithResources")
-  resourceAnalytics ResourceAnalytics[] @relation("ResourceAnalytics")
-  phoneMessages PhoneMessage[] @relation("PhoneMessages")
-  workloadMetrics WorkloadMetrics[]
-  workAssignments WorkAssignment[]
-  workSchedules   WorkSchedule[]
-  teachingSchedules TeachingSchedule[]
-  teachingMetrics   TeachingMetrics[]
-  backups      Backup[]
-  agentNotifications AgentNotification[]
-  agentChats        AgentChat[]
-  clientAppointments      Appointment[] @relation("ClientAppointments")
-  coordinatorAppointments Appointment[] @relation("CoordinatorAppointments")
-  clientProfile ClientProfile?
+  id                      String                   @id @default(auto()) @map("_id") @db.ObjectId
+  email                   String                   @unique
+  phone                   String?                  @unique
+  password                String
+  plainPassword           String?
+  fullName                String
+  username                String?
+  emailVerified           Boolean                  @default(false)
+  phoneVerified           Boolean                  @default(false)
+  userRole                UserRoleEnum             @default(CLIENT)
+  status                  UserStatus               @default(ACTIVE)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  otpVerifications        OTPVerification[]
+  isAdmin                 Boolean                  @default(false)
+  role                    Role?                    @relation(fields: [roleId], references: [id])
+  roleId                  String?                  @db.ObjectId
+  activities              Activity[]
+  notifications           Notification[]
+  documents               Document[]
+  assignedCases           Case[]                   @relation("AssignedCases")
+  clientCases             Case[]                   @relation("ClientCases")
+  caseActivities          CaseActivity[]
+  caseDocuments           CaseDocument[]
+  caseNotes               CaseNote[]
+  appeals                 Appeal[]
+  assignedByCases         CaseAssignment[]         @relation("AssignedBy")
+  assignedToCases         CaseAssignment[]         @relation("AssignedTo")
+  lawyerProfile           LawyerProfile?
+  coordinatorProfile      Coordinator?
+  serviceRequests         ServiceRequest[]         @relation("ClientRequests")
+  assignedServices        ServiceRequest[]         @relation("AssignedRequests")
+  serviceActivities       ServiceActivity[]
+  serviceNotes            ServiceNote[]
+  notificationPrefs       NotificationPreference[]
+  blockRecords            BlockRecord[]
+  ratings                 Rating[]
+  authoredPackages        ServicePackage[]         @relation("AuthoredPackages")
+  createdPackages         ServicePackage[]         @relation("CreatedPackages")
+  securityLogs            SecurityLog[]
+  sessions                Session[]
+  verificationRequests    VerificationRequest[]    @relation("UserVerifications")
+  reviewedRequests        VerificationRequest[]    @relation("ReviewedVerifications")
+  auditLogs               AuditLog[]
+  sentMessages            Message[]                @relation("SentMessages")
+  receivedMessages        Message[]                @relation("ReceivedMessages")
+  threadParticipations    ThreadParticipant[]
+  messageReactions        MessageReaction[]
+  messageNotifications    MessageNotification[]
+  chats                   UserChat[]
+  lastSeen                DateTime?
+  isOnline                Boolean                  @default(false)
+  lawyerEvents            Event[]                  @relation("LawyerEvents")
+  eventParticipant        EventParticipant[]       @relation("EventParticipants")
+  timeEntries             TimeEntry[]
+  caseLaws                CaseLaw[]
+  senderTyping            TypingStatus[]           @relation("SenderTyping")
+  recipientTyping         TypingStatus[]           @relation("RecipientTyping")
+  legalResources          LegalResource[]
+  sharedResources         ResourceShare[]          @relation("SharedByResources")
+  receivedResources       ResourceShare[]          @relation("SharedWithResources")
+  resourceAnalytics       ResourceAnalytics[]      @relation("ResourceAnalytics")
+  phoneMessages           PhoneMessage[]           @relation("PhoneMessages")
+  workloadMetrics         WorkloadMetrics[]
+  workAssignments         WorkAssignment[]
+  workSchedules           WorkSchedule[]
+  teachingSchedules       TeachingSchedule[]
+  teachingMetrics         TeachingMetrics[]
+  backups                 Backup[]
+  agentNotifications      AgentNotification[]
+  agentChats              AgentChat[]
+  clientAppointments      Appointment[]            @relation("ClientAppointments")
+  coordinatorAppointments Appointment[]            @relation("CoordinatorAppointments")
+  clientProfile           ClientProfile?
+  clientHistory           CoordinatorHistory[]     @relation("ClientHistory")
+  lawyerHistory           CoordinatorHistory[]     @relation("LawyerHistory")
 
   @@index([email, phone, username])
 }
@@ -149,25 +151,25 @@ model Activity {
 }
 
 model Notification {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
-  user        User     @relation(fields: [userId], references: [id])
-  title       String?
-  message     String
-  type        NotificationType
-  priority    NotificationPriority @default(NORMAL)
-  status      NotificationStatus   @default(UNREAD)
-  link        String?
-  metadata    Json?
-  readAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  expiresAt   DateTime?
-  
+  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String               @db.ObjectId
+  user      User                 @relation(fields: [userId], references: [id])
+  title     String?
+  message   String
+  type      NotificationType
+  priority  NotificationPriority @default(NORMAL)
+  status    NotificationStatus   @default(UNREAD)
+  link      String?
+  metadata  Json?
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  expiresAt DateTime?
+
   // Additional fields for SMS notifications
-  recipientId String?  @db.ObjectId
-  caseId      String?  @db.ObjectId
-  case        Case?    @relation("CaseNotifications", fields: [caseId], references: [id])
+  recipientId String? @db.ObjectId
+  caseId      String? @db.ObjectId
+  case        Case?   @relation("CaseNotifications", fields: [caseId], references: [id])
 
   @@index([userId])
   @@index([type])
@@ -218,7 +220,7 @@ enum DocumentStatus {
 }
 
 model Document {
-  id          String    @id @default(cuid()) @map("_id")
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   description String?
   type        DocumentType
@@ -226,17 +228,18 @@ model Document {
   path        String
   size        Int
   mimeType    String
-  uploadedBy  String    @db.ObjectId
-  user        User      @relation(fields: [uploadedBy], references: [id])
+  uploadedBy  String         @db.ObjectId
+  user        User           @relation(fields: [uploadedBy], references: [id])
   kebeleId    String
-  kebele      Kebele    @relation(fields: [kebeleId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  kebele      Kebele         @relation(fields: [kebeleId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   // Add reverse relations
   serviceDocuments     ServiceDocument[]
   coordinatorDocuments CoordinatorDocument[]
   qualificationDocs    QualificationDocument[]
+  coordinatorHistory   CoordinatorHistory[]
 
   @@index([kebeleId])
   @@index([uploadedBy])
@@ -281,23 +284,23 @@ model Case {
   description String?
   status      CaseStatus @default(PENDING)
   priority    Priority   @default(MEDIUM)
-  
+
   // Case Classification
-  category    CaseCategory
-  
+  category CaseCategory
+
   // Specific type based on category
-  familyCaseType        FamilyCaseType?
-  criminalCaseType      CriminalCaseType?
-  civilCaseType         CivilCaseType?
-  propertyCaseType      PropertyCaseType?
-  laborCaseType         LaborCaseType?
-  commercialCaseType    CommercialCaseType?
+  familyCaseType         FamilyCaseType?
+  criminalCaseType       CriminalCaseType?
+  civilCaseType          CivilCaseType?
+  propertyCaseType       PropertyCaseType?
+  laborCaseType          LaborCaseType?
+  commercialCaseType     CommercialCaseType?
   administrativeCaseType AdministrativeCaseType?
-  
+
   // Rest of the fields remain the same...
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  resolvedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
 
   // Client Information
   clientName    String
@@ -327,12 +330,12 @@ model Case {
   tags          String[]
 
   // Existing relations...
-  activities  CaseActivity[]
-  appeals     Appeal[]
-  notes       CaseNote[]
-  assignments CaseAssignment[]
-  assignedOffice  Office?    @relation(fields: [officeId], references: [id])
-  officeId        String?    @db.ObjectId
+  activities     CaseActivity[]
+  appeals        Appeal[]
+  notes          CaseNote[]
+  assignments    CaseAssignment[]
+  assignedOffice Office?          @relation(fields: [officeId], references: [id])
+  officeId       String?          @db.ObjectId
 
   // Case Metrics
   complexityScore   Int @default(0)
@@ -343,24 +346,26 @@ model Case {
   // Additional fields
   expectedResolutionDate DateTime?
   actualResolutionDate   DateTime?
-  totalBillableHours     Float     @default(0)
-  documentCount          Int       @default(0)
-  caseEvents Event[]     @relation("CaseEvents")
-  timeEntries TimeEntry[]
+  totalBillableHours     Float       @default(0)
+  documentCount          Int         @default(0)
+  caseEvents             Event[]     @relation("CaseEvents")
+  timeEntries            TimeEntry[]
 
   // Workload Management
   workAssignments WorkAssignment[]
 
   // Kebele Details
-  kebeleDetails   Kebele?    @relation(fields: [kebeleId], references: [id])
-  kebeleId        String?    @db.ObjectId
+  kebeleDetails   Kebele?   @relation(fields: [kebeleId], references: [id])
+  kebeleId        String?   @db.ObjectId
   assignmentNotes String?
   assignmentDate  DateTime?
 
   notifications Notification[] @relation("CaseNotifications")
 
-  totalServiceHours Float?     @default(0)
-  expectedDuration  Float?     @default(40) // Expected duration in hours
+  totalServiceHours Float? @default(0)
+  expectedDuration  Float? @default(40) // Expected duration in hours
+
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([status])
   @@index([priority])
@@ -421,41 +426,43 @@ model LawyerProfile {
 
 // Coordinator Management
 model Coordinator {
-  id             String                  @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String                  @unique @db.ObjectId
-  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type           CoordinatorType
-  officeId       String                  @db.ObjectId
-  office         Office                  @relation(fields: [officeId], references: [id])
-  startDate      DateTime                @default(now())
-  endDate        DateTime?
-  specialties    String[]
-  status         CoordinatorStatus       @default(ACTIVE)
-  qualifications Qualification[]
-  projects       Project[]
-  assignments    CoordinatorAssignment[]
-  documents      CoordinatorDocument[]
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  templates      Template[]
+  id                String                  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String                  @unique @db.ObjectId
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              CoordinatorType
+  officeId          String                  @db.ObjectId
+  office            Office                  @relation(fields: [officeId], references: [id])
+  startDate         DateTime                @default(now())
+  endDate           DateTime?
+  specialties       String[]
+  status            CoordinatorStatus       @default(ACTIVE)
+  qualifications    Qualification[]
+  projects          Project[]
+  assignments       CoordinatorAssignment[]
+  documents         CoordinatorDocument[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  templates         Template[]
   agentInstructions AgentInstruction[]
+  history           CoordinatorHistory[]
 
   @@index([officeId])
   @@index([status])
 }
 
 model Project {
-  id            String                  @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  description   String
-  startDate     DateTime
-  endDate       DateTime?
-  status        ProjectStatus           @default(PLANNED)
-  coordinator   Coordinator             @relation(fields: [coordinatorId], references: [id])
-  coordinatorId String                  @db.ObjectId
-  assignments   CoordinatorAssignment[]
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
+  id                 String                  @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  description        String
+  startDate          DateTime
+  endDate            DateTime?
+  status             ProjectStatus           @default(PLANNED)
+  coordinator        Coordinator             @relation(fields: [coordinatorId], references: [id])
+  coordinatorId      String                  @db.ObjectId
+  assignments        CoordinatorAssignment[]
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([coordinatorId])
 }
@@ -479,24 +486,25 @@ model CoordinatorAssignment {
 
 // Office Management
 model Office {
-  id           String              @id @default(auto()) @map("_id") @db.ObjectId
-  name         String              @unique
-  location     String
-  type         OfficeType          @default(BRANCH)
-  status       OfficeStatus        @default(ACTIVE)
-  coordinators Coordinator[]
-  cases        Case[]
-  lawyers      LawyerProfile[]
-  resources    Resource[]
-  performances OfficePerformance[]
-  templates    Template[]
-  capacity     Int                 @default(0)
-  contactEmail String?
-  contactPhone String?
-  address      String?
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  clients      ClientProfile[]
+  id                 String               @id @default(auto()) @map("_id") @db.ObjectId
+  name               String               @unique
+  location           String
+  type               OfficeType           @default(BRANCH)
+  status             OfficeStatus         @default(ACTIVE)
+  coordinators       Coordinator[]
+  cases              Case[]
+  lawyers            LawyerProfile[]
+  resources          Resource[]
+  performances       OfficePerformance[]
+  templates          Template[]
+  capacity           Int                  @default(0)
+  contactEmail       String?
+  contactPhone       String?
+  address            String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  clients            ClientProfile[]
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([status])
 }
@@ -624,6 +632,8 @@ model ServiceRequest {
   ServicePayment     ServicePayment?
   ReminderPreference ReminderPreference[]
   Appointment        Appointment[]
+
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([clientId])
   @@index([packageId])
@@ -912,15 +922,15 @@ enum UserStatus {
 
 model VerificationRecord {
   id               String         @id @default(auto()) @map("_id") @db.ObjectId
-  serviceRequest   ServiceRequest   @relation(fields: [serviceRequestId], references: [id])
-  serviceRequestId String           @db.ObjectId
-  documentId       String?          @db.ObjectId
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+  serviceRequestId String         @db.ObjectId
+  documentId       String?        @db.ObjectId
   type             String // DOCUMENT, PAYMENT, INCOME
   status           String // VERIFIED, REJECTED
   verifiedAt       DateTime
   notes            String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([serviceRequestId])
   @@index([documentId])
@@ -1030,27 +1040,31 @@ model Communication {
 }
 
 model Appointment {
-  id               String      @id @default(auto()) @map("_id") @db.ObjectId
-  client           User        @relation("ClientAppointments", fields: [clientId], references: [id])
-  clientId         String      @db.ObjectId
-  coordinator      User        @relation("CoordinatorAppointments", fields: [coordinatorId], references: [id])
-  coordinatorId    String      @db.ObjectId
-  scheduledTime    DateTime
-  duration         Int         // Duration in minutes
-  purpose         String
-  priority        String      @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  caseType        String      // Type of legal case
-  caseDetails     String?     // Additional case details
-  venue           String?     // Court or meeting venue
-  requiredDocuments String[]  // List of required documents
-  status          String      @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
-  notes           String?
-  reminderType    String[]    @default(["EMAIL"]) // EMAIL, SMS, WHATSAPP
-  reminderTiming  Int[]       @default([24, 1]) // Hours before appointment
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  serviceRequest  ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
-  serviceRequestId String?    @db.ObjectId
+  id                String          @id @default(auto()) @map("_id") @db.ObjectId
+  client            User            @relation("ClientAppointments", fields: [clientId], references: [id])
+  clientId          String          @db.ObjectId
+  coordinator       User            @relation("CoordinatorAppointments", fields: [coordinatorId], references: [id])
+  coordinatorId     String          @db.ObjectId
+  scheduledTime     DateTime
+  duration          Int // Duration in minutes
+  purpose           String
+  priority          String          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  caseType          String // Type of legal case
+  caseDetails       String? // Additional case details
+  venue             String? // Court or meeting venue
+  requiredDocuments String[] // List of required documents
+  status            String          @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  notes             String?
+  reminderType      String[]        @default(["EMAIL"]) // EMAIL, SMS, WHATSAPP
+  reminderTiming    Int[]           @default([24, 1]) // Hours before appointment
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  serviceRequest    ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  serviceRequestId  String?         @db.ObjectId
+  cancellationReason String?
+  completionNotes   String?
+
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([clientId])
   @@index([coordinatorId])
@@ -1319,25 +1333,26 @@ model AuditLog {
 
 // Message Model
 model Message {
-  id              String          @id @default(auto()) @map("_id") @db.ObjectId
-  subject         String?
-  text            String
-  senderId        String          @db.ObjectId
-  sender          User            @relation("SentMessages", fields: [senderId], references: [id])
-  recipientId     String?         @db.ObjectId
-  recipient       User?           @relation("ReceivedMessages", fields: [recipientId], references: [id])
-  chatId          String          @db.ObjectId
-  chat            Chat            @relation(fields: [chatId], references: [id])
-  status          MessageStatus   @default(SENT)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  isForwarded     Boolean         @default(false)
-  originalMessageId String?       @db.ObjectId
-  attachments     Attachment[]
-  reactions       MessageReaction[]
-  notifications   MessageNotification[]
-  thread          MessageThread?  @relation(fields: [threadId], references: [id])
-  threadId        String?         @db.ObjectId
+  id                 String                @id @default(auto()) @map("_id") @db.ObjectId
+  subject            String?
+  text               String
+  senderId           String                @db.ObjectId
+  sender             User                  @relation("SentMessages", fields: [senderId], references: [id])
+  recipientId        String?               @db.ObjectId
+  recipient          User?                 @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  chatId             String                @db.ObjectId
+  chat               Chat                  @relation(fields: [chatId], references: [id])
+  status             MessageStatus         @default(SENT)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  isForwarded        Boolean               @default(false)
+  originalMessageId  String?               @db.ObjectId
+  attachments        Attachment[]
+  reactions          MessageReaction[]
+  notifications      MessageNotification[]
+  thread             MessageThread?        @relation(fields: [threadId], references: [id])
+  threadId           String?               @db.ObjectId
+  coordinatorHistory CoordinatorHistory[]
 
   @@index([senderId])
   @@index([recipientId])
@@ -1346,18 +1361,18 @@ model Message {
 }
 
 model Attachment {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  url           String
-  name          String
-  type          String
-  size          Int
-  publicId      String
-  resourceType  String
-  format        String
-  messageId     String    @db.ObjectId
-  message       Message   @relation(fields: [messageId], references: [id])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  url          String
+  name         String
+  type         String
+  size         Int
+  publicId     String
+  resourceType String
+  format       String
+  messageId    String   @db.ObjectId
+  message      Message  @relation(fields: [messageId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([messageId])
 }
@@ -1505,22 +1520,22 @@ model EventDocument {
 }
 
 model TimeEntry {
-  id               String      @id @default(auto()) @map("_id") @db.ObjectId
-  lawyer           User        @relation(fields: [lawyerId], references: [id])
-  lawyerId         String      @db.ObjectId
-  case             Case?       @relation(fields: [caseId], references: [id])
-  caseId           String?     @db.ObjectId
+  id               String          @id @default(auto()) @map("_id") @db.ObjectId
+  lawyer           User            @relation(fields: [lawyerId], references: [id])
+  lawyerId         String          @db.ObjectId
+  case             Case?           @relation(fields: [caseId], references: [id])
+  caseId           String?         @db.ObjectId
   description      String
   startTime        DateTime
   endTime          DateTime?
-  duration         Int         // Duration in seconds
+  duration         Int // Duration in seconds
   serviceType      ServiceType?
-  needsFollowUp    Boolean     @default(false)
+  needsFollowUp    Boolean         @default(false)
   followUpNotes    String?
   outreachLocation String?
   status           TimeEntryStatus @default(IN_PROGRESS)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([lawyerId])
   @@index([caseId])
@@ -1821,19 +1836,19 @@ enum AdministrativeCaseType {
 }
 
 model Template {
-  id          String   @id @default(cuid()) @map("_id")
+  id          String         @id @default(cuid()) @map("_id")
   name        String
   type        TemplateType
   content     Json
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   String   @db.ObjectId
-  officeId    String?  @db.ObjectId
+  isDefault   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy   String         @db.ObjectId
+  officeId    String?        @db.ObjectId
   description String?
   status      TemplateStatus @default(ACTIVE)
-  coordinator Coordinator? @relation(fields: [createdBy], references: [userId])
-  office      Office?     @relation(fields: [officeId], references: [id])
+  coordinator Coordinator?   @relation(fields: [createdBy], references: [userId])
+  office      Office?        @relation(fields: [officeId], references: [id])
 
   @@unique([name, type], name: "name_type")
   @@index([createdBy])
@@ -1854,12 +1869,12 @@ enum TemplateStatus {
 }
 
 model Chat {
-  id            String          @id @default(auto()) @map("_id") @db.ObjectId
-  participants  UserChat[]
-  messages      Message[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  isArchived    Boolean         @default(false)
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  participants UserChat[]
+  messages     Message[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  isArchived   Boolean    @default(false)
 
   @@index([createdAt])
   @@index([updatedAt])
@@ -1890,15 +1905,15 @@ enum MessageStatus {
 }
 
 model PhoneMessage {
-  id          String          @id @default(cuid()) @map("_id")
-  messageId   String?         
+  id          String           @id @default(cuid()) @map("_id")
+  messageId   String?
   phoneNumber String
   content     String
   status      MessageStatus
   direction   MessageDirection
-  timestamp   DateTime        @default(now())
-  userId      String         @db.ObjectId
-  user        User           @relation("PhoneMessages", fields: [userId], references: [id])
+  timestamp   DateTime         @default(now())
+  userId      String           @db.ObjectId
+  user        User             @relation("PhoneMessages", fields: [userId], references: [id])
 
   @@index([userId])
   @@index([phoneNumber])
@@ -1911,71 +1926,71 @@ enum MessageDirection {
 }
 
 model Settings {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  key       String   @unique
-  value     String
-  type      String   // e.g., "SYSTEM", "EMAIL", "NOTIFICATION"
-  category  SettingsCategory @relation(fields: [categoryId], references: [id])
-  categoryId String  @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String           @id @default(auto()) @map("_id") @db.ObjectId
+  key        String           @unique
+  value      String
+  type       String // e.g., "SYSTEM", "EMAIL", "NOTIFICATION"
+  category   SettingsCategory @relation(fields: [categoryId], references: [id])
+  categoryId String           @db.ObjectId
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 }
 
 model SettingsCategory {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String   @unique
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name      String     @unique
   settings  Settings[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 // Add Workload Management Models
 model WorkloadMetrics {
-  id                String    @id @default(cuid()) @map("_id") @db.ObjectId
-  lawyer            User      @relation(fields: [lawyerId], references: [id])
-  lawyerId          String    @db.ObjectId
-  period            DateTime
-  caseCount         Int       @default(0)
-  completedCases    Int       @default(0)
-  averageRating     Float     @default(0)
-  utilizationRate   Float     @default(0)
-  responseTime      Float     @default(0)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id              String   @id @default(cuid()) @map("_id") @db.ObjectId
+  lawyer          User     @relation(fields: [lawyerId], references: [id])
+  lawyerId        String   @db.ObjectId
+  period          DateTime
+  caseCount       Int      @default(0)
+  completedCases  Int      @default(0)
+  averageRating   Float    @default(0)
+  utilizationRate Float    @default(0)
+  responseTime    Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([lawyerId])
   @@index([period])
 }
 
 model WorkAssignment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  lawyerId  String   @db.ObjectId
-  lawyer    User     @relation(fields: [lawyerId], references: [id])
-  
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  lawyerId String @db.ObjectId
+  lawyer   User   @relation(fields: [lawyerId], references: [id])
+
   // Assignment Details
-  title           String
-  description     String?
-  priority        Priority       @default(MEDIUM)
-  status          WorkStatus     @default(PENDING)
-  type            WorkType
-  estimatedHours  Float
-  actualHours     Float?
-  complexity      ComplexityLevel @default(MEDIUM)
-  
+  title          String
+  description    String?
+  priority       Priority        @default(MEDIUM)
+  status         WorkStatus      @default(PENDING)
+  type           WorkType
+  estimatedHours Float
+  actualHours    Float?
+  complexity     ComplexityLevel @default(MEDIUM)
+
   // Dates
-  startDate       DateTime
-  dueDate         DateTime
-  completedDate   DateTime?
-  
+  startDate     DateTime
+  dueDate       DateTime
+  completedDate DateTime?
+
   // Related Entities
-  caseId          String?        @db.ObjectId
-  case            Case?          @relation(fields: [caseId], references: [id])
-  
+  caseId String? @db.ObjectId
+  case   Case?   @relation(fields: [caseId], references: [id])
+
   // Progress Tracking
-  progress        Float          @default(0)
-  notes           String?
-  blockers        String?
-  
+  progress Float   @default(0)
+  notes    String?
+  blockers String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1985,22 +2000,22 @@ model WorkAssignment {
 }
 
 model WorkSchedule {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  lawyerId  String   @db.ObjectId
-  lawyer    User     @relation(fields: [lawyerId], references: [id])
-  
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  lawyerId String @db.ObjectId
+  lawyer   User   @relation(fields: [lawyerId], references: [id])
+
   // Schedule Details
-  date            DateTime
-  startTime       DateTime
-  endTime         DateTime
-  status          ScheduleStatus @default(AVAILABLE)
-  type            ScheduleType
-  recurrence      RecurrenceType?
-  
+  date       DateTime
+  startTime  DateTime
+  endTime    DateTime
+  status     ScheduleStatus  @default(AVAILABLE)
+  type       ScheduleType
+  recurrence RecurrenceType?
+
   // Availability
-  isAvailable     Boolean        @default(true)
-  reason          String?
-  
+  isAvailable Boolean @default(true)
+  reason      String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2084,19 +2099,19 @@ model TeachingMetrics {
 }
 
 model KebeleManager {
-  id             String   @id @default(cuid()) @map("_id")
+  id             String              @id @default(cuid()) @map("_id")
   fullName       String
-  phone          String   @unique
-  email          String?  @unique
+  phone          String              @unique
+  email          String?             @unique
   password       String
   position       String
   officeLocation String
   status         KebeleManagerStatus @default(ACTIVE)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   lastLoginAt    DateTime?
-  kebeleId       String  @unique
-  kebele         Kebele  @relation(fields: [kebeleId], references: [id])
+  kebeleId       String              @unique
+  kebele         Kebele              @relation(fields: [kebeleId], references: [id])
 }
 
 enum KebeleManagerStatus {
@@ -2106,24 +2121,24 @@ enum KebeleManagerStatus {
 }
 
 model Kebele {
-  id            String    @id @default(cuid()) @map("_id")
-  kebeleNumber  String
-  kebeleName    String
-  population    Int?
-  subCity       String?
-  district      String?
-  mainOffice    String?
-  contactPhone  String?
-  contactEmail  String?
-  workingHours  String?
-  services      String[]
-  status        KebeleStatus @default(ACTIVE)
-  manager       KebeleManager?
-  documents     Document[]
-  cases         Case[]
-  messages      KebeleMessage[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String          @id @default(cuid()) @map("_id")
+  kebeleNumber String
+  kebeleName   String
+  population   Int?
+  subCity      String?
+  district     String?
+  mainOffice   String?
+  contactPhone String?
+  contactEmail String?
+  workingHours String?
+  services     String[]
+  status       KebeleStatus    @default(ACTIVE)
+  manager      KebeleManager?
+  documents    Document[]
+  cases        Case[]
+  messages     KebeleMessage[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@index([kebeleNumber])
   @@index([kebeleName])
@@ -2136,32 +2151,32 @@ enum KebeleStatus {
 
 // Backup System Models
 model Backup {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   type        BackupType
   status      BackupStatus
-  size        Float?        // Size in bytes
-  path        String        // Storage path
-  checksum    String?       // For integrity verification
-  compression String?       // Compression method used
-  encrypted   Boolean       @default(false)
-  
+  size        Float? // Size in bytes
+  path        String // Storage path
+  checksum    String? // For integrity verification
+  compression String? // Compression method used
+  encrypted   Boolean      @default(false)
+
   // Metadata
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime  @default(now())
   startedAt   DateTime?
   completedAt DateTime?
   expiresAt   DateTime?
-  
+
   // Relations
-  createdBy   User          @relation(fields: [userId], references: [id])
-  userId      String        @db.ObjectId
-  settings    BackupSettings?
-  logs        BackupLog[]
-  files       BackupFile[]
-  
+  createdBy User            @relation(fields: [userId], references: [id])
+  userId    String          @db.ObjectId
+  settings  BackupSettings?
+  logs      BackupLog[]
+  files     BackupFile[]
+
   // Retention policy
-  retentionDays Int         @default(30)
-  
+  retentionDays Int @default(30)
+
   @@index([type])
   @@index([status])
   @@index([userId])
@@ -2169,39 +2184,39 @@ model Backup {
 }
 
 model BackupSettings {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  backup        Backup    @relation(fields: [backupId], references: [id])
-  backupId      String    @unique @db.ObjectId
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  backup        Backup           @relation(fields: [backupId], references: [id])
+  backupId      String           @unique @db.ObjectId
   compression   CompressionLevel @default(MEDIUM)
-  encryption    Boolean   @default(true)
+  encryption    Boolean          @default(true)
   excludedPaths String[]
-  maxConcurrent Int       @default(3)
+  maxConcurrent Int              @default(3)
   schedule      BackupSchedule?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 }
 
 model BackupSchedule {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  settings    BackupSettings @relation(fields: [settingsId], references: [id])
-  settingsId  String    @unique @db.ObjectId
-  enabled     Boolean   @default(true)
-  frequency   BackupFrequency
-  timeOfDay   String    // Format: HH:mm
-  lastRun     DateTime?
-  nextRun     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String          @id @default(auto()) @map("_id") @db.ObjectId
+  settings   BackupSettings  @relation(fields: [settingsId], references: [id])
+  settingsId String          @unique @db.ObjectId
+  enabled    Boolean         @default(true)
+  frequency  BackupFrequency
+  timeOfDay  String // Format: HH:mm
+  lastRun    DateTime?
+  nextRun    DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 }
 
 model BackupLog {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  backup    Backup    @relation(fields: [backupId], references: [id])
-  backupId  String    @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  backup    Backup   @relation(fields: [backupId], references: [id])
+  backupId  String   @db.ObjectId
   level     LogLevel
   message   String
   metadata  Json?
-  timestamp DateTime  @default(now())
+  timestamp DateTime @default(now())
 
   @@index([backupId])
   @@index([level])
@@ -2209,15 +2224,15 @@ model BackupLog {
 }
 
 model BackupFile {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  backup    Backup    @relation(fields: [backupId], references: [id])
-  backupId  String    @db.ObjectId
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  backup    Backup     @relation(fields: [backupId], references: [id])
+  backupId  String     @db.ObjectId
   path      String
   size      Float
   checksum  String?
   status    FileStatus
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([backupId])
   @@index([status])
@@ -2298,41 +2313,41 @@ enum AgentNotificationType {
 
 // AI Agent Models
 model AgentInstruction {
-  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  id          String               @id @default(auto()) @map("_id") @db.ObjectId
   type        AgentInstructionType
   description String
   priority    AgentPriority
-  isActive    Boolean             @default(true)
+  isActive    Boolean              @default(true)
   metadata    Json?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
   // Relations
-  coordinator   Coordinator?        @relation(fields: [coordinatorId], references: [id])
-  coordinatorId String?            @db.ObjectId
+  coordinator   Coordinator?  @relation(fields: [coordinatorId], references: [id])
+  coordinatorId String?       @db.ObjectId
   actions       AgentAction[]
 }
 
 model AgentAction {
-  id            String          @id @default(auto()) @map("_id") @db.ObjectId
-  type          String
-  status        AgentActionStatus
-  payload       Json
-  result        Json?
-  error         String?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  type        String
+  status      AgentActionStatus
+  payload     Json
+  result      Json?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   // Relations
-  instruction   AgentInstruction @relation(fields: [instructionId], references: [id])
-  instructionId String          @db.ObjectId
+  instruction   AgentInstruction    @relation(fields: [instructionId], references: [id])
+  instructionId String              @db.ObjectId
   notifications AgentNotification[]
 }
 
 model AgentNotification {
-  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  id        String                @id @default(auto()) @map("_id") @db.ObjectId
   title     String
   message   String
   type      AgentNotificationType
@@ -2340,21 +2355,21 @@ model AgentNotification {
   status    NotificationStatus    @default(UNREAD)
   metadata  Json?
   readAt    DateTime?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
   // Relations
-  action    AgentAction          @relation(fields: [actionId], references: [id])
-  actionId  String              @db.ObjectId
-  user      User                @relation(fields: [userId], references: [id])
-  userId    String              @db.ObjectId
+  action   AgentAction @relation(fields: [actionId], references: [id])
+  actionId String      @db.ObjectId
+  user     User        @relation(fields: [userId], references: [id])
+  userId   String      @db.ObjectId
 }
 
 model WebsiteContent {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   url         String   @unique
   content     String   @db.String
-  hash        String   // For content change detection
+  hash        String // For content change detection
   lastChecked DateTime
   lastUpdated DateTime
   metadata    Json?
@@ -2363,16 +2378,16 @@ model WebsiteContent {
 }
 
 model AgentChat {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  messages  Json[]     // Array of chat messages
-  context   Json?      // Chat context/history
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  messages  Json[] // Array of chat messages
+  context   Json? // Chat context/history
   metadata  Json?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user      User       @relation(fields: [userId], references: [id])
-  userId    String     @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @db.ObjectId
 }
 
 model KebeleMessage {
@@ -2392,38 +2407,38 @@ model KebeleMessage {
 }
 
 model ClientProfile {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  user            User      @relation(fields: [userId], references: [id])
-  userId          String    @unique @db.ObjectId
-  
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique @db.ObjectId
+
   // Personal Information
-  age             Int
-  sex             Gender
-  phone           String
-  numberOfFamily  Int
-  healthStatus    HealthStatus
-  
+  age            Int
+  sex            Gender
+  phone          String
+  numberOfFamily Int
+  healthStatus   HealthStatus
+
   // Location Details
-  region          String
-  zone            String
-  wereda          String
-  kebele          String
-  houseNumber     String?
-  
+  region      String
+  zone        String
+  wereda      String
+  kebele      String
+  houseNumber String?
+
   // Case Information
-  caseType        CaseType
-  caseCategory    CaseCategory
-  
+  caseType     CaseType
+  caseCategory CaseCategory
+
   // Office Assignment
-  assignedOffice  Office     @relation(fields: [officeId], references: [id])
-  officeId        String     @db.ObjectId
-  
+  assignedOffice Office @relation(fields: [officeId], references: [id])
+  officeId       String @db.ObjectId
+
   // Additional Details
-  guidelines      String[]
-  notes           String?
-  
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  guidelines String[]
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([officeId])
 }
@@ -2457,10 +2472,11 @@ model SmsMessage {
   recipientName  String
   recipientPhone String
   content        String
-  status         String   // 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
+  status         String // 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED'
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
 enum TimeEntryStatus {
   IN_PROGRESS
   PAUSED
@@ -2468,21 +2484,21 @@ enum TimeEntryStatus {
 }
 
 model notificationSettings {
-  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId               String   @db.ObjectId
-  userType             String   // 'CLIENT' or 'COORDINATOR'
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                 String   @db.ObjectId
+  userType               String // 'CLIENT' or 'COORDINATOR'
   automaticNotifications Boolean  @default(true)
-  emailEnabled         Boolean  @default(true)
-  smsEnabled          Boolean  @default(true)
-  pushEnabled         Boolean  @default(true)
-  reminderTiming      Json     // { before: number, frequency: string, customIntervals: number[] }
-  priorityLevels      Json     // { urgent: boolean, high: boolean, medium: boolean, low: boolean }
-  templates           Json     // { confirmation: string, reminder: string, cancellation: string, rescheduling: string }
-  workingHours        Json     // { start: string, end: string }
-  blackoutDates       String[] @default([])
-  customRules         String[] @default([])
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  emailEnabled           Boolean  @default(true)
+  smsEnabled             Boolean  @default(true)
+  pushEnabled            Boolean  @default(true)
+  reminderTiming         Json // { before: number, frequency: string, customIntervals: number[] }
+  priorityLevels         Json // { urgent: boolean, high: boolean, medium: boolean, low: boolean }
+  templates              Json // { confirmation: string, reminder: string, cancellation: string, rescheduling: string }
+  workingHours           Json // { start: string, end: string }
+  blackoutDates          String[] @default([])
+  customRules            String[] @default([])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@unique([userId, userType])
   @@index([userId])
@@ -2490,33 +2506,184 @@ model notificationSettings {
 }
 
 model SystemSettings {
-  id                            String   @id @default(cuid()) @map("_id")
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
-  
+  id        String   @id @default(cuid()) @map("_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // System Settings
-  automaticUpdates             Boolean  @default(true)
-  updateInterval               Int      @default(30)
-  emailNotifications           Boolean  @default(true)
-  workloadAlerts               Boolean  @default(true)
-  maxCaseLoad                  Int      @default(50)
-  defaultOffice                String   @default("main")
-  language                     String   @default("en")
-  timezone                     String   @default("UTC")
-  
+  automaticUpdates   Boolean @default(true)
+  updateInterval     Int     @default(30)
+  emailNotifications Boolean @default(true)
+  workloadAlerts     Boolean @default(true)
+  maxCaseLoad        Int     @default(50)
+  defaultOffice      String  @default("main")
+  language           String  @default("en")
+  timezone           String  @default("UTC")
+
   // Notification Settings
-  notificationCaseAssignments  Boolean  @default(true)
-  notificationCaseUpdates      Boolean  @default(true)
-  notificationWorkloadAlerts   Boolean  @default(true)
+  notificationCaseAssignments    Boolean @default(true)
+  notificationCaseUpdates        Boolean @default(true)
+  notificationWorkloadAlerts     Boolean @default(true)
   notificationPerformanceReports Boolean @default(true)
-  notificationSystemUpdates    Boolean  @default(true)
-  emailDigestFrequency        String   @default("daily")
-  
+  notificationSystemUpdates      Boolean @default(true)
+  emailDigestFrequency           String  @default("daily")
+
   // Security Settings
-  twoFactorAuthRequired       Boolean  @default(false)
-  sessionTimeoutMinutes       Int      @default(30)
-  passwordExpiryDays         Int      @default(90)
-  maxLoginAttempts           Int      @default(5)
-  ipWhitelist               String[] @default([])
+  twoFactorAuthRequired Boolean  @default(false)
+  sessionTimeoutMinutes Int      @default(30)
+  passwordExpiryDays    Int      @default(90)
+  maxLoginAttempts      Int      @default(5)
+  ipWhitelist           String[] @default([])
 }
 
+model CoordinatorHistory {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  coordinatorId String      @db.ObjectId
+  coordinator   Coordinator @relation(fields: [coordinatorId], references: [id])
+
+  // History Details
+  action        CoordinatorHistoryAction
+  previousValue Json?
+  newValue      Json?
+  changeDetails String?
+
+  // Related Entity References
+  clientId         String? @db.ObjectId
+  caseId           String? @db.ObjectId
+  officeId         String? @db.ObjectId
+  lawyerId         String? @db.ObjectId
+  projectId        String? @db.ObjectId
+  documentId       String? @db.ObjectId
+  appointmentId    String? @db.ObjectId
+  serviceRequestId String? @db.ObjectId
+  messageId        String? @db.ObjectId
+
+  // Related Entity Relations
+  client         User?           @relation("ClientHistory", fields: [clientId], references: [id])
+  case           Case?           @relation(fields: [caseId], references: [id])
+  office         Office?         @relation(fields: [officeId], references: [id])
+  lawyer         User?           @relation("LawyerHistory", fields: [lawyerId], references: [id])
+  project        Project?        @relation(fields: [projectId], references: [id])
+  document       Document?       @relation(fields: [documentId], references: [id])
+  appointment    Appointment?    @relation(fields: [appointmentId], references: [id])
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+  message        Message?        @relation(fields: [messageId], references: [id])
+
+  // Metadata
+  changedBy String   @db.ObjectId
+  changedAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  // Additional Context
+  context  Json? // Additional context about the change
+  metadata Json? // Any additional metadata
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([coordinatorId])
+  @@index([action])
+  @@index([changedAt])
+  @@index([clientId])
+  @@index([caseId])
+  @@index([officeId])
+  @@index([lawyerId])
+  @@index([projectId])
+  @@index([documentId])
+  @@index([appointmentId])
+  @@index([serviceRequestId])
+  @@index([messageId])
+}
+
+enum CoordinatorHistoryAction {
+  // Profile & Status Actions
+  PROFILE_UPDATE
+  STATUS_CHANGE
+  OFFICE_ASSIGNMENT
+  QUALIFICATION_ADDED
+  QUALIFICATION_UPDATED
+  QUALIFICATION_REMOVED
+  DOCUMENT_ADDED
+
+  // Project & Assignment Actions
+  PROJECT_ASSIGNED
+  PROJECT_UNASSIGNED
+  PROJECT_STATUS_CHANGED
+  PROJECT_UPDATED
+  SPECIALTY_ADDED
+  SPECIALTY_REMOVED
+
+  // Template & Instruction Actions
+  TEMPLATE_CREATED
+  TEMPLATE_UPDATED
+  TEMPLATE_DELETED
+  INSTRUCTION_ADDED
+  INSTRUCTION_UPDATED
+  INSTRUCTION_REMOVED
+
+  // Client Management Actions
+  CLIENT_ASSIGNED
+  CLIENT_UNASSIGNED
+  CLIENT_STATUS_CHANGED
+  CLIENT_DOCUMENT_ADDED
+  CLIENT_DOCUMENT_REMOVED
+  CLIENT_PROFILE_UPDATED
+
+  // Case Management Actions
+  CASE_ASSIGNED
+  CASE_UNASSIGNED
+  CASE_STATUS_CHANGED
+  CASE_DOCUMENT_ADDED
+  CASE_DOCUMENT_REMOVED
+  CASE_NOTE_ADDED
+  CASE_NOTE_UPDATED
+  CASE_NOTE_DELETED
+
+  // Lawyer Management Actions
+  LAWYER_ASSIGNED
+  LAWYER_UNASSIGNED
+  LAWYER_STATUS_CHANGED
+  LAWYER_WORKLOAD_UPDATED
+  LAWYER_PERFORMANCE_UPDATED
+
+  // Service Request Actions
+  SERVICE_REQUEST_CREATED
+  SERVICE_REQUEST_UPDATED
+  SERVICE_REQUEST_STATUS_CHANGED
+  SERVICE_REQUEST_ASSIGNED
+  SERVICE_REQUEST_UNASSIGNED
+
+  // Appointment Actions
+  APPOINTMENT_SCHEDULED
+  APPOINTMENT_UPDATED
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_RESCHEDULED
+  APPOINTMENT_COMPLETED
+
+  // Communication Actions
+  MESSAGE_SENT
+  MESSAGE_UPDATED
+  MESSAGE_DELETED
+  NOTIFICATION_SENT
+  NOTIFICATION_UPDATED
+
+  // Document Management Actions
+  DOCUMENT_UPLOADED
+  DOCUMENT_DOWNLOADED
+  DOCUMENT_SHARED
+  DOCUMENT_REMOVED
+  DOCUMENT_STATUS_CHANGED
+
+  // Office Management Actions
+  OFFICE_ASSIGNED
+  OFFICE_UNASSIGNED
+  OFFICE_STATUS_CHANGED
+  OFFICE_RESOURCE_ASSIGNED
+  OFFICE_RESOURCE_UNASSIGNED
+
+  // Other Actions
+  SETTINGS_UPDATED
+  PREFERENCES_CHANGED
+  OTHER
+}

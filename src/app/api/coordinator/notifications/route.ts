@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { verifyAuth } from '@/lib/auth';
-import { NotificationStatus } from '@prisma/client';
+import { NotificationStatus, UserRoleEnum } from '@prisma/client';
+import { cookies, headers } from 'next/headers';
 
 export async function GET() {
   try {
-    const session = await getServerSession();
+    // Get token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      );
+    }
+
+    // Verify authentication and coordinator role
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Invalid role' },
         { status: 401 }
       );
     }
@@ -19,7 +30,7 @@ export async function GET() {
     // Get unread notifications count
     const unreadCount = await prisma.notification.count({
       where: {
-        userId: session.user.id,
+        userId: authResult.user.id,
         status: 'UNREAD',
       },
     });
@@ -27,7 +38,7 @@ export async function GET() {
     // Get recent notifications
     const notifications = await prisma.notification.findMany({
       where: {
-        userId: session.user.id,
+        userId: authResult.user.id,
       },
       orderBy: {
         createdAt: 'desc',
@@ -36,6 +47,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
+      success: true,
       unreadCount,
       notifications: notifications.map((n) => ({
         ...n,
@@ -46,7 +58,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -54,11 +66,23 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    // Get token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
-    if (!session) {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      );
+    }
+
+    // Verify authentication and coordinator role
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - Invalid role' },
         { status: 401 }
       );
     }
@@ -68,7 +92,7 @@ export async function POST(request: Request) {
 
     if (!notificationId) {
       return NextResponse.json(
-        { error: 'Notification ID is required' },
+        { success: false, error: 'Notification ID is required' },
         { status: 400 }
       );
     }
@@ -77,7 +101,7 @@ export async function POST(request: Request) {
     const notification = await prisma.notification.update({
       where: {
         id: notificationId,
-        userId: session.user.id,
+        userId: authResult.user.id,
       },
       data: {
         status: 'READ',
@@ -86,6 +110,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({
+      success: true,
       notification: {
         ...notification,
         createdAt: notification.createdAt.toISOString(),
@@ -96,7 +121,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error updating notification:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -104,48 +129,60 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
+    // Get token from cookies
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
 
-    if (!userId) {
-      const cookies = request.headers.get('cookie');
-      const token = cookies?.split(';')
-        .find(c => c.trim().startsWith('auth-token='))
-        ?.split('=')[1];
-
-      if (token) {
-        const authResult = await verifyAuth(token);
-        if (authResult.isAuthenticated && authResult.user) {
-          userId = authResult.user.id;
-        }
-      }
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - No token provided' },
+        { status: 401 }
+      );
     }
 
-    if (!userId) {
+    // Verify authentication and coordinator role
+    const authResult = await verifyAuth(token);
+    
+    if (!authResult.isAuthenticated || authResult.user.userRole !== UserRoleEnum.COORDINATOR) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { success: false, error: 'Unauthorized - Invalid role' },
         { status: 401 }
       );
     }
 
     const { notificationId } = await request.json();
 
+    if (!notificationId) {
+      return NextResponse.json(
+        { success: false, error: 'Notification ID is required' },
+        { status: 400 }
+      );
+    }
+
     // Mark notification as read
     const notification = await prisma.notification.update({
       where: {
         id: notificationId,
-        userId
+        userId: authResult.user.id
       },
       data: {
         status: NotificationStatus.READ
       }
     });
 
-    return NextResponse.json(notification);
+    return NextResponse.json({
+      success: true,
+      notification: {
+        ...notification,
+        createdAt: notification.createdAt.toISOString(),
+        updatedAt: notification.updatedAt.toISOString(),
+        readAt: notification.readAt?.toISOString(),
+      }
+    });
   } catch (error) {
     console.error('Error updating notification:', error);
     return NextResponse.json(
-      { error: 'Failed to update notification' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

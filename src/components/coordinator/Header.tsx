@@ -23,7 +23,10 @@ import {
   Shield,
   HelpCircle,
   ChevronDown,
-  X
+  X,
+  Maximize2,
+  Minimize2,
+  RefreshCw
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -54,6 +57,7 @@ export default function Header({ user, toggleSidebar }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showQuickAccess, setShowQuickAccess] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Default user data if none provided
   const userData = user || {
@@ -92,6 +96,35 @@ export default function Header({ user, toggleSidebar }: HeaderProps) {
     localStorage.setItem('darkMode', (!isDarkMode).toString());
   };
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    // First refresh the router
+    router.refresh();
+    // Then force a hard refresh of the page
+    window.location.reload();
+  };
+
+  // Add event listener for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -112,7 +145,7 @@ export default function Header({ user, toggleSidebar }: HeaderProps) {
     { icon: Calendar, label: 'Appointments', href: '/coordinator/appointments' },
     { icon: Users, label: 'Clients', href: '/coordinator/clients/directory' },
     { icon: FileText, label: 'Cases', href: '/coordinator/cases' },
-    { icon: Building2, label: 'Offices', href: '/coordinator/offices' },
+    { icon: Building2, label: 'Office', href: '/coordinator/office' },
     { icon: Database, label: 'Storage', href: '/coordinator/storage' },
     { icon: Shield, label: 'Security', href: '/coordinator/security' },
   ];
@@ -157,6 +190,28 @@ export default function Header({ user, toggleSidebar }: HeaderProps) {
 
           {/* Right Section */}
           <div className="flex items-center space-x-4">
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title="Refresh Page"
+            >
+              <RefreshCw className="h-6 w-6" />
+            </button>
+
+            {/* Fullscreen Button */}
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-full text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-6 w-6" />
+              ) : (
+                <Maximize2 className="h-6 w-6" />
+              )}
+            </button>
+
             {/* Quick Access Button */}
             <div className="relative">
               <button
@@ -255,9 +310,9 @@ export default function Header({ user, toggleSidebar }: HeaderProps) {
                     <User className="h-4 w-4 inline-block mr-2" />
                     My Profile
                   </Link>
-                  <Link href="/coordinator/offices" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <Link href="/coordinator/office" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Building2 className="h-4 w-4 inline-block mr-2" />
-                    My Offices
+                    My Office
                   </Link>
                   <Link href="/coordinator/clients" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Users className="h-4 w-4 inline-block mr-2" />

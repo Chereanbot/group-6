@@ -27,7 +27,8 @@ import {
   HiOutlineTemplate,
   HiOutlineCollection,
   HiOutlinePhone,
-  HiOutlineX
+  HiOutlineX,
+  HiOutlineClock
 } from 'react-icons/hi';
 
 const menuItems = [
@@ -167,18 +168,18 @@ const menuItems = [
     ]
   },
   {
-    title: 'Office Management',
+    title: 'My Office',
     path: '/coordinator/office',
     icon: HiOutlineOfficeBuilding,
     submenu: [
       { 
-        title: 'Staff Directory', 
-        path: '/coordinator/office/staff',
+        title: 'Office', 
+        path: '/coordinator/office',
         icon: HiOutlineUserGroup
       },
       { 
-        title: 'Resources', 
-        path: '/coordinator/office/resources',
+        title: 'Staff', 
+        path: '/coordinator/office/staff',
         icon: HiOutlineCollection
       },
       { 
@@ -278,6 +279,19 @@ const menuItems = [
         path: '/coordinator/communications/notifications',
         icon: HiOutlineBell,
         badge: '7'
+      }
+    ]
+  },
+  {
+    // i want to create the recent tasks section and here  history for all
+    title: 'Recent History',
+    path: '/coordinator/recent-history',
+    icon: HiOutlineClock,
+    submenu: [
+      {
+        title: 'Recent History',
+        path: '/coordinator/recent-history',
+        icon: HiOutlineClock
       }
     ]
   },

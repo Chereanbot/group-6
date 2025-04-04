@@ -15,7 +15,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       <Toaster position="top-right" />
       <Sidebar isOpen={true} onClose={() => {}} />
       <div className="lg:pl-64">
-        <Header  toggleSidebar={() => {}} />
+        <Header user={null} toggleSidebar={() => {}} />
         <main>{children}</main>
       </div>
     </div>

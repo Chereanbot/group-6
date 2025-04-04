@@ -16,7 +16,11 @@ import {
   HiOutlineTrash,
   HiOutlineExclamationCircle,
   HiOutlineCheck,
-  HiOutlineX
+  HiOutlineX,
+  HiOutlineChevronDoubleLeft,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
+  HiOutlineChevronDoubleRight
 } from 'react-icons/hi';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -65,6 +69,7 @@ export default function ClientDirectory() {
 
   const fetchClients = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '10',
@@ -73,16 +78,24 @@ export default function ClientDirectory() {
       });
 
       const response = await fetch(`/api/coordinator/clients?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch clients');
+      }
+      
       const result = await response.json();
-
-      if (result.success) {
+      
+      if (result.success && Array.isArray(result.data?.clients)) {
         setClients(result.data.clients);
-        setTotalPages(result.data.pagination.pages);
+        setTotalPages(result.data.pagination?.pages || 1);
       } else {
+        setClients([]);
+        setTotalPages(1);
         toast.error(result.error || 'Failed to fetch clients');
       }
     } catch (error) {
       console.error('Error fetching clients:', error);
+      setClients([]);
+      setTotalPages(1);
       toast.error('An error occurred while fetching clients');
     } finally {
       setLoading(false);

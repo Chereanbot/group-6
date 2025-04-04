@@ -6,6 +6,12 @@ import { UserRoleEnum, MessageDirection } from '@prisma/client';
 
 export async function GET(req: Request) {
   try {
+    // Get URL parameters for pagination
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '4');
+    const skip = (page - 1) * limit;
+
     // Get auth token from cookies
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
@@ -41,7 +47,10 @@ export async function GET(req: Request) {
       direction: MessageDirection.OUTGOING
     };
 
-    // Fetch recent messages
+    // Get total count for pagination
+    const total = await prisma.phoneMessage.count({ where });
+
+    // Fetch paginated messages
     const messages = await prisma.phoneMessage.findMany({
       where,
       select: {
@@ -57,8 +66,8 @@ export async function GET(req: Request) {
       orderBy: {
         timestamp: 'desc'
       },
-      take: 50,
-      skip: 0
+      take: limit,
+      skip: skip
     });
 
     // Get user details for the messages
@@ -92,7 +101,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
-      messages: transformedMessages
+      messages: transformedMessages,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
     });
 
   } catch (error) {

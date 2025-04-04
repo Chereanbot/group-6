@@ -33,6 +33,36 @@ export async function POST(request: Request) {
     // Generate a unique ID for this report share
     const reportShareId = new Date().getTime().toString();
 
+    // Get user details for the shared users and the sharing user
+    const [sharedUsers, sharingUser] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          id: { in: sharedWithIds }
+        },
+        select: {
+          id: true,
+          fullName: true,
+          userRole: true,
+          email: true
+        }
+      }),
+      prisma.user.findUnique({
+        where: { id: payload.id },
+        select: {
+          id: true,
+          fullName: true,
+          userRole: true
+        }
+      })
+    ]);
+
+    if (!sharingUser) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     // Create notifications for shared users
     const notificationPromises = sharedWithIds.map(userId =>
       prisma.notification.create({
@@ -44,11 +74,23 @@ export async function POST(request: Request) {
           metadata: {
             type: 'REPORT_SHARE',
             resourceId: reportShareId,
-            sharedBy: payload.id,
+            sharedBy: {
+              id: sharingUser.id,
+              name: sharingUser.fullName,
+              role: sharingUser.userRole
+            },
+            sharedWith: sharedUsers.map(user => ({
+              id: user.id,
+              name: user.fullName,
+              role: user.userRole,
+              status: 'PENDING'
+            })),
             description,
             hasNotes: !!notes,
             notes,
-            exportOptions
+            exportOptions,
+            permissions,
+            expiresAt
           }
         }
       })

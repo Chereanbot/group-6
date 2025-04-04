@@ -3,6 +3,29 @@ import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 import { verifyAuth } from '@/lib/edge-auth';
 import { Parser } from '@json2csv/plainjs';
+import { Prisma } from '@prisma/client';
+
+interface ReportShareMetadata {
+  type: string;
+  resourceId: string;
+  sharedBy: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  sharedWith: Array<{
+    id: string;
+    name: string;
+    role: string;
+    status: string;
+  }>;
+  description: string;
+  hasNotes: boolean;
+  notes: string;
+  exportOptions: any;
+  permissions: string[];
+  expiresAt: string | null;
+}
 
 export async function POST(
   request: Request,
@@ -37,12 +60,15 @@ export async function POST(
         id: params.id,
         type: 'SYSTEM_UPDATE',
         metadata: {
-          path: ['type'],
-          equals: 'REPORT_SHARE'
+          not: null
         },
         OR: [
           { userId: payload.id },
-          { metadata: { path: ['sharedWith'], array_contains: [{ id: payload.id }] } }
+          {
+            metadata: {
+              not: null
+            }
+          }
         ]
       }
     });
@@ -54,8 +80,32 @@ export async function POST(
       );
     }
 
+    // Parse metadata and verify access
+    const metadata = (typeof notification.metadata === 'string' 
+      ? JSON.parse(notification.metadata) 
+      : notification.metadata) as ReportShareMetadata;
+
+    if (!metadata || metadata.type !== 'REPORT_SHARE') {
+      return NextResponse.json(
+        { success: false, message: 'Invalid report type' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has access to this report
+    const hasAccess = metadata.sharedBy?.id === payload.id || 
+                     (Array.isArray(metadata.sharedWith) && 
+                      metadata.sharedWith.some((user) => user.id === payload.id));
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        { success: false, message: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
     // Get the export options from metadata
-    const exportOptions = notification.metadata.exportOptions;
+    const exportOptions = metadata.exportOptions;
 
     // Fetch the actual report data based on export options
     const reportData = await generateReportData(exportOptions);
@@ -67,17 +117,19 @@ export async function POST(
     const csv = parser.parse(reportData);
 
     // Update the notification status for this user
+    const updatedMetadata = {
+      ...metadata,
+      sharedWith: metadata.sharedWith.map(user => 
+        user.id === payload.id 
+          ? { ...user, status: 'DOWNLOADED' }
+          : user
+      )
+    } as Prisma.InputJsonValue;
+
     await prisma.notification.update({
       where: { id: params.id },
       data: {
-        metadata: {
-          ...notification.metadata,
-          sharedWith: notification.metadata.sharedWith.map((user: any) => 
-            user.id === payload.id 
-              ? { ...user, status: 'DOWNLOADED' }
-              : user
-          )
-        }
+        metadata: updatedMetadata
       }
     });
 

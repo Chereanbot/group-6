@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreVertical, CheckCircle, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -21,6 +21,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface Appointment {
   id: string;
@@ -50,18 +63,50 @@ interface Appointment {
   caseType: string;
   venue: string;
   priority: string;
+  cancellationReason?: string;
+  completionNotes?: string;
 }
 
 interface BigCalendarProps {
   appointments: Appointment[];
-  onUpdateStatus: (appointmentId: string, newStatus: string) => Promise<void>;
-  onDeleteAppointment: (appointmentId: string) => Promise<void>;
+  onUpdateStatus: (appointmentId: string, status: string) => void;
+  onDeleteAppointment: (appointmentId: string) => void;
+  onOpenStatusDialog: (appointment: Appointment) => void;
 }
+
+const APPOINTMENT_STATUS = {
+  SCHEDULED: 'SCHEDULED',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+  NO_SHOW: 'NO_SHOW',
+  RESCHEDULED: 'RESCHEDULED'
+} as const;
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case APPOINTMENT_STATUS.SCHEDULED:
+      return 'bg-blue-500';
+    case APPOINTMENT_STATUS.CONFIRMED:
+      return 'bg-green-500';
+    case APPOINTMENT_STATUS.CANCELLED:
+      return 'bg-red-500';
+    case APPOINTMENT_STATUS.COMPLETED:
+      return 'bg-blue-700';
+    case APPOINTMENT_STATUS.NO_SHOW:
+      return 'bg-yellow-500';
+    case APPOINTMENT_STATUS.RESCHEDULED:
+      return 'bg-purple-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
 
 export default function BigCalendar({
   appointments,
   onUpdateStatus,
   onDeleteAppointment,
+  onOpenStatusDialog
 }: BigCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Appointment | null>(null);
@@ -148,17 +193,6 @@ export default function BigCalendar({
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case "COMPLETED":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "CANCELLED":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      default:
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-    }
-  };
-
   const getPriorityColor = (priority: string) => {
     switch (priority.toUpperCase()) {
       case "URGENT":
@@ -168,6 +202,22 @@ export default function BigCalendar({
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
+  };
+
+  const events = appointments.map(apt => ({
+    id: apt.id,
+    title: `${apt.client.fullName} - ${apt.purpose}`,
+    start: apt.start,
+    end: apt.end,
+    backgroundColor: getStatusColor(apt.status),
+    borderColor: getStatusColor(apt.status),
+    extendedProps: {
+      appointment: apt
+    }
+  }));
+
+  const handleEventClick = (info: any) => {
+    setSelectedEvent(info.event.extendedProps.appointment);
   };
 
   return (
@@ -411,6 +461,29 @@ export default function BigCalendar({
           </Dialog>
         )}
       </AnimatePresence>
+
+      <div className="h-[600px]">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+          }}
+          events={events}
+          eventClick={handleEventClick}
+          height="100%"
+          slotMinTime="06:00:00"
+          slotMaxTime="22:00:00"
+          allDaySlot={false}
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }}
+        />
+      </div>
     </div>
   );
 } 

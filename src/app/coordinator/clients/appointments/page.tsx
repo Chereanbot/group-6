@@ -4,13 +4,30 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, Grid3X3, Table } from "lucide-react";
+import { Calendar, Grid3X3, Table, Bell, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import BigCalendar from "./components/BigCalendar";
 import TableView from "./components/TableView";
 import GridView from "./components/GridView";
 import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Appointment {
   id: string;
@@ -40,12 +57,30 @@ interface Appointment {
   caseType: string;
   venue: string;
   priority: string;
+  cancellationReason?: string;
+  completionNotes?: string;
+  requiredDocuments?: string[];
+  reminderType?: string;
+  reminderTiming?: string;
 }
+
+const APPOINTMENT_STATUS = {
+  SCHEDULED: 'SCHEDULED',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+  NO_SHOW: 'NO_SHOW',
+  RESCHEDULED: 'RESCHEDULED'
+} as const;
 
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState("calendar");
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [completionNotes, setCompletionNotes] = useState("");
   const router = useRouter();
   const { toast } = useToast();
 
@@ -99,6 +134,8 @@ export default function AppointmentsPage() {
         body: JSON.stringify({
           appointmentId,
           status: newStatus,
+          ...(newStatus === APPOINTMENT_STATUS.CANCELLED && { cancellationReason }),
+          ...(newStatus === APPOINTMENT_STATUS.COMPLETED && { completionNotes })
         }),
       });
 
@@ -109,6 +146,9 @@ export default function AppointmentsPage() {
       }
 
       await fetchAppointments();
+      setIsStatusDialogOpen(false);
+      setCancellationReason("");
+      setCompletionNotes("");
       toast({
         title: "Success",
         description: "Appointment status updated successfully",
@@ -156,6 +196,11 @@ export default function AppointmentsPage() {
     }
   };
 
+  const openStatusDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsStatusDialogOpen(true);
+  };
+
   useEffect(() => {
     fetchAppointments();
   }, []);
@@ -176,9 +221,9 @@ export default function AppointmentsPage() {
           onClick={() => router.push("/coordinator/clients/appointments/new")}
           className="bg-primary hover:bg-primary/90"
         >
-                      New Appointment
-                    </Button>
-          </div>
+          New Appointment
+        </Button>
+      </div>
 
       <Tabs defaultValue="calendar" className="w-full" onValueChange={setActiveView}>
         <TabsList className="mb-4">
@@ -209,6 +254,7 @@ export default function AppointmentsPage() {
                 appointments={appointments}
                 onUpdateStatus={handleUpdateStatus}
                 onDeleteAppointment={handleDeleteAppointment}
+                onOpenStatusDialog={openStatusDialog}
               />
             </TabsContent>
 
@@ -217,6 +263,7 @@ export default function AppointmentsPage() {
                 appointments={appointments}
                 onUpdateStatus={handleUpdateStatus}
                 onDeleteAppointment={handleDeleteAppointment}
+                onOpenStatusDialog={openStatusDialog}
               />
             </TabsContent>
 
@@ -225,11 +272,90 @@ export default function AppointmentsPage() {
                 appointments={appointments}
                 onUpdateStatus={handleUpdateStatus}
                 onDeleteAppointment={handleDeleteAppointment}
+                onOpenStatusDialog={openStatusDialog}
               />
             </TabsContent>
           </motion.div>
-                          </AnimatePresence>
+        </AnimatePresence>
       </Tabs>
-      </div>
+
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Appointment Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedAppointment && (
+              <div className="space-y-2">
+                <p className="font-medium">Client: {selectedAppointment.client.fullName}</p>
+                <p>Date: {new Date(selectedAppointment.scheduledTime).toLocaleDateString()}</p>
+                <p>Time: {new Date(selectedAppointment.scheduledTime).toLocaleTimeString()}</p>
+                <p>Purpose: {selectedAppointment.purpose}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                onClick={() => handleUpdateStatus(selectedAppointment!.id, APPOINTMENT_STATUS.CONFIRMED)}
+                className="bg-green-500 hover:bg-green-600"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Confirm
+              </Button>
+              <Button
+                onClick={() => handleUpdateStatus(selectedAppointment!.id, APPOINTMENT_STATUS.COMPLETED)}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Complete
+              </Button>
+              <Button
+                onClick={() => handleUpdateStatus(selectedAppointment!.id, APPOINTMENT_STATUS.NO_SHOW)}
+                className="bg-yellow-500 hover:bg-yellow-600"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                No Show
+              </Button>
+              <Button
+                onClick={() => handleUpdateStatus(selectedAppointment!.id, APPOINTMENT_STATUS.CANCELLED)}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+            </div>
+
+            {(selectedAppointment?.status === APPOINTMENT_STATUS.CANCELLED || 
+              selectedAppointment?.status === APPOINTMENT_STATUS.COMPLETED) && (
+              <div className="space-y-2">
+                <Label htmlFor="notes">
+                  {selectedAppointment.status === APPOINTMENT_STATUS.CANCELLED 
+                    ? "Cancellation Reason" 
+                    : "Completion Notes"}
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={selectedAppointment.status === APPOINTMENT_STATUS.CANCELLED 
+                    ? cancellationReason 
+                    : completionNotes}
+                  onChange={(e) => {
+                    if (selectedAppointment.status === APPOINTMENT_STATUS.CANCELLED) {
+                      setCancellationReason(e.target.value);
+                    } else {
+                      setCompletionNotes(e.target.value);
+                    }
+                  }}
+                  placeholder={
+                    selectedAppointment.status === APPOINTMENT_STATUS.CANCELLED
+                      ? "Enter reason for cancellation..."
+                      : "Enter completion notes..."
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 } 

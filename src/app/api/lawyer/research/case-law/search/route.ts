@@ -2,15 +2,26 @@ import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { UserRoleEnum } from "@prisma/client";
+import { headers } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
+    const headersList = await headers();
+    const userId = headersList.get('x-user-id');
+    const userRole = headersList.get('x-user-role');
+
+    if (!userId) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: 'Unauthorized: Please login first' },
         { status: 401 }
+      );
+    }
+
+    if (userRole !== 'LAWYER') {
+      return NextResponse.json(
+        { error: 'Unauthorized: Only lawyers can access case law research' },
+        { status: 403 }
       );
     }
 
@@ -18,7 +29,7 @@ export async function POST(request: Request) {
 
     // Get lawyer's specializations
     const lawyer = await prisma.lawyerProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
       include: {
         specializations: {
           include: {

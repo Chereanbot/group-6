@@ -27,6 +27,7 @@ export default function NotificationSettings({ userId, userType }: NotificationS
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           userId,
           setting,
@@ -35,6 +36,14 @@ export default function NotificationSettings({ userId, userType }: NotificationS
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "Please log in again to update your settings.",
+          });
+          return;
+        }
         throw new Error('Failed to update notification settings');
       }
 

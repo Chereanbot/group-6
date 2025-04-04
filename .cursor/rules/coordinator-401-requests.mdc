@@ -1,9 +1,27 @@
 ---
-description:
-globs:
+description: 
+globs: 
+alwaysApply: true
 ---
+  try {
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
 
-# Your rule content
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 200 }
+      );
+    }
 
-- You can @ files here
-- You can use markdown but dont have to
+    const { isAuthenticated, payload } = await verifyAuth(token);
+
+    if (!isAuthenticated || !payload) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 200 }
+      );
+    }

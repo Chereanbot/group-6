@@ -40,13 +40,19 @@ interface SmsTemplate {
   category: string;
 }
 
+interface StatusHistoryItem {
+  status: 'DRAFT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+  timestamp: Date;
+  detail: string;
+}
+
 interface SmsMessage {
   id: string;
   recipientId: string;
   recipientName: string;
   recipientPhone: string;
   content: string;
-  status: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
+  status: 'DRAFT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   createdAt: Date;
 }
 
@@ -105,6 +111,13 @@ export default function SmsPage() {
   const [previewTemplate, setPreviewTemplate] = useState<SmsTemplate | null>(null);
   const [manualPhoneNumber, setManualPhoneNumber] = useState('');
   const [showManualSend, setShowManualSend] = useState(false);
+  const [currentMessagePage, setCurrentMessagePage] = useState(1);
+  const [totalMessagePages, setTotalMessagePages] = useState(1);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<SmsMessage | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryItem[]>([]);
+  const [loadingStatus, setLoadingStatus] = useState(false);
 
   useEffect(() => {
     console.log('Setting initial templates:', initialTemplates);
@@ -160,15 +173,19 @@ export default function SmsPage() {
 
   const fetchRecentMessages = async () => {
     try {
-      const response = await fetch('/api/coordinator/communications/sms/recent');
+      setIsLoadingMessages(true);
+      const response = await fetch(`/api/coordinator/communications/sms/recent?page=${currentMessagePage}&limit=4`);
       if (!response.ok) throw new Error('Failed to fetch recent messages');
       
       const data = await response.json();
       setRecentMessages(data.messages);
+      setTotalMessagePages(data.totalPages);
     } catch (error) {
       console.error('Error fetching recent messages:', error);
       toast.error('Failed to load recent messages');
       setError('Failed to load recent messages');
+    } finally {
+      setIsLoadingMessages(false);
     }
   };
 
@@ -312,7 +329,7 @@ export default function SmsPage() {
     switch (status) {
       case 'DELIVERED': return 'text-green-500';
       case 'SENT': return 'text-blue-500';
-      case 'PENDING': return 'text-yellow-500';
+      case 'DRAFT': return 'text-yellow-500';
       case 'FAILED': return 'text-red-500';
       default: return 'text-gray-500';
     }
@@ -369,11 +386,58 @@ export default function SmsPage() {
     setShowManualSend(!showManualSend);
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentMessagePage(page);
+    fetchRecentMessages();
+  };
+
+  const handleStatusClick = async (messageId: string) => {
+    try {
+      setLoadingStatus(true);
+      const response = await fetch(`/api/coordinator/communications/sms/status/${messageId}`);
+      if (!response.ok) throw new Error('Failed to fetch status history');
+      
+      const data = await response.json();
+      // First set the selected message
+      const message = recentMessages.find(msg => msg.id === messageId);
+      if (message) {
+        setSelectedMessage(message);
+        setStatusHistory(data.history || []); // Use data.history instead of data.statusHistory
+        setShowStatusModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching status history:', error);
+      toast.error('Failed to fetch status history');
+    } finally {
+      setLoadingStatus(false);
+    }
+  };
+
+  const handleResendMessage = async (messageId: string) => {
+    try {
+      const confirmResend = window.confirm('Are you sure you want to resend this message?');
+      if (!confirmResend) return;
+
+      const response = await fetch(`/api/coordinator/communications/sms/resend/${messageId}`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) throw new Error('Failed to resend message');
+
+      toast.success('Message resent successfully!');
+      fetchRecentMessages();
+      setShowStatusModal(false);
+    } catch (error) {
+      console.error('Error resending message:', error);
+      toast.error('Failed to resend message');
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {loading && <div className="spinner">Loading...</div>}
-      {/* Error handling UI */}
       {error && <div className="error-message">{error}</div>}
+      
       {/* Left sidebar - Contacts */}
       <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="p-4 space-y-4">
@@ -468,7 +532,9 @@ export default function SmsPage() {
                       onChange={() => handleContactToggle(contact.id)}
                       className="mr-2"
                     />
-                    <span className="text-gray-900 dark:text-white">{contact.fullName} ({contact.phone})</span>
+                    <span className="text-gray-900 dark:text-white">
+                      {contact.fullName} ({contact.phone})
+                    </span>
                   </div>
                 ))}
               </div>
@@ -481,49 +547,56 @@ export default function SmsPage() {
       <div className="flex-1 flex flex-col">
         {/* Top stats bar */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900">
-              <div className="flex items-center">
-                <HiOutlinePaperAirplane className="w-8 h-8 text-blue-500" />
-                <div className="ml-3">
-                  <p className="text-sm text-blue-500 font-medium">Total Sent</p>
-                  <p className="text-2xl font-semibold text-blue-700 dark:text-blue-300">
-                    {recentMessages.length}
-                  </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {/* Draft Messages */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-800 p-4 rounded-lg shadow-lg border border-amber-200 dark:border-amber-700">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <HiOutlineClock className="w-8 h-8 text-amber-500 dark:text-amber-400" />
                 </div>
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Draft</p>
+                <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">
+                  {recentMessages.filter(m => m.status === 'DRAFT').length}
+                </p>
               </div>
             </div>
-            <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900">
-              <div className="flex items-center">
-                <HiOutlineCheck className="w-8 h-8 text-green-500" />
-                <div className="ml-3">
-                  <p className="text-sm text-green-500 font-medium">Delivered</p>
-                  <p className="text-2xl font-semibold text-green-700 dark:text-green-300">
-                    {recentMessages.filter(m => m.status === 'DELIVERED').length}
-                  </p>
+
+            {/* Sent Messages */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 p-4 rounded-lg shadow-lg border border-blue-200 dark:border-blue-700">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <HiOutlinePaperAirplane className="w-8 h-8 text-blue-500 dark:text-blue-400" />
                 </div>
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Sent</p>
+                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                  {recentMessages.filter(m => m.status === 'SENT').length}
+                </p>
               </div>
             </div>
-            <div className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900">
-              <div className="flex items-center">
-                <HiOutlineClock className="w-8 h-8 text-yellow-500" />
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-500 font-medium">Pending</p>
-                  <p className="text-2xl font-semibold text-yellow-700 dark:text-yellow-300">
-                    {recentMessages.filter(m => m.status === 'PENDING').length}
-                  </p>
+
+            {/* Delivered Messages */}
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900 dark:to-emerald-800 p-4 rounded-lg shadow-lg border border-emerald-200 dark:border-emerald-700">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <HiOutlineCheck className="w-8 h-8 text-emerald-500 dark:text-emerald-400" />
                 </div>
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Delivered</p>
+                <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
+                  {recentMessages.filter(m => m.status === 'DELIVERED').length}
+                </p>
               </div>
             </div>
-            <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900">
-              <div className="flex items-center">
-                <HiOutlineExclamationCircle className="w-8 h-8 text-red-500" />
-                <div className="ml-3">
-                  <p className="text-sm text-red-500 font-medium">Failed</p>
-                  <p className="text-2xl font-semibold text-red-700 dark:text-red-300">
-                    {recentMessages.filter(m => m.status === 'FAILED').length}
-                  </p>
+
+            {/* Failed Messages */}
+            <div className="bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900 dark:to-rose-800 p-4 rounded-lg shadow-lg border border-rose-200 dark:border-rose-700">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-2">
+                  <HiOutlineExclamationCircle className="w-8 h-8 text-rose-500 dark:text-rose-400" />
                 </div>
+                <p className="text-sm font-medium text-rose-700 dark:text-rose-300">Failed</p>
+                <p className="text-2xl font-bold text-rose-800 dark:text-rose-200">
+                  {recentMessages.filter(m => m.status === 'FAILED').length}
+                </p>
               </div>
             </div>
           </div>
@@ -686,11 +759,15 @@ export default function SmsPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        <span className={`text-sm ${getStatusColor(msg.status)}`}>
-                          {msg.status}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-4">
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => handleStatusClick(msg.id)}
+                          className={`text-sm flex items-center space-x-1 ${getStatusColor(msg.status)} hover:opacity-80 cursor-pointer`}
+                        >
+                          <span>{msg.status}</span>
+                          <HiOutlineEye className="w-4 h-4 ml-1" />
+                        </button>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           {format(new Date(msg.createdAt), 'MMM d, h:mm a')}
                         </span>
                       </div>
@@ -700,6 +777,37 @@ export default function SmsPage() {
                     </p>
                   </div>
                 ))}
+
+                {/* Pagination Controls */}
+                <div className="flex items-center justify-between mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Page {currentMessagePage} of {totalMessagePages}
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handlePageChange(currentMessagePage - 1)}
+                      disabled={currentMessagePage === 1}
+                      className={`px-3 py-1 text-sm rounded-md border
+                        ${currentMessagePage === 1
+                          ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                          : 'text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentMessagePage + 1)}
+                      disabled={currentMessagePage === totalMessagePages}
+                      className={`px-3 py-1 text-sm rounded-md border
+                        ${currentMessagePage === totalMessagePages
+                          ? 'text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                          : 'text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -817,6 +925,85 @@ export default function SmsPage() {
                     </div>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Modal */}
+      {showStatusModal && selectedMessage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Message Status History
+              </h3>
+              <button
+                onClick={() => {
+                  setShowStatusModal(false);
+                  setSelectedMessage(null);
+                  setStatusHistory([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <HiOutlineX className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Message Details
+                </h4>
+                <p className="text-sm text-gray-900 dark:text-white">
+                  To: {selectedMessage.recipientName} ({selectedMessage.recipientPhone})
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  {selectedMessage.content}
+                </p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Status Timeline
+                </h4>
+                <div className="space-y-3">
+                  {loadingStatus ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent" />
+                    </div>
+                  ) : statusHistory.length > 0 ? (
+                    statusHistory.map((item, index) => (
+                      <div key={index} className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-700">
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(item.status)}`} />
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${getStatusColor(item.status)}`}>
+                            {item.status}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {format(new Date(item.timestamp), 'MMM d, h:mm:ss a')} - {item.detail}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Current Status: {selectedMessage.status}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">No detailed history available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {selectedMessage.status === 'FAILED' && (
+                <div className="flex justify-end mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => handleResendMessage(selectedMessage.id)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white 
+                      bg-primary-500 rounded-lg hover:bg-primary-600"
+                  >
+                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                    Resend Message
+                  </button>
+                </div>
               )}
             </div>
           </div>

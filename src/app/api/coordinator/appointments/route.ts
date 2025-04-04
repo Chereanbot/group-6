@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { createHistoryEntry } from '@/lib/history-utils';
+import { Prisma } from '@prisma/client';
 
 // GET all appointments
 export async function GET() {
@@ -35,26 +37,52 @@ export async function POST(request: Request) {
       purpose,
       status = 'SCHEDULED',
       notes,
+      caseType = 'CONSULTATION', // Default case type if not provided
     } = body;
 
-    const appointment = await prisma.appointment.create({
-      data: {
-        clientId,
-        coordinatorId,
-        scheduledTime: new Date(scheduledTime),
-        duration,
-        purpose,
-        status,
-        notes,
+    const appointmentData: Prisma.AppointmentCreateInput = {
+      scheduledTime: new Date(scheduledTime),
+      duration: Number(duration),
+      purpose,
+      status,
+      notes,
+      caseType,
+      client: {
+        connect: { id: clientId }
       },
+      coordinator: {
+        connect: { id: coordinatorId }
+      }
+    };
+
+    const appointment = await prisma.appointment.create({
+      data: appointmentData,
       include: {
         client: true,
         coordinator: true,
       },
     });
 
+    // Create history entry for the appointment
+    await createHistoryEntry({
+      action: 'APPOINTMENT_SCHEDULED',
+      coordinatorId,
+      appointmentId: appointment.id,
+      clientId: appointment.clientId,
+      changeDetails: `Scheduled ${caseType.toLowerCase()} appointment with ${appointment.client.fullName} for ${new Date(scheduledTime).toLocaleString()}`,
+      previousValue: null,
+      newValue: {
+        scheduledTime,
+        duration,
+        purpose,
+        status,
+        caseType
+      }
+    });
+
     return NextResponse.json(appointment);
   } catch (error) {
+    console.error('Appointment creation error:', error);
     return NextResponse.json(
       { error: 'Failed to create appointment' },
       { status: 500 }
@@ -73,21 +101,63 @@ export async function PUT(request: Request) {
       purpose,
       status,
       notes,
+      caseType,
     } = body;
 
-    const appointment = await prisma.appointment.update({
+    const previousAppointment = await prisma.appointment.findUnique({
       where: { id },
-      data: {
-        scheduledTime: new Date(scheduledTime),
-        duration,
-        purpose,
-        status,
-        notes,
-      },
       include: {
         client: true,
         coordinator: true,
       },
+    });
+
+    if (!previousAppointment) {
+      return NextResponse.json(
+        { error: 'Appointment not found' },
+        { status: 404 }
+      );
+    }
+
+    const appointmentData: Prisma.AppointmentUpdateInput = {
+      scheduledTime: new Date(scheduledTime),
+      duration: Number(duration),
+      purpose,
+      status,
+      notes,
+      ...(caseType && { caseType }),
+    };
+
+    const appointment = await prisma.appointment.update({
+      where: { id },
+      data: appointmentData,
+      include: {
+        client: true,
+        coordinator: true,
+      },
+    });
+
+    // Create history entry for appointment update
+    await createHistoryEntry({
+      action: status === 'CANCELLED' ? 'APPOINTMENT_CANCELLED' : 'APPOINTMENT_UPDATED',
+      coordinatorId: appointment.coordinatorId,
+      appointmentId: appointment.id,
+      clientId: appointment.clientId,
+      changeDetails: `${status === 'CANCELLED' ? 'Cancelled' : 'Updated'} appointment with ${appointment.client.fullName}`,
+      previousValue: {
+        scheduledTime: previousAppointment.scheduledTime,
+        duration: previousAppointment.duration,
+        purpose: previousAppointment.purpose,
+        status: previousAppointment.status,
+        caseType: previousAppointment.caseType
+      },
+      newValue: {
+        scheduledTime,
+        duration,
+        purpose,
+        status,
+        caseType: caseType || previousAppointment.caseType
+      }
     });
 
     return NextResponse.json(appointment);
@@ -110,6 +180,32 @@ export async function DELETE(request: Request) {
         { error: 'Appointment ID is required' },
         { status: 400 }
       );
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        coordinator: true,
+      },
+    });
+
+    if (appointment) {
+      await createHistoryEntry({
+        action: 'APPOINTMENT_CANCELLED',
+        coordinatorId: appointment.coordinatorId,
+        appointmentId: appointment.id,
+        clientId: appointment.clientId,
+        changeDetails: `Deleted ${appointment.caseType.toLowerCase()} appointment with ${appointment.client.fullName}`,
+        previousValue: {
+          scheduledTime: appointment.scheduledTime,
+          duration: appointment.duration,
+          purpose: appointment.purpose,
+          status: appointment.status,
+          caseType: appointment.caseType
+        },
+        newValue: null
+      });
     }
 
     await prisma.appointment.delete({
