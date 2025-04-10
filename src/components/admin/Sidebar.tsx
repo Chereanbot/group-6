@@ -34,6 +34,9 @@ import {
   HiOutlineInbox,
   HiOutlinePaperAirplane,
   HiOutlineArchive,
+  HiOutlineDatabase,
+  HiOutlineServer,
+  HiOutlineRefresh,
 } from 'react-icons/hi';
 import { useAdmin } from '@/contexts/AdminContext';
 
@@ -125,25 +128,6 @@ const menuItems: MenuItem[] = [
         description: 'Manage case assignments from coordinators'
       },
     
-  
-      { 
-        title: 'Client Payments', 
-        path: '/admin/lawyers/payments',
-        icon: HiOutlineCash,
-        description: 'Track lawyer purchase requests'
-      },
-      { 
-        title: 'Reports', 
-        path: '/admin/lawyers/reports',
-        icon: HiOutlineDocumentReport,
-        description: 'View lawyer performance reports'
-      },
-      {
-        title: 'Availability',
-        path: '/admin/lawyers/availability',
-        icon: HiOutlineClock,
-        description: 'Manage lawyer schedules and status'
-      },
      
     ]
   },
@@ -187,18 +171,7 @@ const menuItems: MenuItem[] = [
         icon: HiOutlineDocumentReport,
         description: 'Manage case appeals'
       },
-      {
-        title: 'Case Timeline',
-        path: '/admin/cases/timeline',
-        icon: HiOutlineClock,
-        description: 'View case progression'
-      },
-      {
-        title: 'Performance',
-        path: '/admin/cases/performance',
-        icon: HiOutlineChartBar,
-        description: 'Case resolution metrics'
-      }
+    
     ]
   },
   {
@@ -223,12 +196,7 @@ const menuItems: MenuItem[] = [
         icon: HiOutlineChartPie,
         description: 'Office performance metrics'
       },
-      { 
-        title: 'Planning', 
-        path: '/admin/office/planning',
-        icon: HiOutlineDocumentReport,
-        description: 'Office planning and scheduling'
-      }
+    
     ]
   },
   {
@@ -271,6 +239,48 @@ const menuItems: MenuItem[] = [
     ]
   },
   {
+    title: 'Backup & Recovery',
+    icon: HiOutlineArchive,
+    submenu: [
+      { 
+        title: 'System Backup', 
+        path: '/admin/backup/system',
+        icon: HiOutlineCollection,
+        description: 'Full system backup management'
+      },
+      { 
+        title: 'Database Backup', 
+        path: '/admin/backup/database',
+        icon: HiOutlineDatabase,
+        description: 'Database backup and restoration'
+      },
+      { 
+        title: 'File Backup', 
+        path: '/admin/backup/files',
+        icon: HiOutlineDocumentDuplicate,
+        description: 'Document and file backup'
+      },
+      { 
+        title: 'Backup Schedule', 
+        path: '/admin/backup/schedule',
+        icon: HiOutlineClock,
+        description: 'Configure backup timing'
+      },
+      { 
+        title: 'Recovery Points', 
+        path: '/admin/backup/recovery',
+        icon: HiOutlineRefresh,
+        description: 'Manage recovery points'
+      },
+      { 
+        title: 'Storage Location', 
+        path: '/admin/backup/storage',
+        icon: HiOutlineServer,
+        description: 'Configure backup storage'
+      }
+    ]
+  },
+  {
     title: 'Reports',
     icon: HiOutlineDocumentReport,
     submenu: [
@@ -295,60 +305,9 @@ const menuItems: MenuItem[] = [
       }
     ]
   },
-  {
-    title: 'Settings',
-    icon: HiOutlineCog,
-    submenu: [
-      { 
-        title: 'General Settings', 
-        path: '/admin/settings/general',
-        icon: HiOutlineCog,
-        description: 'Configure general system settings'
-      },
-      { 
-        title: 'Security Settings', 
-        path: '/admin/settings/security',
-        icon: HiOutlineLockClosed,
-        description: 'Manage security configurations'
-      },
-      { 
-        title: 'Email Settings', 
-        path: '/admin/settings/email',
-        icon: HiOutlinePaperAirplane,
-        description: 'Configure email notifications and templates'
-      },
-      { 
-        title: 'Billing Settings', 
-        path: '/admin/settings/billing',
-        icon: HiOutlineCash,
-        description: 'Manage billing configurations'
-      },
-      { 
-        title: 'API Settings', 
-        path: '/admin/settings/api',
-        icon: HiOutlineKey,
-        description: 'Configure API keys and integrations'
-      },
-      { 
-        title: 'Backup & Restore', 
-        path: '/admin/settings/backup',
-        icon: HiOutlineArchive,
-        description: 'Manage system backups and restoration'
-      },
-      { 
-        title: 'Notifications', 
-        path: '/admin/settings/notifications',
-        icon: HiOutlineInbox,
-        description: 'Configure system notifications'
-      },
-      { 
-        title: 'Appearance', 
-        path: '/admin/settings/appearance',
-        icon: HiOutlineLightBulb,
-        description: 'Customize system appearance'
-      }
-    ]
-  }
+ 
+  
+ 
 ];
 
 // Add interfaces for the new functionality
