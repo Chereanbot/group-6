@@ -125,6 +125,7 @@ export default function RegistrationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasActiveCase, setHasActiveCase] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [clientCases, setClientCases] = useState([]);
 
   useEffect(() => {
     const fetchOffices = async () => {
@@ -159,11 +160,12 @@ export default function RegistrationPage() {
         if (data.success) {
           setProfile(data.data);
           
-          // Check if client has any active cases
+          // Fetch client cases
           const casesResponse = await fetch('/api/client/cases');
-          const casesData = await response.json();
+          const casesData = await casesResponse.json();
           
           if (casesData.success) {
+            setClientCases(casesData.data);
             const activeCase = casesData.data.find(
               case_ => case_.status !== 'CLOSED' && case_.status !== 'REJECTED'
             );
@@ -311,7 +313,7 @@ export default function RegistrationPage() {
         className: "bg-green-500 text-white"
       });
 
-      router.push('/client/dashboard');
+      router.push('/client/cases/register');
     } catch (error) {
       console.error('Registration error:', error);
       toast({
@@ -350,6 +352,71 @@ export default function RegistrationPage() {
           </Alert>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (profile && clientCases.length > 0) {
+    return (
+      <div className="container max-w-4xl mx-auto py-8 px-4">
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold dark:text-white">Welcome back, {profile.user?.fullName || 'Client'}!</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-300">Your registered cases are listed below.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Case Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  {clientCases.map((caseItem: any) => (
+                    <tr key={caseItem.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {caseItem.title || 'Untitled'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {caseItem.type}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          caseItem.status === 'OPEN' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          caseItem.status === 'CLOSED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                        }`}>
+                          {caseItem.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <Button
+                          onClick={() => router.push(`/client/cases/case-activity?id=${caseItem.id}`)}
+                          className="mr-2 bg-primary-500 hover:bg-primary-600 text-white"
+                          size="sm"
+                        >
+                          View Activity
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button
+                onClick={() => router.push('/client/cases/case-activity')}
+                className="bg-primary-500 hover:bg-primary-600 text-white"
+              >
+                Go to Case Activity
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

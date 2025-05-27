@@ -67,6 +67,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [language, setLanguage] = useState<'en' | 'am'>('en');
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const translations = {
     en: {
@@ -217,29 +222,31 @@ const Login = () => {
         
         {/* Floating particles effect */}
         <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-primary-500/20 rounded-full"
-              animate={{
-                x: [
-                  Math.random() * window.innerWidth,
-                  Math.random() * window.innerWidth
-                ],
-                y: [
-                  Math.random() * window.innerHeight,
-                  Math.random() * window.innerHeight
-                ],
-                scale: [0.5, 1, 0.5],
-                opacity: [0.2, 0.5, 0.2]
-              }}
-              transition={{
-                duration: Math.random() * 10 + 10,
-                repeat: Infinity,
-                repeatType: 'reverse'
-              }}
-            />
-          ))}
+          {isMounted && [...Array(20)].map((_, i) => {
+            const randomX1 = Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000);
+            const randomX2 = Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000);
+            const randomY1 = Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000);
+            const randomY2 = Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1000);
+            const randomDuration = Math.random() * 10 + 10;
+            
+            return (
+              <motion.div
+                key={i}
+                className="absolute w-2 h-2 bg-primary-500/20 rounded-full"
+                animate={{
+                  x: [randomX1, randomX2],
+                  y: [randomY1, randomY2],
+                  scale: [0.5, 1, 0.5],
+                  opacity: [0.2, 0.5, 0.2]
+                }}
+                transition={{
+                  duration: randomDuration,
+                  repeat: Infinity,
+                  repeatType: 'reverse'
+                }}
+              />
+            );
+          })}
         </div>
       </motion.div>
 

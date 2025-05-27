@@ -1,0 +1,339 @@
+"use client";
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { 
+  HiOutlineShieldCheck, 
+  HiOutlineLightningBolt, 
+  HiOutlineStar,
+  HiOutlineCreditCard,
+  HiOutlineCurrencyDollar,
+  HiOutlineCash,
+  HiOutlineCheck,
+  HiX
+} from 'react-icons/hi';
+import { toast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { ServiceType } from '@prisma/client';
+import Image from 'next/image';
+
+const CHAPA_PUBLIC_KEY = process.env.NEXT_PUBLIC_CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-40nSrRkEurW5fh4da1PD4YbDEnAEDgxg';
+
+interface ClientProfile {
+  fullName: string;
+  email: string;
+  phone: string;
+}
+
+interface PaymentPlan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+  recommended?: boolean;
+  color?: string;
+  icon?: React.ReactNode;
+  savings?: number;
+  billingPeriod?: string;
+  initialPayment: number;
+  serviceType: ServiceType;
+  description?: string;
+}
+
+const paymentPlans: PaymentPlan[] = [
+  {
+    id: 'basic',
+    name: 'Basic Plan',
+    price: 1000,
+    initialPayment: 25000,
+    billingPeriod: 'month',
+    color: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    icon: <HiOutlineShieldCheck className="w-8 h-8 text-blue-500" />,
+    serviceType: ServiceType.CONSULTATION,
+    description: 'Basic legal consultation and document review services',
+    features: [
+      'Standard case handling',
+      'Email support',
+      'Basic document review',
+      'Single lawyer consultation',
+      'Basic case tracking'
+    ]
+  },
+  {
+    id: 'standard',
+    name: 'Standard Plan',
+    price: 2500,
+    initialPayment: 35000,
+    recommended: true,
+    billingPeriod: 'month',
+    color: 'bg-gradient-to-br from-purple-500 to-purple-600',
+    icon: <HiOutlineLightningBolt className="w-8 h-8 text-purple-500" />,
+    savings: 500,
+    serviceType: ServiceType.DOCUMENT_PREPARATION,
+    description: 'Comprehensive document preparation and legal assistance',
+    features: [
+      'Priority case handling',
+      'Phone & email support',
+      'Comprehensive document review',
+      'Multiple lawyer consultations',
+      'Case strategy planning'
+    ]
+  },
+  {
+    id: 'premium',
+    name: 'Premium Plan',
+    price: 5000,
+    initialPayment: 50000,
+    billingPeriod: 'month',
+    color: 'bg-gradient-to-br from-yellow-500 to-amber-600',
+    icon: <HiOutlineStar className="w-8 h-8 text-amber-500" />,
+    savings: 1000,
+    serviceType: ServiceType.COURT_APPEARANCE,
+    description: 'Full legal representation and court appearance services',
+    features: [
+      'VIP case handling',
+      '24/7 support access',
+      'Full document management',
+      'Senior lawyer assignment',
+      'Strategy & planning sessions'
+    ]
+  }
+];
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+const paymentMethods: PaymentMethod[] = [
+  {
+    id: 'chapa',
+    name: 'Chapa',
+    icon: <HiOutlineCreditCard className="w-8 h-8 text-blue-500" />,
+    description: 'Pay securely with your card or mobile money'
+  },
+  {
+    id: 'cbe-birr',
+    name: 'CBE Birr',
+    icon: <HiOutlineCurrencyDollar className="w-8 h-8 text-green-500" />,
+    description: 'Pay directly from your CBE Birr account'
+  },
+  {
+    id: 'telebirr',
+    name: 'Telebirr',
+    icon: <HiOutlineCash className="w-8 h-8 text-purple-500" />,
+    description: 'Quick mobile money payments via Telebirr'
+  }
+];
+
+function PaymentPage() {
+  const router = useRouter();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
+  const [clientProfile, setClientProfile] = useState<ClientProfile>({
+    fullName: '',
+    email: '',
+    phone: ''
+  });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollPosition(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handlePlanSelect = (plan: PaymentPlan) => {
+    setSelectedPlan(plan);
+    setShowConfirmDialog(true);
+  };
+
+  const handlePaymentMethodSelect = (methodId: string) => {
+    setSelectedPaymentMethod(methodId);
+  };
+
+  const handlePaymentConfirm = () => {
+    if (!selectedPaymentMethod) {
+      toast({
+        title: "Payment method required",
+        description: "Please select a payment method to continue",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    // Simulate payment processing
+    setTimeout(() => {
+      router.push('/client/dashboard');
+    }, 2000);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 relative">
+      {/* Header */}
+      <div className="text-center mb-12">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          Choose Your Legal Service Plan
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Select the plan that best fits your legal needs and budget
+        </p>
+      </div>
+
+      {/* Plans Section */}
+      <div className="grid md:grid-cols-3 gap-8 mb-12">
+        {paymentPlans.map((plan) => (
+          <div 
+            key={plan.id}
+            className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border-2 transition-all hover:shadow-xl ${
+              plan.recommended ? 'border-primary-500 dark:border-primary-400 transform scale-105' : 'border-transparent'
+            }`}
+          >
+            {plan.recommended && (
+              <div className="bg-primary-500 text-white text-center py-1 font-medium text-sm">
+                Recommended
+              </div>
+            )}
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div className={`p-3 rounded-lg ${plan.color} text-white`}>
+                  {plan.icon}
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {plan.price.toLocaleString()} ETB
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400 block text-sm">
+                    /{plan.billingPeriod}
+                  </span>
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">{plan.description}</p>
+              
+              <div className="space-y-3 mb-6">
+                {plan.features.map((feature, i) => (
+                  <div key={i} className="flex items-start space-x-3">
+                    <HiOutlineCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-600 dark:text-gray-400 text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+              
+              <Button 
+                onClick={() => handlePlanSelect(plan)}
+                className="w-full"
+                variant={plan.recommended ? "default" : "outline"}
+              >
+                Select Plan
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Payment Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogDescription>
+              Please review your subscription details before proceeding with the payment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {selectedPlan && (
+              <>
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Subscription Details</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Plan:</span>
+                      <span className="font-medium">{selectedPlan.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Price:</span>
+                      <span className="font-medium">{selectedPlan.price.toLocaleString()} ETB/{selectedPlan.billingPeriod}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Initial Payment:</span>
+                      <span className="font-medium">{selectedPlan.initialPayment.toLocaleString()} ETB</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Payment Method</h4>
+                  <div className="space-y-3 mt-3">
+                    {paymentMethods.map((method) => (
+                      <div 
+                        key={method.id}
+                        className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                          selectedPaymentMethod === method.id 
+                            ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' 
+                            : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        }`}
+                        onClick={() => handlePaymentMethodSelect(method.id)}
+                      >
+                        <div className="flex-shrink-0">
+                          {method.icon}
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-gray-900 dark:text-white">{method.name}</h5>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{method.description}</p>
+                        </div>
+                        {selectedPaymentMethod === method.id && (
+                          <div className="text-primary-500">
+                            <HiOutlineCheck className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+                Back
+              </Button>
+              <Button 
+                onClick={handlePaymentConfirm}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl text-center max-w-md w-full mx-4">
+            <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+            <h3 className="text-xl font-semibold mb-2">Initializing Payment</h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Please wait while we redirect you to our secure payment gateway
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default PaymentPage;

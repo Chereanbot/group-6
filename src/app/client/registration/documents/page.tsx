@@ -1,323 +1,275 @@
 "use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  HiOutlineDocumentText,
-  HiOutlineUpload,
-  HiOutlineCheck,
-  HiOutlineExclamation,
-  HiOutlineX,
-  HiOutlineInformationCircle,
-  HiOutlineDownload,
-  HiOutlineTrash
-} from 'react-icons/hi';
-import { toast } from '@/components/ui/use-toast';
+import { useEffect, useState, useRef } from "react";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2, Upload, Trash2, Download, FileText, RefreshCw, User, Briefcase, FilePlus2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { Modal } from '@/components/ui/modal';
 
 interface Document {
   id: string;
-  name: string;
+  title: string;
   type: string;
-  status: 'required' | 'uploaded' | 'verified' | 'rejected';
-  description: string;
-  uploadedAt?: string;
-  fileSize?: string;
-  path?: string;
+  status: string;
+  path: string;
+  size: number;
+  mimeType: string;
+  createdAt: string;
+  uploadedBy: string;
+  user?: { fullName: string };
+  serviceRequest?: { title: string };
 }
 
-const DocumentUploadCard = ({ 
-  document, 
-  onUpload,
-  onDelete 
-}: { 
-  document: Document; 
-  onUpload: (id: string, file: File) => void;
-  onDelete: (id: string) => void;
-}) => {
-  const getStatusColor = (status: Document['status']) => {
-    switch (status) {
-      case 'required':
-        return 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900';
-      case 'uploaded':
-        return 'text-blue-500 bg-blue-100 dark:bg-blue-900';
-      case 'verified':
-        return 'text-green-500 bg-green-100 dark:bg-green-900';
-      case 'rejected':
-        return 'text-red-500 bg-red-100 dark:bg-red-900';
+interface DocumentDetail extends Document {
+  description?: string;
+  user?: { fullName: string; email: string; phone: string };
+  serviceRequest?: { title: string };
+}
+
+export default function ClientDocumentsPage() {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [reuploadId, setReuploadId] = useState<string | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewDoc, setViewDoc] = useState<DocumentDetail | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [viewError, setViewError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const reuploadInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Fetch documents
+  const fetchDocuments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/client/documents");
+      if (!res.ok) throw new Error("Failed to fetch documents");
+      const data = await res.json();
+      setDocuments(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusIcon = (status: Document['status']) => {
-    switch (status) {
-      case 'required':
-        return <HiOutlineExclamation className="w-5 h-5" />;
-      case 'uploaded':
-        return <HiOutlineUpload className="w-5 h-5" />;
-      case 'verified':
-        return <HiOutlineCheck className="w-5 h-5" />;
-      case 'rejected':
-        return <HiOutlineX className="w-5 h-5" />;
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  // Fetch document details for view modal
+  useEffect(() => {
+    if (!viewId) return;
+    setViewLoading(true);
+    setViewError(null);
+    setViewDoc(null);
+    fetch(`/api/client/documents/${viewId}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || 'Failed to fetch document');
+        setViewDoc(data.data);
+      })
+      .catch((err) => setViewError(err.message))
+      .finally(() => setViewLoading(false));
+  }, [viewId]);
+
+  // Upload new document
+  const handleUpload = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    setUploading(true);
+    try {
+      const res = await fetch("/api/client/documents", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Upload failed");
+      toast({ title: "Document uploaded" });
+      form.reset();
+      fetchDocuments();
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
+  };
+
+  // Re-upload document
+  const handleReupload = async (e: React.FormEvent<HTMLFormElement>, docId: string) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    setUploading(true);
+    try {
+      // For demo: just delete and re-upload (replace with PATCH in real app)
+      await fetch(`/api/client/documents?id=${docId}`, { method: "DELETE" });
+      const res = await fetch("/api/client/documents", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Re-upload failed");
+      toast({ title: "Document re-uploaded" });
+      setReuploadId(null);
+      fetchDocuments();
+    } catch (err: any) {
+      toast({ title: "Re-upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Delete document
+  const handleDelete = async (docId: string) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/client/documents?id=${docId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      toast({ title: "Document deleted" });
+      fetchDocuments();
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Download/View document
+  const handleDownload = (doc: Document) => {
+    window.open(doc.path, "_blank");
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 space-y-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <HiOutlineDocumentText className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{document.name}</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{document.description}</p>
-          </div>
-        </div>
-        <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(document.status)}`}>
-          <div className="flex items-center space-x-1">
-            {getStatusIcon(document.status)}
-            <span className="capitalize">{document.status}</span>
-          </div>
-        </div>
-      </div>
-
-      {document.uploadedAt && (
-        <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-          <span>Uploaded: {new Date(document.uploadedAt).toLocaleDateString()}</span>
-          <span>{document.fileSize}</span>
-        </div>
-      )}
-
-      <div className="flex items-center space-x-4">
-        <label className="flex-1">
-          <input
-            type="file"
-            className="hidden"
-            accept={document.type}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onUpload(document.id, file);
-            }}
-          />
-          <div className="flex items-center justify-center px-4 py-2 border-2 border-dashed 
-                        border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer
-                        hover:border-blue-500 dark:hover:border-blue-500 transition-colors">
-            <HiOutlineUpload className="w-5 h-5 mr-2 text-gray-400" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {document.status === 'required' ? 'Upload Document' : 'Replace Document'}
-            </span>
-          </div>
-        </label>
-
-        {document.status === 'uploaded' && (
-          <>
-            <button 
-              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
-              onClick={() => window.open(document.path, '_blank')}
-            >
-              <HiOutlineDownload className="w-5 h-5" />
-            </button>
-            <button 
-              className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
-              onClick={() => onDelete(document.id)}
-            >
-              <HiOutlineTrash className="w-5 h-5" />
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const DocumentsPage = () => {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: '1',
-      name: 'Government-issued ID',
-      type: 'image/*,.pdf',
-      status: 'required',
-      description: 'Valid passport, driver\'s license, or national ID card'
-    },
-    {
-      id: '2',
-      name: 'Proof of Address',
-      type: '.pdf',
-      status: 'uploaded',
-      description: 'Utility bill or bank statement (not older than 3 months)',
-      uploadedAt: '2024-01-15',
-      fileSize: '2.4 MB'
-    },
-    {
-      id: '3',
-      name: 'Case Documentation',
-      type: '.pdf,.doc,.docx',
-      status: 'verified',
-      description: 'Any relevant documents related to your case',
-      uploadedAt: '2024-01-10',
-      fileSize: '1.8 MB'
-    },
-    {
-      id: '4',
-      name: 'Power of Attorney',
-      type: '.pdf',
-      status: 'rejected',
-      description: 'Signed power of attorney document',
-      uploadedAt: '2024-01-05',
-      fileSize: '1.2 MB'
-    }
-  ]);
-
-  const handleUpload = async (id: string, file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('title', file.name);
-      formData.append('type', documents.find(d => d.id === id)?.type || 'OTHER');
-      formData.append('description', documents.find(d => d.id === id)?.description || '');
-
-      const response = await fetch('/api/client/documents', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to upload document');
-      }
-
-      const uploadedDoc = await response.json();
-
-      setDocuments(prev => prev.map(doc => 
-        doc.id === id ? { 
-          ...doc, 
-          status: 'uploaded' as const,
-          uploadedAt: new Date().toISOString(),
-          fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-          path: uploadedDoc.path
-        } : doc
-      ));
-
-      toast({
-        title: "Document Uploaded",
-        description: "Your document has been successfully uploaded and is pending verification.",
-        duration: 3000
-      });
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to upload document",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const response = await fetch(`/api/client/documents?id=${id}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete document');
-      }
-
-      setDocuments(prev => prev.map(doc => 
-        doc.id === id ? { ...doc, status: 'required' as const } : doc
-      ));
-
-      toast({
-        title: "Document Deleted",
-        description: "The document has been successfully deleted.",
-        duration: 3000
-      });
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast({
-        title: "Delete Failed",
-        description: error instanceof Error ? error.message : "Failed to delete document",
-        variant: "destructive"
-      });
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <div className="container max-w-5xl mx-auto py-10 px-4">
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl font-bold">
+            <FileText className="w-6 h-6 text-primary" /> Client Documents
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="flex flex-wrap gap-4 items-end mb-6" onSubmit={handleUpload}>
+            <Input name="title" placeholder="Document Title" required className="w-48" />
+            <Input name="type" placeholder="Type (e.g. IDENTIFICATION)" required className="w-48" />
+            <Input name="file" type="file" required className="w-64" ref={fileInputRef} />
+            <Button type="submit" disabled={uploading} className="flex items-center gap-2">
+              <Upload className="w-4 h-4" /> Upload
+            </Button>
+          </form>
+          <div className="overflow-x-auto rounded-lg border dark:border-gray-800">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Document Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Uploaded Date</TableHead>
+                  <TableHead>Client Name</TableHead>
+                  <TableHead>Case Name</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <AnimatePresence>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                      </TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-red-500">{error}</TableCell>
+                    </TableRow>
+                  ) : documents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-gray-500 dark:text-gray-400 py-8">
+                        No documents found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    documents.map((doc) => (
+                      <motion.tr
+                        key={doc.id}
+                        initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gray-50 dark:bg-gray-900 p-0"
-    >
-      <div className="max-w-full space-y-6 px-4 lg:px-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Required Documents</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Please upload all required documents for your registration
-          </p>
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="border-b dark:border-gray-800"
+                      >
+                        <TableCell>{doc.title}</TableCell>
+                        <TableCell>{doc.type}</TableCell>
+                        <TableCell>{format(new Date(doc.createdAt), 'yyyy-MM-dd')}</TableCell>
+                        <TableCell><User className="inline w-4 h-4 mr-1" /> {doc.user?.fullName || "Me"}</TableCell>
+                        <TableCell><Briefcase className="inline w-4 h-4 mr-1" /> {doc.serviceRequest?.title || "-"}</TableCell>
+                        <TableCell>{doc.status}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => handleDownload(doc)} title="Download/View">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setViewId(doc.id)} title="View">
+                              <FileText className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => setReuploadId(doc.id)} title="Re-upload">
+                              <RefreshCw className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => handleDelete(doc.id)} title="Delete">
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </Button>
         </div>
-
-        <div className="bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <HiOutlineInformationCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            <div>
-              <h4 className="font-medium text-blue-900 dark:text-blue-100">Document Requirements</h4>
-              <ul className="mt-2 text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• Files must be in PDF, DOC, DOCX, or image format</li>
-                <li>• Maximum file size: 10MB per document</li>
-                <li>• Documents must be clear and legible</li>
-                <li>• All pages must be included in a single file</li>
-              </ul>
+                          {/* View Modal */}
+                          {viewId === doc.id && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 w-full max-w-lg">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><FileText className="w-5 h-5 text-primary" /> Document Details</h3>
+                                {viewLoading ? (
+                                  <div className="flex flex-col items-center justify-center py-8">
+                                    <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
+                                    <div>Loading...</div>
             </div>
+                                ) : viewError ? (
+                                  <div className="text-red-500">{viewError}</div>
+                                ) : viewDoc ? (
+                                  <div className="space-y-3">
+                                    <div><span className="font-semibold">Title:</span> {viewDoc.title}</div>
+                                    <div><span className="font-semibold">Type:</span> {viewDoc.type}</div>
+                                    <div><span className="font-semibold">Status:</span> {viewDoc.status}</div>
+                                    <div><span className="font-semibold">Uploaded:</span> {format(new Date(viewDoc.createdAt), 'yyyy-MM-dd')}</div>
+                                    {viewDoc.description && <div><span className="font-semibold">Description:</span> {viewDoc.description}</div>}
+                                    <div><span className="font-semibold">Client:</span> {viewDoc.user?.fullName} ({viewDoc.user?.email}, {viewDoc.user?.phone})</div>
+                                    <div><span className="font-semibold">Case:</span> {viewDoc.serviceRequest?.title || '-'}</div>
+                                    <div className="flex gap-2 mt-2">
+                                      <Button asChild variant="outline">
+                                        <a href={viewDoc.path} target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4" /> Download</a>
+                                      </Button>
+                                      <Button variant="outline" onClick={() => setViewId(null)}>Close</Button>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-          {documents.map(document => (
-            <DocumentUploadCard
-              key={document.id}
-              document={document}
-              onUpload={handleUpload}
-              onDelete={handleDelete}
-            />
-          ))}
+                                ) : null}
+                              </motion.div>
         </div>
-
-        <div className="flex justify-end space-x-4">
-          <button
-            onClick={() => window.history.back()}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 
-                     dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 
-                     rounded-lg transition-colors duration-200"
-          >
-            Back
-          </button>
-          <button
-            onClick={() => {
-              const allUploaded = documents.every(doc => doc.status !== 'required');
-              if (allUploaded) {
-                toast({
-                  title: "Documents Submitted",
-                  description: "All your documents have been submitted for review.",
-                  duration: 3000
-                });
-              } else {
-                toast({
-                  title: "Missing Documents",
-                  description: "Please upload all required documents before proceeding.",
-                  variant: "destructive"
-                });
-              }
-            }}
-            className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 
-                     rounded-lg transition-colors duration-200"
-          >
-            Submit Documents
-          </button>
+                          )}
+                        </TableCell>
+                      </motion.tr>
+                    ))
+                  )}
+                </AnimatePresence>
+              </TableBody>
+            </Table>
         </div>
+        </CardContent>
+      </Card>
       </div>
-    </motion.div>
   );
-};
-
-export default DocumentsPage; 
+} 

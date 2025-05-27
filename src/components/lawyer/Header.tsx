@@ -136,12 +136,16 @@ const languages = [
 export default function LawyerHeader({ user, office }: LawyerHeaderProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [locale, setLocale] = useState('en');
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [previousNotificationCount, setPreviousNotificationCount] = useState(0);
   const { notifications, unreadCount } = useNotifications();
+
+  // After mounting, we have access to the theme
+  useEffect(() => setMounted(true), []);
 
   // Refs for dropdowns
   const languageRef = useRef<HTMLDivElement>(null);
@@ -314,7 +318,11 @@ export default function LawyerHeader({ user, office }: LawyerHeaderProps) {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {mounted && theme === 'dark' ? (
+              <Sun className="h-5 w-5 text-yellow-500" />
+            ) : (
+              <Moon className="h-5 w-5 text-slate-700 dark:text-slate-400" />
+            )}
           </button>
 
           {/* Notifications */}

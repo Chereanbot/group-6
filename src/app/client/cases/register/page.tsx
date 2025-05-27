@@ -123,6 +123,7 @@ export default function CaseRegistrationPage() {
   const [selectedOffice, setSelectedOffice] = useState<Office | null>(null);
   const [isLoadingOffices, setIsLoadingOffices] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasExistingCase, setHasExistingCase] = useState(false);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseSchema),
@@ -254,8 +255,41 @@ export default function CaseRegistrationPage() {
     }
   };
 
+  const checkExistingCases = async () => {
+    try {
+      const response = await fetch('/api/client/cases');
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const activeCase = data.data.find(
+          case_ => case_.status !== 'CLOSED' && case_.status !== 'REJECTED'
+        );
+
+        if (activeCase) {
+          setHasExistingCase(true);
+          toast({
+            title: "Active Case Found",
+            description: "You already have an active case. Redirecting to case activity...",
+            variant: "default",
+            className: "bg-yellow-500 text-white"
+          });
+          
+          // Redirect to case activity after a short delay
+          setTimeout(() => {
+            router.push('/client/cases/case-activity');
+          }, 2000);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking existing cases:', error);
+    }
+  };
+
   useEffect(() => {
-    // Fetch both profile and offices data when component mounts
+    // Check for existing cases first
+    checkExistingCases();
+    
+    // Then fetch profile and offices data
     Promise.all([fetchUserProfile(), fetchOffices()]).catch(error => {
       console.error('Error initializing page:', error);
     });
@@ -469,6 +503,26 @@ export default function CaseRegistrationPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (hasExistingCase) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <Card className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 sm:p-8">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 dark:border-primary-400 mx-auto"></div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Redirecting to Case Activity...
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                You already have an active case. Please wait while we redirect you.
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">

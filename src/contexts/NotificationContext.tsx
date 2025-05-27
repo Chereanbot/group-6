@@ -36,24 +36,43 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/notifications', {
-        credentials: 'include'
-      });
+      // Using try-catch to handle potential network errors
+      try {
+        const response = await fetch('/api/notifications', {
+          credentials: 'include'
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
-      }
+        // Handle HTTP errors
+        if (!response.ok) {
+          // For 401/403 errors, we can handle them silently since the user might not be logged in yet
+          if (response.status === 401 || response.status === 403 || response.status === 402) {
+            console.log('User not authenticated for notifications');
+            setNotifications([]);
+            setUnreadCount(0);
+            return;
+          }
+          
+          throw new Error(`Failed to fetch notifications: ${response.status}`);
+        }
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setNotifications(data.notifications);
-        setUnreadCount(data.notifications.filter((n: Notification) => n.status === 'UNREAD').length);
-      } else {
-        throw new Error(data.error || 'Failed to fetch notifications');
+        const data = await response.json();
+        
+        if (data.success) {
+          setNotifications(data.notifications || []);
+          setUnreadCount((data.notifications || []).filter((n: Notification) => n.status === 'UNREAD').length);
+        } else {
+          throw new Error(data.error || 'Failed to fetch notifications');
+        }
+      } catch (networkError) {
+        // Handle network errors (like CORS, network disconnection)
+        console.warn('Network error when fetching notifications:', networkError);
+        // We'll set empty notifications but not show an error to the user
+        // as this is likely due to auth issues or API not being available
+        setNotifications([]);
+        setUnreadCount(0);
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('Error in notification processing:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch notifications');
     } finally {
       setLoading(false);

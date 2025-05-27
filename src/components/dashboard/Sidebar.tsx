@@ -64,10 +64,16 @@ const sidebarItems: SidebarItem[] = [
         icon: <HiOutlineUserCircle className="w-5 h-5" />
       },
       { 
-        title: 'Payment Options', 
+        title: 'Payment ', 
         path: '/client/registration/payment',
         icon: <HiOutlineCreditCard className="w-5 h-5" />
       },
+      { 
+        title: 'Payment History', 
+        path: '/client/registration/payment/history',
+        icon: <HiOutlineCreditCard className="w-5 h-5" />
+      },
+
       { 
         title: 'Document Upload', 
         path: '/client/registration/documents',
@@ -90,11 +96,7 @@ const sidebarItems: SidebarItem[] = [
         path: '/client/cases/progress',
         icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
-      {
-        title: 'Raw Cases',
-        path: '/client/cases/raw',
-        icon: <HiOutlineClipboardList className="w-5 h-5" />
-      },
+    
       { 
         title: 'My Cases', 
         path: '/client/cases/my-cases',
@@ -125,38 +127,21 @@ const sidebarItems: SidebarItem[] = [
         path: '/client/communications/messages',
         icon: <HiOutlineMailOpen className="w-5 h-5" />
       },
-      { 
-        title: 'Submit Documents', 
-        path: '/client/communications/documents',
-        icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
-      },
-      { 
-        title: 'Request Appointment', 
-        path: '/client/communications/appointments',
-        icon: <HiOutlineCalendar className="w-5 h-5" />
-      }
+    
     ]
   },
   {
-    title: 'Forms & Documents',
+    title: 'Documents',
     icon: <HiOutlineDocumentDuplicate className="w-6 h-6" />,
-    path: '/client/forms',
+    path: '/client/documents',
     subItems: [
       { 
-        title: 'Legal Aid Application', 
-        path: '/client/forms/legal-aid',
+        title: 'Document List', 
+        path: '/client/documents',
         icon: <HiOutlineScale className="w-5 h-5" />
       },
-      { 
-        title: 'Financial Assessment', 
-        path: '/client/forms/financial',
-        icon: <HiOutlineCreditCard className="w-5 h-5" />
-      },
-      { 
-        title: 'Document Templates', 
-        path: '/client/forms/templates',
-        icon: <HiOutlineDocumentText className="w-5 h-5" />
-      },
+     
+    
       { 
         title: 'E-Signatures', 
         path: '/client/forms/signatures',
@@ -179,21 +164,7 @@ const sidebarItems: SidebarItem[] = [
         path: '/client/appointments/calendar',
         icon: <HiOutlineCalendar className="w-5 h-5" />,
       },
-      { 
-        title: 'Request Appointment', 
-        path: '/client/appointments/request',
-        icon: <HiOutlinePlusCircle className="w-5 h-5" />,
-      },
-      { 
-        title: 'Consultation History', 
-        path: '/client/appointments/history',
-        icon: <HiOutlineCollection className="w-5 h-5" />,
-      },
-      { 
-        title: 'Available Slots', 
-        path: '/client/appointments/slots',
-        icon: <HiOutlineClock className="w-5 h-5" />,
-      }
+     
     ]
   }
 ];

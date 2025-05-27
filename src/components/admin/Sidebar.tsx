@@ -61,7 +61,7 @@ const menuItems: MenuItem[] = [
     path: '/admin/messages'
   },
   {
-    title: 'User Management',
+    title: 'Users',
     icon: HiOutlineUserGroup,
     submenu: [
       { 
@@ -97,7 +97,7 @@ const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: 'Lawyer Management',
+    title: 'Lawyers',
     icon: HiOutlineScale,
     submenu: [
       { 
@@ -106,7 +106,7 @@ const menuItems: MenuItem[] = [
         icon: HiOutlineBriefcase,
         description: 'View and manage all lawyers'
       },
-       {
+      {
         title: 'Specializations',
         path: '/admin/lawyers/specializations',
         icon: HiOutlineBadgeCheck,
@@ -117,38 +117,11 @@ const menuItems: MenuItem[] = [
         path: '/admin/lawyers/workload',
         icon: HiOutlineChartBar,
         description: 'Monitor teaching staff case distribution and academic workload'
-      },
-      { 
-        title: 'Case Assignments', 
-        path: '/admin/lawyers/assignments',
-        icon: HiOutlineDocumentDuplicate,
-        description: 'Manage case assignments from coordinators'
-      },
-    
-  
-      { 
-        title: 'Client Payments', 
-        path: '/admin/lawyers/payments',
-        icon: HiOutlineCash,
-        description: 'Track lawyer purchase requests'
-      },
-      { 
-        title: 'Reports', 
-        path: '/admin/lawyers/reports',
-        icon: HiOutlineDocumentReport,
-        description: 'View lawyer performance reports'
-      },
-      {
-        title: 'Availability',
-        path: '/admin/lawyers/availability',
-        icon: HiOutlineClock,
-        description: 'Manage lawyer schedules and status'
-      },
-     
+      }
     ]
   },
   {
-    title: 'Case Management',
+    title: 'Cases',
     icon: HiOutlineScale,
     submenu: [
       { 
@@ -164,75 +137,26 @@ const menuItems: MenuItem[] = [
         description: 'Add new case'
       },
       { 
-        title: 'Active Cases', 
-        path: '/admin/cases/active',
-        icon: HiOutlineDocumentDuplicate,
-        description: 'View and manage active cases'
-      },
-      { 
         title: 'Case Assignment', 
         path: '/admin/cases/assign',
         icon: HiOutlineUserGroup,
         description: 'Assign cases to lawyers'
       },
       { 
-        title: 'Priority Cases', 
-        path: '/admin/cases/priority',
-        icon: HiOutlineExclamation,
-        description: 'High priority case management'
-      },
-      { 
         title: 'Appeals', 
         path: '/admin/cases/appeals',
         icon: HiOutlineDocumentReport,
         description: 'Manage case appeals'
-      },
-      {
-        title: 'Case Timeline',
-        path: '/admin/cases/timeline',
-        icon: HiOutlineClock,
-        description: 'View case progression'
-      },
-      {
-        title: 'Performance',
-        path: '/admin/cases/performance',
-        icon: HiOutlineChartBar,
-        description: 'Case resolution metrics'
       }
     ]
   },
   {
-    title: 'Office Management',
+    title: 'Offices',
     icon: HiOutlineOfficeBuilding,
-    submenu: [
-      { 
-        title: 'All Offices', 
-        path: '/admin/offices',
-        icon: HiOutlineCog,
-        description: 'Manage all offices'
-      },
-      { 
-        title: 'Resources', 
-        path: '/admin/office/resources',
-        icon: HiOutlineCog,
-        description: 'Manage office resources'
-      },
-      { 
-        title: 'Performance', 
-        path: '/admin/office/performance',
-        icon: HiOutlineChartPie,
-        description: 'Office performance metrics'
-      },
-      { 
-        title: 'Planning', 
-        path: '/admin/office/planning',
-        icon: HiOutlineDocumentReport,
-        description: 'Office planning and scheduling'
-      }
-    ]
+    path: '/admin/offices'
   },
   {
-    title: 'Client Services',
+    title: 'Services',
     icon: HiOutlineCash,
     submenu: [
       { title: 'Service Requests', path: '/admin/services/requests', icon: HiOutlineClipboardList, description: 'Manage service requests' },
@@ -241,7 +165,7 @@ const menuItems: MenuItem[] = [
     ]
   },
   {
-    title: 'Coordinator Management',
+    title: 'Coordinator',
     icon: HiOutlineUsers,
     submenu: [
       { 
@@ -261,37 +185,25 @@ const menuItems: MenuItem[] = [
         path: '/admin/coordinators/assignments', 
         icon: HiOutlineClipboardList,
         description: 'Manage coordinator assignments' 
-      },
-      { 
-        title: 'Performance', 
-        path: '/admin/coordinators/performance', 
-        icon: HiOutlineChartBar,
-        description: 'View coordinator performance metrics' 
       }
     ]
   },
   {
     title: 'Reports',
     icon: HiOutlineDocumentReport,
+    path: '/admin/reports',
     submenu: [
       { 
-        title: 'Dashboard', 
-        path: '/admin/reports/dashboard',
-        icon: HiOutlineChartPie,
-        description: 'Overview of all report metrics and analytics'
-      },
-   
-      { 
-        title: 'Shared Reports', 
-        path: '/admin/reports/shared',
-        icon: HiOutlinePaperAirplane,
-        description: 'View and manage shared reports'
+        title: 'dashboard', 
+        path: '/admin/dashboard', 
+        icon: HiOutlineDocumentReport,
+        description: 'View and manage all reports' 
       },
       { 
-        title: 'Report Settings', 
-        path: '/admin/reports/settings',
-        icon: HiOutlineCog,
-        description: 'Configure report generation settings'
+        title: 'shared Report', 
+        path: '/admin/reports/shared', 
+        icon: HiOutlineDocumentReport,
+        description: 'shared report' 
       }
     ]
   },
@@ -299,54 +211,7 @@ const menuItems: MenuItem[] = [
     title: 'Settings',
     icon: HiOutlineCog,
     submenu: [
-      { 
-        title: 'General Settings', 
-        path: '/admin/settings/general',
-        icon: HiOutlineCog,
-        description: 'Configure general system settings'
-      },
-      { 
-        title: 'Security Settings', 
-        path: '/admin/settings/security',
-        icon: HiOutlineLockClosed,
-        description: 'Manage security configurations'
-      },
-      { 
-        title: 'Email Settings', 
-        path: '/admin/settings/email',
-        icon: HiOutlinePaperAirplane,
-        description: 'Configure email notifications and templates'
-      },
-      { 
-        title: 'Billing Settings', 
-        path: '/admin/settings/billing',
-        icon: HiOutlineCash,
-        description: 'Manage billing configurations'
-      },
-      { 
-        title: 'API Settings', 
-        path: '/admin/settings/api',
-        icon: HiOutlineKey,
-        description: 'Configure API keys and integrations'
-      },
-      { 
-        title: 'Backup & Restore', 
-        path: '/admin/settings/backup',
-        icon: HiOutlineArchive,
-        description: 'Manage system backups and restoration'
-      },
-      { 
-        title: 'Notifications', 
-        path: '/admin/settings/notifications',
-        icon: HiOutlineInbox,
-        description: 'Configure system notifications'
-      },
-      { 
-        title: 'Appearance', 
-        path: '/admin/settings/appearance',
-        icon: HiOutlineLightBulb,
-        description: 'Customize system appearance'
-      }
+      
     ]
   }
 ];
@@ -504,7 +369,7 @@ const Sidebar = () => {
   const isMenuOpen = (title: string) => openMenus.includes(title);
 
   const renderIcon = (Icon: React.ComponentType<{ className?: string }>) => {
-    return <Icon className="w-6 h-6" />;
+    return <Icon className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors duration-200" />;
   };
 
   const adminLinks = [
@@ -528,32 +393,37 @@ const Sidebar = () => {
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-screen bg-white dark:bg-gray-800 
-        border-r border-gray-200 dark:border-gray-700 z-50 transition-all duration-300
+      <aside className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900
+        border-r border-gray-200 dark:border-gray-700 z-50 transition-all duration-300 shadow-md
         ${isCollapsed ? 'w-20' : 'w-64'}`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 shadow-sm">
           <Link href="/admin/dashboard" className="flex items-center space-x-2">
-            <img 
-              src="/images/logo.svg" 
-              alt="DU LADS" 
-              className="w-8 h-8"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.backgroundColor = '#3B82F6';
-                target.style.borderRadius = '8px';
-              }}
-            />
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-lg bg-primary-600 text-white shadow-lg overflow-hidden">
+              <img 
+                src="/images/logo.svg" 
+                alt="DU LADS" 
+                className="w-8 h-8 absolute z-10"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = 'DU';
+                  }
+                }}
+              />
+            </div>
             {!isCollapsed && (
-              <span className="text-xl font-bold text-gray-800 dark:text-white">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-500 dark:from-primary-400 dark:to-primary-300">
                 DU LADS
               </span>
             )}
           </Link>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="lg:block hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="lg:block hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
           >
             <HiOutlineChevronDown 
               className={`w-5 h-5 transform transition-transform duration-300 
@@ -563,7 +433,7 @@ const Sidebar = () => {
         </div>
 
         {/* Navigation */}
-        <nav className={`p-4 space-y-1 overflow-y-auto h-[calc(100vh-5rem)]
+        <nav className={`p-4 space-y-2 overflow-y-auto h-[calc(100vh-5rem)] scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600
           ${isCollapsed ? 'overflow-x-hidden' : ''}`}
         >
           {menuItems.map((item) => (
@@ -573,8 +443,8 @@ const Sidebar = () => {
                   <button
                     onClick={() => toggleSubmenu(item.title)}
                     className={`w-full flex items-center justify-between p-3 rounded-lg
-                      hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
-                      ${isMenuOpen(item.title) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+                      hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200
+                      ${isMenuOpen(item.title) ? 'bg-primary-50 dark:bg-primary-900/20 font-medium' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
                       {renderIcon(item.icon)}
@@ -606,9 +476,9 @@ const Sidebar = () => {
                             <Link
                               href={subitem.path}
                               className={`flex items-center space-x-3 p-3 rounded-lg text-sm
-                                hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+                                hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200
                                 ${isActive(subitem.path) 
-                                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' 
+                                  ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400 font-medium shadow-sm' 
                                   : ''}`}
                             >
                               {renderIcon(subitem.icon)}
@@ -624,9 +494,9 @@ const Sidebar = () => {
                 <Link
                   href={item.path!}
                   className={`flex items-center space-x-3 p-3 rounded-lg
-                    hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+                    hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200
                     ${isActive(item.path!) 
-                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' 
+                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400 font-medium shadow-sm' 
                       : ''}`}
                 >
                   {renderIcon(item.icon)}
@@ -638,12 +508,12 @@ const Sidebar = () => {
         </nav>
 
         {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
           <div className="space-y-2">
             <Link
               href="/admin/settings"
               className="flex items-center space-x-3 p-3 rounded-lg
-                hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200"
             >
               {renderIcon(HiOutlineCog)}
               {!isCollapsed && <span>Settings</span>}
@@ -651,7 +521,7 @@ const Sidebar = () => {
             <button
               onClick={logout}
               className="w-full flex items-center space-x-3 p-3 rounded-lg
-                hover:bg-red-50 text-red-600 dark:hover:bg-red-900/20 transition-colors"
+                hover:bg-red-50 text-red-600 dark:hover:bg-red-900/20 transition-all duration-200 hover:shadow-sm"
             >
               {renderIcon(HiOutlineLogout)}
               {!isCollapsed && <span>Logout</span>}

@@ -120,7 +120,7 @@ export default function CaseSummaryDashboard() {
         activeCases: data.summary.activeCases,
         resolvedCases: data.summary.resolvedCases,
         totalBillable: data.summary.totalBillable,
-        averageComplexity: data.summary.averageComplexity.toFixed(1),
+        averageComplexity: data.summary.averageComplexity ? data.summary.averageComplexity.toFixed(1) : '0.0',
       }],
       Cases: data.cases.map(c => ({
         title: c.title,
@@ -290,7 +290,7 @@ export default function CaseSummaryDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data.summary.averageComplexity.toFixed(1)}
+              {data.summary.averageComplexity ? data.summary.averageComplexity.toFixed(1) : '0.0'}
             </div>
           </CardContent>
         </Card>
@@ -391,7 +391,7 @@ export default function CaseSummaryDashboard() {
                           ? 'text-yellow-400 fill-current'
                           : 'text-gray-300'
                       }`} />
-                      <span className="ml-2">{caseItem.metrics.averageRating.toFixed(1)}</span>
+                      <span className="ml-2">{caseItem.metrics.averageRating ? caseItem.metrics.averageRating.toFixed(1) : '0.0'}</span>
                     </div>
                   </TableCell>
                 </TableRow>

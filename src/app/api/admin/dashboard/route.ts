@@ -27,9 +27,9 @@ export async function GET() {
 
     const { isAuthenticated, user } = await verifyAuth(token);
 
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
+    if (!isAuthenticated || (user.userRole !== UserRoleEnum.ADMIN && user.userRole !== UserRoleEnum.SUPER_ADMIN)) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Unauthorized: Admin or Super Admin access required" },
         { status: 401 }
       );
     }
