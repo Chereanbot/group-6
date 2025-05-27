@@ -1,4 +1,4 @@
-import { UserRoleEnum } from '@prisma/client'
+import { UserRoleEnum, UserStatus } from '@prisma/client'
 
 declare module "next-auth" {
   interface Session {
@@ -6,8 +6,9 @@ declare module "next-auth" {
       id: string
       email: string
       name: string
-      role: UserRoleEnum
-      status: string
+      userRole: UserRoleEnum
+      fullName: string
+      status: UserStatus
       isAdmin: boolean
     }
   }
@@ -17,7 +18,7 @@ declare module "next-auth" {
     email: string
     userRole: UserRoleEnum
     fullName: string
-    status: string
+    status: UserStatus
     isAdmin: boolean
   }
 }
@@ -25,7 +26,9 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
-    role: UserRoleEnum
+    userRole: UserRoleEnum
+    fullName: string
+    status: UserStatus
     isAdmin: boolean
   }
 } 

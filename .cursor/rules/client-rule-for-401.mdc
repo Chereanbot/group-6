@@ -1,6 +1,7 @@
 ---
-description: 
+description: when you create all the client code you have ti use this cursor rules
 globs: 
+alwaysApply: false
 ---
 ---
 description: client rolesor the 401requste

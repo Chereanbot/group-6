@@ -1,36 +1,30 @@
 ---
-description: super-admin- rol ceck
+description: super-admin- role you have to use this admin rolehere check it
 globs: 
+alwaysApply: false
 ---
-try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth-token')?.value;
+  
+  if (!token) {
+    return { error: 'Unauthorized', status: 401 };
+  }
 
-    if (!token) {
+  const authResult = await verifyAuth(token);
+  if (!authResult.isAuthenticated || authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+    return { error: 'Unauthorized access', status: 403 };
+  }
+
+  return { authResult };
+}
+
+export async function GET(request: Request) {
+  try {
+    const adminCheck = await verifyAdmin();
+    if (adminCheck.error) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
-
-    const { isAuthenticated, user } = await verifyAuth(token);
-
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-
-
-    for the fronend 
-
-    useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please log in to access this page');
-      router.push('/auth/login');
-      return;
-    }
-  }, [router]);

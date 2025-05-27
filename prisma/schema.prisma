@@ -76,7 +76,6 @@ model User {
   workSchedules           WorkSchedule[]
   teachingSchedules       TeachingSchedule[]
   teachingMetrics         TeachingMetrics[]
-  backups                 Backup[]
   agentNotifications      AgentNotification[]
   agentChats              AgentChat[]
   clientAppointments      Appointment[]            @relation("ClientAppointments")
@@ -1284,7 +1283,7 @@ model BlockedIP {
 model Session {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   userId        String   @db.ObjectId
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token         String   @unique
   active        Boolean  @default(true)
   userAgent     String?
@@ -1295,6 +1294,8 @@ model Session {
   updatedAt     DateTime @updatedAt
 
   @@index([userId])
+  @@index([active])
+  @@index([expiresAt])
 }
 
 model VerificationRequest {
@@ -2147,141 +2148,6 @@ model Kebele {
 enum KebeleStatus {
   ACTIVE
   INACTIVE
-}
-
-// Backup System Models
-model Backup {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  type        BackupType
-  status      BackupStatus
-  size        Float? // Size in bytes
-  path        String // Storage path
-  checksum    String? // For integrity verification
-  compression String? // Compression method used
-  encrypted   Boolean      @default(false)
-
-  // Metadata
-  createdAt   DateTime  @default(now())
-  startedAt   DateTime?
-  completedAt DateTime?
-  expiresAt   DateTime?
-
-  // Relations
-  createdBy User            @relation(fields: [userId], references: [id])
-  userId    String          @db.ObjectId
-  settings  BackupSettings?
-  logs      BackupLog[]
-  files     BackupFile[]
-
-  // Retention policy
-  retentionDays Int @default(30)
-
-  @@index([type])
-  @@index([status])
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model BackupSettings {
-  id            String           @id @default(auto()) @map("_id") @db.ObjectId
-  backup        Backup           @relation(fields: [backupId], references: [id])
-  backupId      String           @unique @db.ObjectId
-  compression   CompressionLevel @default(MEDIUM)
-  encryption    Boolean          @default(true)
-  excludedPaths String[]
-  maxConcurrent Int              @default(3)
-  schedule      BackupSchedule?
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-}
-
-model BackupSchedule {
-  id         String          @id @default(auto()) @map("_id") @db.ObjectId
-  settings   BackupSettings  @relation(fields: [settingsId], references: [id])
-  settingsId String          @unique @db.ObjectId
-  enabled    Boolean         @default(true)
-  frequency  BackupFrequency
-  timeOfDay  String // Format: HH:mm
-  lastRun    DateTime?
-  nextRun    DateTime?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-}
-
-model BackupLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  backup    Backup   @relation(fields: [backupId], references: [id])
-  backupId  String   @db.ObjectId
-  level     LogLevel
-  message   String
-  metadata  Json?
-  timestamp DateTime @default(now())
-
-  @@index([backupId])
-  @@index([level])
-  @@index([timestamp])
-}
-
-model BackupFile {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  backup    Backup     @relation(fields: [backupId], references: [id])
-  backupId  String     @db.ObjectId
-  path      String
-  size      Float
-  checksum  String?
-  status    FileStatus
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@index([backupId])
-  @@index([status])
-}
-
-enum BackupType {
-  FULL
-  PARTIAL
-  DIFFERENTIAL
-  INCREMENTAL
-}
-
-enum BackupStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-  CANCELLED
-  EXPIRED
-}
-
-enum CompressionLevel {
-  NONE
-  LOW
-  MEDIUM
-  HIGH
-}
-
-enum BackupFrequency {
-  HOURLY
-  DAILY
-  WEEKLY
-  MONTHLY
-  CUSTOM
-}
-
-enum LogLevel {
-  INFO
-  WARNING
-  ERROR
-  DEBUG
-}
-
-enum FileStatus {
-  PENDING
-  UPLOADING
-  COMPLETED
-  FAILED
-  VERIFIED
 }
 
 // Add new enums for AI Agent functionality

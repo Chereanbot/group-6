@@ -4,13 +4,11 @@ import { verifyAuth } from '@/lib/edge-auth';
 import prisma from '@/lib/prisma';
 import { PaymentMethod, PaymentStatus, ServiceType, ServiceCategory } from '@prisma/client';
 import crypto from 'crypto';
+import { UserRoleEnum } from '@prisma/client';
 
-// Chapa API Keys
 const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-cIE6IPsupgrF0aQnIU4cmK0PkeJBOfwX';
-const CHAPA_PUBLIC_KEY = process.env.CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-40nSrRkEurW5fh4da1PD4YbDEnAEDgxg';
 const CHAPA_API_URL = 'https://api.chapa.co/v1/transaction/initialize';
 
-// Default service packages
 const DEFAULT_SERVICE_PACKAGES = [
   {
     name: 'basic',
@@ -80,99 +78,79 @@ const DEFAULT_SERVICE_PACKAGES = [
   }
 ];
 
-// Add this before the ensureServicePackages function
 const isValidServiceType = (type: any): type is ServiceType => {
   return Object.values(ServiceType).includes(type);
 };
 
-// Function to ensure service packages exist
 async function ensureServicePackages() {
-  try {
-    for (const pkg of DEFAULT_SERVICE_PACKAGES) {
-      try {
-        // Validate service type before proceeding
-        if (!isValidServiceType(pkg.serviceType)) {
-          console.error(`Invalid service type ${pkg.serviceType} for package ${pkg.name}`);
+  for (const pkg of DEFAULT_SERVICE_PACKAGES) {
+    try {
+      if (!isValidServiceType(pkg.serviceType)) {
+        console.error(`Invalid service type ${pkg.serviceType} for package ${pkg.name}`);
+        continue;
+      }
+      const existingPackage = await prisma.servicePackage.findFirst({
+        where: {
+          name: pkg.name.toLowerCase(),
+          active: true
+        }
+      });
+      if (!existingPackage) {
+        const adminUser = await prisma.user.findFirst({
+          where: { isAdmin: true }
+        });
+        if (!adminUser) {
+          console.error('No admin user found to create service packages');
           continue;
         }
-
-        // First check if package exists
-        const existingPackage = await prisma.servicePackage.findFirst({
-          where: {
+        await prisma.servicePackage.create({
+          data: {
             name: pkg.name.toLowerCase(),
+            description: pkg.description,
+            serviceType: pkg.serviceType,
+            category: pkg.category,
+            price: pkg.price,
+            features: pkg.features,
+            eligibilityCriteria: pkg.eligibilityCriteria,
+            estimatedDuration: pkg.estimatedDuration,
+            authorId: adminUser.id,
+            createdById: adminUser.id,
             active: true
           }
         });
-
-        if (!existingPackage) {
-          // Create a default admin user if not exists
-          const adminUser = await prisma.user.findFirst({
-            where: { isAdmin: true }
-          });
-
-          if (!adminUser) {
-            console.error('No admin user found to create service packages');
-            continue;
+        console.log(`Created service package: ${pkg.name}`);
+      } else {
+        await prisma.servicePackage.update({
+          where: { id: existingPackage.id },
+          data: {
+            description: pkg.description,
+            serviceType: pkg.serviceType,
+            category: pkg.category,
+            price: pkg.price,
+            features: pkg.features,
+            eligibilityCriteria: pkg.eligibilityCriteria,
+            estimatedDuration: pkg.estimatedDuration,
+            active: true
           }
-
-          // Create the package with validated enum values
-          await prisma.servicePackage.create({
-            data: {
-              name: pkg.name.toLowerCase(),
-              description: pkg.description,
-              serviceType: pkg.serviceType,
-              category: pkg.category,
-              price: pkg.price,
-              features: pkg.features,
-              eligibilityCriteria: pkg.eligibilityCriteria,
-              estimatedDuration: pkg.estimatedDuration,
-              authorId: adminUser.id,
-              createdById: adminUser.id,
-              active: true
-            }
-          });
-          console.log(`Created service package: ${pkg.name}`);
-        } else {
-          // Update existing package if needed
-          await prisma.servicePackage.update({
-            where: { id: existingPackage.id },
-            data: {
-              description: pkg.description,
-              serviceType: pkg.serviceType,
-              category: pkg.category,
-              price: pkg.price,
-              features: pkg.features,
-              eligibilityCriteria: pkg.eligibilityCriteria,
-              estimatedDuration: pkg.estimatedDuration,
-              active: true
-            }
-          });
-          console.log(`Updated service package: ${pkg.name}`);
-        }
-      } catch (packageError) {
-        console.error(`Error processing package ${pkg.name}:`, packageError);
-        // Continue with next package even if one fails
-        continue;
+        });
+        console.log(`Updated service package: ${pkg.name}`);
       }
+    } catch (packageError) {
+      console.error(`Error processing package ${pkg.name}:`, packageError);
+      continue;
     }
-  } catch (error) {
-    console.error('Error ensuring service packages:', error);
-    throw error; // Re-throw to handle in the POST handler
   }
 }
 
-// Generate a unique transaction reference
 const generateTxRef = () => {
   return `TX-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 };
 
-// Validate email format
 const isValidEmail = (email: string) => {
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
   return emailRegex.test(email);
 };
 
-// Validate phone format
 const isValidPhone = (phone: string) => {
   const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
   return phoneRegex.test(phone);
@@ -181,38 +159,38 @@ const isValidPhone = (phone: string) => {
 export async function POST(request: Request) {
   let payment;
   try {
-    // Get auth token from cookies
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
 
     if (!token) {
-      return NextResponse.json({
-        success: false,
-        message: 'No authentication token found'
-      }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // Verify authentication
     const { isAuthenticated, payload } = await verifyAuth(token);
 
-    if (!isAuthenticated || !payload) {
-      return NextResponse.json({
-        success: false,
-        message: 'Invalid authentication token'
-      }, { status: 401 });
+    if (!isAuthenticated || payload?.role !== UserRoleEnum.CLIENT) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
     const { amount, email, first_name, last_name, phone, metadata } = body;
 
     // Validate required fields
-    if (!amount || !email || !first_name || !last_name || !phone) {
+    const missingFields = ['amount', 'email', 'first_name', 'last_name', 'phone'].filter(field => !body[field]);
+    if (missingFields.length > 0) {
       return NextResponse.json({
         success: false,
         message: 'Missing required fields',
-        details: {
-          required: ['amount', 'email', 'first_name', 'last_name', 'phone'],
-          received: { amount, email, first_name, last_name, phone }
+        error: {
+          code: 'VALIDATION_ERROR',
+          missingFields,
+          details: 'All required fields must be provided'
         }
       }, { status: 400 });
     }
@@ -230,7 +208,6 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Ensure service packages exist
       await ensureServicePackages();
     } catch (error) {
       console.error('Failed to ensure service packages:', error);

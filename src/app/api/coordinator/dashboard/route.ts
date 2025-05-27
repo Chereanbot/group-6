@@ -1,27 +1,30 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+  import { cookies, headers } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { UserRoleEnum, CaseStatus } from '@prisma/client';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 headersList.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
 
     if (!token) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 200 }
       );
     }
 
     const { isAuthenticated, user } = await verifyAuth(token);
 
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.COORDINATOR) {
+    if (!isAuthenticated || !user) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, message: 'Invalid or expired token' },
+        { status: 200 }
       );
     }
 

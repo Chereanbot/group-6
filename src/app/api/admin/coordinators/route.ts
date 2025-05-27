@@ -22,6 +22,7 @@ async function verifyAdmin() {
   return { authResult };
 }
 
+// GET: Fetch coordinators with filtering, pagination, and stats
 export async function GET(request: Request) {
   try {
     const adminCheck = await verifyAdmin();
@@ -186,6 +187,7 @@ export async function GET(request: Request) {
   }
 }
 
+// POST: Create a new coordinator
 export async function POST(request: Request) {
   try {
     const adminCheck = await verifyAdmin();
@@ -209,6 +211,22 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate coordinator type
+    if (!Object.values(CoordinatorType).includes(body.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid coordinator type' },
+        { status: 400 }
+      );
+    }
+
+    // Validate end date for part-time coordinators
+    if (body.type === CoordinatorType.PART_TIME && !body.endDate) {
+      return NextResponse.json(
+        { success: false, error: 'End date is required for part-time coordinators' },
+        { status: 400 }
+      );
+    }
+
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
       where: { email: body.email }
@@ -221,7 +239,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check office capacity
+    // Check office capacity and status
     const office = await prisma.office.findUnique({
       where: { id: body.officeId },
       include: {
@@ -244,12 +262,45 @@ export async function POST(request: Request) {
       );
     }
 
+    if (office.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { success: false, error: 'Selected office is not active' },
+        { status: 400 }
+      );
+    }
+
     const maxAllowed = office.capacity || 10;
     if (office._count.coordinators >= maxAllowed) {
       return NextResponse.json(
         { success: false, error: `Office has reached maximum capacity of ${maxAllowed} coordinators` },
         { status: 400 }
       );
+    }
+
+    // Validate start date
+    const startDate = new Date(body.startDate);
+    if (isNaN(startDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid start date' },
+        { status: 400 }
+      );
+    }
+
+    // Validate end date if provided
+    if (body.endDate) {
+      const endDate = new Date(body.endDate);
+      if (isNaN(endDate.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid end date' },
+          { status: 400 }
+        );
+      }
+      if (endDate <= startDate) {
+        return NextResponse.json(
+          { success: false, error: 'End date must be after start date' },
+          { status: 400 }
+        );
+      }
     }
 
     // Hash password
@@ -291,7 +342,7 @@ export async function POST(request: Request) {
           userId: user.id,
           officeId: body.officeId,
           type: body.type as CoordinatorType,
-          startDate: body.startDate ? new Date(body.startDate) : new Date(),
+          startDate: startDate,
           endDate: body.endDate ? new Date(body.endDate) : null,
           specialties: Array.isArray(body.specialties) ? body.specialties : [],
           status: CoordinatorStatus.ACTIVE,
@@ -327,7 +378,8 @@ export async function POST(request: Request) {
           details: {
             coordinatorId: coordinator.id,
             coordinatorName: body.fullName,
-            office: office.name
+            office: office.name,
+            type: body.type
           }
         }
       });
@@ -370,6 +422,7 @@ export async function POST(request: Request) {
   }
 }
 
+// PATCH: Update an existing coordinator
 export async function PATCH(request: Request) {
   try {
     const adminCheck = await verifyAdmin();
@@ -405,40 +458,106 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Update coordinator in transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Update user
-      await tx.user.update({
-        where: { id: existingCoordinator.userId },
-        data: {
-          fullName: body.fullName,
-          phone: body.phone
+    // Validate end date for part-time coordinators if type is being updated
+    if (body.type && body.type === CoordinatorType.PART_TIME && !body.endDate) {
+      return NextResponse.json(
+        { success: false, error: 'End date is required for part-time coordinators' },
+        { status: 400 }
+      );
+    }
+
+    // Validate dates if provided
+    const startDate = body.startDate ? new Date(body.startDate) : undefined;
+    if (startDate && isNaN(startDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid start date' },
+        { status: 400 }
+      );
+    }
+
+    const endDate = body.endDate ? new Date(body.endDate) : null;
+    if (endDate && isNaN(endDate.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid end date' },
+        { status: 400 }
+      );
+    }
+
+    // Check office capacity if officeId is being updated
+    if (body.officeId && body.officeId !== existingCoordinator.officeId) {
+      const newOffice = await prisma.office.findUnique({
+        where: { id: body.officeId },
+        include: {
+          _count: {
+            select: { coordinators: { where: { status: CoordinatorStatus.ACTIVE } } }
+          }
         }
       });
 
-      // Update coordinator
-      const coordinator = await tx.coordinator.update({
-        where: { id },
-        data: {
-          type: body.type,
-          officeId: body.officeId,
-          startDate: body.startDate ? new Date(body.startDate) : undefined,
-          endDate: body.endDate ? new Date(body.endDate) : null,
-          specialties: body.specialties,
-          status: body.status,
-          qualifications: {
-            deleteMany: {},
-            createMany: {
+      if (!newOffice) {
+        return NextResponse.json(
+          { success: false, error: 'New office not found' },
+          { status: 404 }
+        );
+      }
+
+      if (newOffice.status !== 'ACTIVE') {
+        return NextResponse.json(
+          { success: false, error: 'Selected office is not active' },
+          { status: 400 }
+        );
+      }
+
+      const maxAllowed = newOffice.capacity || 10;
+      if (newOffice._count.coordinators >= maxAllowed) {
+        return NextResponse.json(
+          { success: false, error: `New office has reached maximum capacity of ${maxAllowed} coordinators` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Update coordinator in transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Update user fields if provided
+      if (body.fullName !== undefined || body.phone !== undefined) {
+        await tx.user.update({
+          where: { id: existingCoordinator.userId },
+          data: {
+            fullName: body.fullName,
+            phone: body.phone
+          }
+        });
+      }
+
+      // Prepare qualifications data if provided (recreate all if provided)
+      const qualificationsUpdateData = Array.isArray(body.qualifications)
+        ? {
+            deleteMany: {}, // Delete existing qualifications
+            createMany: { // Create new qualifications
               data: body.qualifications.map((q: any) => ({
                 type: q.type,
                 title: q.title,
                 institution: q.institution,
                 dateObtained: new Date(q.dateObtained),
                 expiryDate: q.expiryDate ? new Date(q.expiryDate) : null,
-                score: q.score
+                score: q.score || null
               }))
             }
           }
+        : undefined; // Do not update qualifications if not provided
+
+      // Update coordinator profile
+      const coordinator = await tx.coordinator.update({
+        where: { id },
+        data: {
+          type: body.type,
+          officeId: body.officeId,
+          startDate: startDate, // Use validated startDate
+          endDate: endDate, // Use validated endDate
+          specialties: body.specialties,
+          status: body.status,
+          ...(qualificationsUpdateData && { qualifications: qualificationsUpdateData }) // Apply qualifications update if data exists
         },
         include: {
           user: {
@@ -469,7 +588,7 @@ export async function PATCH(request: Request) {
           action: 'COORDINATOR_UPDATED',
           details: {
             coordinatorId: coordinator.id,
-            coordinatorName: body.fullName,
+            coordinatorName: coordinator.user.fullName, // Use updated full name
             changes: body
           }
         }
@@ -484,15 +603,25 @@ export async function PATCH(request: Request) {
       message: 'Coordinator updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating coordinator:', error);
+
+    // Handle specific Prisma errors
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { success: false, error: 'A unique constraint was violated during update. Please check the provided data.' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Failed to update coordinator' },
+      { success: false, error: 'Failed to update coordinator', details: process.env.NODE_ENV === 'development' ? error.message : undefined },
       { status: 500 }
     );
   }
 }
 
+// DELETE: Delete a coordinator (by setting user status to INACTIVE)
 export async function DELETE(request: Request) {
   try {
     const adminCheck = await verifyAdmin();
@@ -526,29 +655,28 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Delete coordinator in transaction
+    // Soft delete: Update user status to INACTIVE in transaction
     await prisma.$transaction(async (tx) => {
-      // Delete qualifications
-      await tx.qualification.deleteMany({
-        where: { coordinatorId: id }
-      });
+      // Note: We are not deleting the coordinator profile or related data
+      // directly, but marking the associated user as INACTIVE.
+      // This is a "soft delete" approach.
 
-      // Delete coordinator
-      await tx.coordinator.delete({
-        where: { id }
-      });
-
-      // Update user status to INACTIVE
       await tx.user.update({
         where: { id: existingCoordinator.userId },
         data: { status: 'INACTIVE' }
       });
 
+      // Optionally, you could also set the coordinator status to INACTIVE
+      // await tx.coordinator.update({
+      //   where: { id },
+      //   data: { status: CoordinatorStatus.INACTIVE }
+      // });
+
       // Log activity
       await tx.activity.create({
         data: {
           userId: adminCheck.authResult.user.id,
-          action: 'COORDINATOR_DELETED',
+          action: 'COORDINATOR_DELETED', // Or 'COORDINATOR_DEACTIVATED'
           details: {
             coordinatorId: id,
             coordinatorName: existingCoordinator.user.fullName
@@ -559,13 +687,13 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Coordinator deleted successfully'
+      message: 'Coordinator deactivated successfully (User status set to INACTIVE)'
     });
 
   } catch (error) {
-    console.error('Error deleting coordinator:', error);
+    console.error('Error deleting/deactivating coordinator:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete coordinator' },
+      { success: false, error: 'Failed to deactivate coordinator' },
       { status: 500 }
     );
   }

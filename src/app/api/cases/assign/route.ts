@@ -31,17 +31,28 @@ export async function GET(req: Request) {
     const officeId = searchParams.get('office');
     const specialization = searchParams.get('specialization');
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
+
+    // Build where clause for cases
+    const whereClause: Prisma.CaseWhereInput = {
+      OR: [
+        { lawyerId: null },
+        { status: CaseStatus.PENDING }
+      ],
+      ...(status ? { status: status as CaseStatus } : {}),
+      ...(officeId ? { assignedOffice: { id: officeId } } : {}),
+      ...(search ? {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { clientName: { contains: search, mode: 'insensitive' } },
+          { clientPhone: { contains: search, mode: 'insensitive' } }
+        ]
+      } : {})
+    };
 
     // Fetch unassigned or reassignable cases
     const cases = await prisma.case.findMany({
-      where: {
-        OR: [
-          { lawyerId: null },
-          { status: CaseStatus.PENDING }
-        ],
-        ...(status ? { status: status as CaseStatus } : {}),
-        assignedOffice: officeId ? { id: officeId } : undefined
-      },
+      where: whereClause,
       include: {
         client: {
           select: {
@@ -68,14 +79,27 @@ export async function GET(req: Request) {
             }
           }
         },
-        assignedOffice: true
+        assignedOffice: true,
+        documents: {
+          select: {
+            id: true,
+            title: true,
+            type: true
+          }
+        },
+        activities: {
+          take: 5,
+          orderBy: {
+            createdAt: 'desc'
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    // Fetch available lawyers
+    // Fetch available lawyers with their current workload
     const lawyers = await prisma.user.findMany({
       where: {
         userRole: UserRoleEnum.LAWYER,
@@ -107,49 +131,54 @@ export async function GET(req: Request) {
             status: {
               in: [CaseStatus.ACTIVE, CaseStatus.PENDING]
             }
+          },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true
           }
         }
       }
     });
 
-    // Transform and calculate workload
-    const formattedLawyers = lawyers.map(lawyer => ({
-      id: lawyer.id,
-      fullName: lawyer.fullName,
-      email: lawyer.email,
-      office: lawyer.lawyerProfile?.office?.name || 'Unassigned',
-      specializations: lawyer.lawyerProfile?.specializations.map(s => s.specialization.name) || [],
-      currentCaseload: lawyer.assignedCases.length,
-      availability: lawyer.lawyerProfile?.availability || false
-    }));
-
-    // Get offices for filtering
+    // Fetch offices for filtering
     const offices = await prisma.office.findMany({
-      where: { status: 'ACTIVE' },
-      select: { id: true, name: true }
+      where: {
+        status: 'ACTIVE'
+      },
+      select: {
+        id: true,
+        name: true,
+        location: true
+      }
     });
 
-    // Get specializations for filtering
+    // Fetch specializations for filtering
     const specializations = await prisma.legalSpecialization.findMany({
-      select: { id: true, name: true, category: true }
+      select: {
+        id: true,
+        name: true,
+        category: true
+      }
     });
 
     return NextResponse.json({
       success: true,
       data: {
         cases,
-        lawyers: formattedLawyers,
+        lawyers,
         offices,
         specializations
       }
     });
 
   } catch (error) {
-    console.error('Error fetching assignment data:', error);
+    console.error('Error fetching assignable cases:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to fetch assignment data',
+        message: 'Failed to fetch assignable cases',
         error: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

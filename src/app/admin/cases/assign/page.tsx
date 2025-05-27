@@ -121,13 +121,6 @@ export default function CaseAssignmentPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('auth-token');
-      if (!token) {
-        toast.error('Please log in to continue');
-        router.push('/auth/login');
-        return;
-      }
-
       // Build query parameters
       const params = new URLSearchParams();
       if (filters.office) params.append('office', filters.office);
@@ -135,23 +128,34 @@ export default function CaseAssignmentPage() {
       if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
 
-      const response = await fetch(`/api/cases/assign?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch(`/api/cases/assign?${params.toString()}`);
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Please log in to continue');
+          router.push('/auth/login');
+          return;
+        }
         throw new Error('Failed to fetch data');
       }
 
       const data = await response.json();
       if (data.success) {
-      setCases(data.data.cases);
-      setLawyers(data.data.lawyers);
+        setCases(data.data.cases);
+        // Transform lawyers data to match the expected interface
+        const transformedLawyers = data.data.lawyers.map((lawyer: any) => ({
+          id: lawyer.id,
+          fullName: lawyer.fullName,
+          email: lawyer.email,
+          office: lawyer.lawyerProfile.office.name,
+          specializations: lawyer.lawyerProfile.specializations.map((spec: any) => spec.specialization.name),
+          currentCaseload: lawyer.assignedCases.length,
+          availability: lawyer.lawyerProfile.status === 'ACTIVE'
+        }));
+        setLawyers(transformedLawyers);
         setOffices(data.data.offices);
         setSpecializations(data.data.specializations);
-    } else {
+      } else {
         toast.error(data.message || 'Failed to load data');
       }
     } catch (error) {
@@ -170,18 +174,10 @@ export default function CaseAssignmentPage() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('auth-token');
-      if (!token) {
-        toast.error('Please log in to continue');
-        router.push('/auth/login');
-      return;
-    }
-
       const response = await fetch('/api/cases/assign', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           caseId: selectedCase.id,
@@ -189,6 +185,15 @@ export default function CaseAssignmentPage() {
           notes: assignmentNotes
         })
       });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Please log in to continue');
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error('Failed to assign case');
+      }
 
       const data = await response.json();
       if (data.success) {

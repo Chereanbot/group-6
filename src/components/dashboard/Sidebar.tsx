@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { isFirstTimeLogin, getServiceType } from '@/utils/userSession';
+import SidebarPremiumPromo from '@/components/premium/SidebarPremiumPromo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import CommunicationPanel from './CommunicationPanel';
@@ -467,9 +469,12 @@ const CaseManagementPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
 const Sidebar = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [activePath, setActivePath] = useState('');
   const [showPaymentPanel, setShowPaymentPanel] = useState(false);
   const [showAppointmentPanel, setShowAppointmentPanel] = useState(false);
@@ -477,8 +482,42 @@ const Sidebar = () => {
   const [showCommunicationPanel, setShowCommunicationPanel] = useState(false);
 
   useEffect(() => {
-    setActivePath(window.location.pathname);
-  }, []);
+    // Close expanded items on mobile when window resizes
+    if (isMobile) {
+      setExpandedItem(null);
+      setIsCollapsed(false);
+    }
+    
+    // Check if this is the user's first visit
+    const firstTimeUser = isFirstTimeLogin();
+    setIsFirstVisit(firstTimeUser);
+    
+    // Show tutorial for first-time users after a short delay
+    if (firstTimeUser) {
+      const timer = setTimeout(() => {
+        setShowTutorial(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile]);
+
+  // Auto-expand the sidebar item that matches the current path
+  useEffect(() => {
+    if (!pathname) return;
+    
+    // Find which sidebar item matches the current path
+    const matchingItem = sidebarItems.find(item => {
+      if (pathname === item.path) return true;
+      if (item.subItems) {
+        return item.subItems.some(subItem => pathname === subItem.path);
+      }
+      return false;
+    });
+    
+    if (matchingItem && !isMobile) {
+      setExpandedItem(matchingItem.title);
+    }
+  }, [pathname, isMobile]);
 
   // Add back the toggleExpand function
   const toggleExpand = (title: string) => {
@@ -603,7 +642,8 @@ const Sidebar = () => {
         </div>
 
         {/* Navigation Items */}
-        <nav className="p-4 space-y-2 overflow-y-auto max-h-[calc(100vh-4rem)]">
+        <nav className="p-4 space-y-2 overflow-y-auto flex flex-col max-h-[calc(100vh-4rem)]">
+          <div className="flex-1 space-y-2">
           {sidebarItems.map((item) => (
             <div key={item.title}>
               <motion.button
@@ -682,8 +722,58 @@ const Sidebar = () => {
               )}
             </div>
           ))}
+          </div>
+          
+          {/* Premium promotion at the bottom of sidebar */}
+          <SidebarPremiumPromo isCollapsed={isCollapsed} />
         </nav>
       </div>
+    );
+  };
+
+  // Tutorial overlay for first-time users
+  const SidebarTutorial = () => {
+    if (!showTutorial) return null;
+    
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+        onClick={() => setShowTutorial(false)}
+      >
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md m-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Welcome to Your Dashboard</h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            This sidebar helps you navigate through different sections of the application. Here's a quick guide:  
+          </p>
+          <ul className="space-y-3 mb-6">
+            <li className="flex items-start space-x-2">
+              <span className="text-primary-500 font-bold">•</span>
+              <span className="text-gray-600 dark:text-gray-300">Click on any menu item to navigate to that section</span>
+            </li>
+            <li className="flex items-start space-x-2">
+              <span className="text-primary-500 font-bold">•</span>
+              <span className="text-gray-600 dark:text-gray-300">Items with arrows can be expanded to show sub-items</span>
+            </li>
+            <li className="flex items-start space-x-2">
+              <span className="text-primary-500 font-bold">•</span>
+              <span className="text-gray-600 dark:text-gray-300">You can collapse the sidebar using the arrow button at the bottom</span>
+            </li>
+          </ul>
+          <button
+            onClick={() => setShowTutorial(false)}
+            className="w-full py-2 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
+          >
+            Got it
+          </button>
+        </motion.div>
+      </motion.div>
     );
   };
 
@@ -691,8 +781,9 @@ const Sidebar = () => {
     <>
       <DesktopSidebar />
       <MobileNavigation />
+      {isFirstVisit && <SidebarTutorial />}
     </>
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

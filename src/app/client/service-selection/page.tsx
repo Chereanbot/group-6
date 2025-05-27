@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import {
@@ -9,14 +9,21 @@ import {
   HiOutlineArrowRight,
   HiOutlineShieldCheck,
   HiOutlineUserGroup,
-  HiOutlineDocumentText
+  HiOutlineDocumentText,
+  HiOutlineLockClosed,
+  HiOutlineLightBulb,
+  HiOutlineInformationCircle
 } from 'react-icons/hi';
 import { useService } from '@/contexts/ServiceContext';
+import { isFirstTimeLogin, getServiceType, setServiceType as setUserServiceType } from '@/utils/userSession';
 
 const ServiceSelection = () => {
   const router = useRouter();
   const { setServiceType } = useService();
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
+  const [showInfoTip, setShowInfoTip] = useState(true);
 
   const services = [
     {
@@ -47,13 +54,30 @@ const ServiceSelection = () => {
     }
   ];
 
+  useEffect(() => {
+    // Check if this is the user's first visit to this page
+    setIsFirstVisit(isFirstTimeLogin());
+    
+    // Check if user already has a service type selected
+    const savedServiceType = getServiceType();
+    if (savedServiceType) {
+      setSelectedService(savedServiceType);
+    }
+    
+    // Add a class to the body for styling
+    document.body.classList.add('service-selection-page');
+    
+    return () => {
+      document.body.classList.remove('service-selection-page');
+    };
+  }, []);
+
   const handleSelection = (serviceId: string) => {
     setSelectedService(serviceId);
     setServiceType(serviceId as 'paid' | 'aid');
+    setUserServiceType(serviceId); // Save to localStorage and cookie
+    setLoading(true);
     
-    // Store selection in cookie using native API
-    document.cookie = `serviceType=${serviceId};path=/;max-age=${7 * 24 * 60 * 60}`; // 7 days
-
     setTimeout(() => {
       if (serviceId === 'paid') {
         router.push('/client/payments/new');
@@ -64,19 +88,34 @@ const ServiceSelection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Overlay when loading */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <HiOutlineLockClosed className="w-20 h-20 text-primary-500 animate-bounce mb-6" />
+          <span className="text-2xl font-semibold text-white mb-2">Please wait...</span>
+          <span className="text-md text-gray-200">Redirecting to the next step</span>
+        </div>
+      )}
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
+        {/* Header with enhanced styling */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
+          <div className="inline-block p-1 rounded-lg bg-gradient-to-r from-primary-500 to-primary-700 mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-md px-4 py-1">
+              <span className="text-sm font-medium text-primary-600 dark:text-primary-400">
+                Legal Services Selection
+              </span>
+            </div>
+          </div>
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
             Welcome to Dilla University Legal Aid
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
-            Choose how you would like to proceed with your legal service
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Choose how you would like to proceed with your legal service. Your selection will determine the type of assistance you'll receive.
           </p>
         </motion.div>
 
@@ -161,6 +200,49 @@ const ServiceSelection = () => {
           </p>
         </motion.div>
       </div>
+      
+      {/* First-time visitor info tip */}
+      {isFirstVisit && showInfoTip && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border-l-4 border-primary-500 z-50"
+        >
+          <div className="flex items-start">
+            <div className="flex-shrink-0 pt-0.5">
+              <HiOutlineLightBulb className="h-8 w-8 text-primary-500" />
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Service Selection Guide</h3>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p>This is where you choose between paid legal services or free legal aid. Your selection will determine the next steps in your legal journey.</p>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowInfoTip(false)}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Floating help button */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowInfoTip(true)}
+        className="fixed bottom-6 right-6 p-3 rounded-full bg-primary-500 text-white shadow-lg z-40"
+      >
+        <HiOutlineInformationCircle className="w-6 h-6" />
+      </motion.button>
     </div>
   );
 };

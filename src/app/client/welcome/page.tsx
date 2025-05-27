@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isFirstTimeLogin, markUserVisited } from '@/utils/userSession';
 import { 
   HiOutlineScale,
   HiOutlineClock,
@@ -14,13 +15,16 @@ import {
   HiOutlineGlobe,
   HiOutlineArrowRight,
   HiOutlineCheck,
-  HiOutlineStar
+  HiOutlineStar,
+  HiOutlineLockClosed
 } from 'react-icons/hi';
 
 const WelcomeDashboard = () => {
   const router = useRouter();
   const [language, setLanguage] = useState<'en' | 'am'>('en');
   const [currentSection, setCurrentSection] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [isFirstVisit, setIsFirstVisit] = useState(false);
 
   const translations = {
     en: {
@@ -178,12 +182,36 @@ const WelcomeDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    // Check if this is the user's first visit
+    const firstTimeUser = isFirstTimeLogin();
+    setIsFirstVisit(firstTimeUser);
+    
+    // Add a class to the body for a more immersive welcome experience
+    document.body.classList.add('welcome-page');
+    
+    return () => {
+      document.body.classList.remove('welcome-page');
+    };
+  }, []);
+
   const handleContinue = () => {
-    router.push('/client/registration/service-selection');
+    // Mark that the user has visited before
+    markUserVisited();
+    router.push('/client/service-selection');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-900 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-900 to-gray-900 py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Overlay when loading */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <HiOutlineLockClosed className="w-20 h-20 text-primary-500 animate-bounce mb-6" />
+          <span className="text-2xl font-semibold text-white mb-2">Please wait...</span>
+          <span className="text-md text-gray-200">Redirecting to the next step</span>
+        </div>
+      )}
+
       {/* Language Toggle */}
       <motion.button
         whileHover={{ scale: 1.1 }}
@@ -376,8 +404,38 @@ const WelcomeDashboard = () => {
           </motion.button>
         </motion.div>
       </motion.div>
+      
+      {/* First-time visitor overlay */}
+      {isFirstVisit && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed bottom-6 right-6 max-w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border-l-4 border-primary-500"
+        >
+          <div className="flex items-start">
+            <div className="flex-shrink-0 pt-0.5">
+              <HiOutlineLightBulb className="h-10 w-10 text-primary-500" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Welcome to Dilla University Legal Aid!</h3>
+              <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p>This appears to be your first visit. Complete your registration to access our legal services.</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsFirstVisit(false)}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
 
-export default WelcomeDashboard; 
+export default WelcomeDashboard;

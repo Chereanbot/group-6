@@ -36,7 +36,7 @@ export default function AdminLayoutClient({ children }: AdminLayoutClientProps) 
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <AdminSidebar />
             <div className="ml-64 min-h-screen flex flex-col">
-              <AdminHeader />
+              <AdminHeader onMenuToggle={() => {}} />
               <main className="flex-1 p-6">{children}</main>
             </div>
             <Toaster 
