@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -43,6 +43,10 @@ import {
 import { CaseDetailsDialog } from './CaseDetailsDialog';
 import { toast } from '@/components/ui/use-toast';
 import type { Case } from '../types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 interface CaseTableProps {
   cases: Case[];
@@ -61,6 +65,16 @@ export function CaseTable({ cases, isAmharic, onCaseDeleted }: CaseTableProps) {
   const [page, setPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 10;
+  const [editCase, setEditCase] = useState<Case | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [editOnceFlag, setEditOnceFlag] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEditOnceFlag(localStorage.getItem('case-edit-warning-shown'));
+  }, []);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -181,6 +195,59 @@ export function CaseTable({ cases, isAmharic, onCaseDeleted }: CaseTableProps) {
     }
   };
 
+  const handleEditClick = (case_) => {
+    if (!editOnceFlag) {
+      setShowWarning(true);
+      setEditCase(case_);
+    } else {
+      openEditModal(case_);
+    }
+  };
+
+  const openEditModal = (case_) => {
+    setEditForm({
+      title: case_.title,
+      description: case_.description,
+      category: case_.category || '',
+    });
+    setEditCase(case_);
+    setShowEditModal(true);
+  };
+
+  const handleWarningConfirm = () => {
+    localStorage.setItem('case-edit-warning-shown', 'true');
+    setEditOnceFlag('true');
+    setShowWarning(false);
+    if (editCase) openEditModal(editCase);
+  };
+
+  const handleEditFormChange = (e) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editCase) return;
+    setEditLoading(true);
+    try {
+      const response = await fetch(`/api/client/cases/${editCase.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to update case');
+      toast({ title: translate('Success', isAmharic), description: translate('Case updated successfully', isAmharic) });
+      setShowEditModal(false);
+      setEditCase(null);
+      onCaseDeleted?.(); // Refresh list
+    } catch (error) {
+      toast({ title: translate('Error', isAmharic), description: translate(error instanceof Error ? error.message : 'Failed to update case', isAmharic), variant: 'destructive' });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="rounded-md border dark:border-gray-800">
@@ -276,41 +343,17 @@ export function CaseTable({ cases, isAmharic, onCaseDeleted }: CaseTableProps) {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
+                        <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>{translate('Actions', isAmharic)}</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setSelectedCase(case_)}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          {translate('View Details', isAmharic)}
+                        <DropdownMenuItem onClick={() => handleEditClick(case_)}>
+                          {translate('Edit', isAmharic)}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/documents`}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          {translate('View Documents', isAmharic)}
+                        <DropdownMenuItem onClick={() => setCaseToDelete(case_)}>
+                          {translate('Delete', isAmharic)}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/events`}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {translate('View Events', isAmharic)}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.location.href = `/client/cases/${case_.id}/messages`}>
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          {translate('Messages', isAmharic)}
-                        </DropdownMenuItem>
-                        {case_.status === 'PENDING' && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => setCaseToDelete(case_)}
-                              className="text-red-600 dark:text-red-400"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {translate('Delete Case', isAmharic)}
-                            </DropdownMenuItem>
-                          </>
-                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -389,6 +432,62 @@ export function CaseTable({ cases, isAmharic, onCaseDeleted }: CaseTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Warning Modal */}
+      <AlertDialog open={showWarning} onOpenChange={setShowWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{translate('Warning', isAmharic)}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {translate('You can only edit your case details once. Are you sure you want to proceed?', isAmharic)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowWarning(false)}>{translate('Cancel', isAmharic)}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleWarningConfirm}>{translate('Proceed', isAmharic)}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{translate('Edit Case', isAmharic)}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="title">{translate('Title', isAmharic)}</Label>
+              <Input id="title" name="title" value={editForm.title || ''} onChange={handleEditFormChange} required />
+            </div>
+            <div>
+              <Label htmlFor="description">{translate('Description', isAmharic)}</Label>
+              <Textarea id="description" name="description" value={editForm.description || ''} onChange={handleEditFormChange} required />
+            </div>
+            <div>
+              <Label htmlFor="category">{translate('Category', isAmharic)}</Label>
+              <select
+                id="category"
+                name="category"
+                value={editForm.category || ''}
+                onChange={handleEditFormChange}
+                required
+                className="w-full border rounded px-2 py-1 dark:bg-gray-900 dark:text-white"
+              >
+                <option value="">{translate('Select Category', isAmharic)}</option>
+                <option value="CIVIL">{translate('Civil', isAmharic)}</option>
+                <option value="CRIMINAL">{translate('Criminal', isAmharic)}</option>
+                <option value="FAMILY">{translate('Family', isAmharic)}</option>
+                <option value="CORPORATE">{translate('Corporate', isAmharic)}</option>
+                <option value="OTHER">{translate('Other', isAmharic)}</option>
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={editLoading}>{editLoading ? translate('Saving...', isAmharic) : translate('Save Changes', isAmharic)}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 } 

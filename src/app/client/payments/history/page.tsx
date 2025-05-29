@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { HiCheck, HiClock, HiX } from 'react-icons/hi';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 const mockPayments = [
   {
@@ -30,11 +31,12 @@ const statusIcons = {
 };
 
 export default function PaymentHistory() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState('all');
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Payment History</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('paymentHistory.title', 'Payment History')}</h1>
 
       {/* Filters */}
       <div className="mb-6 flex space-x-4">
@@ -47,7 +49,7 @@ export default function PaymentHistory() {
                 : 'bg-gray-100 dark:bg-gray-800'}`}
             onClick={() => setFilter(status)}
           >
-            {status}
+            {t(`paymentHistory.filters.${status}`, status)}
           </button>
         ))}
       </div>
@@ -57,11 +59,11 @@ export default function PaymentHistory() {
         <table className="w-full">
           <thead>
             <tr className="border-b dark:border-gray-700">
-              <th className="text-left py-4">Date</th>
-              <th className="text-left py-4">Reference</th>
-              <th className="text-left py-4">Method</th>
-              <th className="text-right py-4">Amount</th>
-              <th className="text-center py-4">Status</th>
+              <th className="text-left py-4">{t('paymentHistory.table.date', 'Date')}</th>
+              <th className="text-left py-4">{t('paymentHistory.table.reference', 'Reference')}</th>
+              <th className="text-left py-4">{t('paymentHistory.table.method', 'Method')}</th>
+              <th className="text-right py-4">{t('paymentHistory.table.amount', 'Amount')}</th>
+              <th className="text-center py-4">{t('paymentHistory.table.status', 'Status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -77,7 +79,7 @@ export default function PaymentHistory() {
                 <td className="py-4">
                   <div className="flex items-center justify-center space-x-2">
                     {statusIcons[payment.status]}
-                    <span className="capitalize">{payment.status}</span>
+                    <span className="capitalize">{t(`paymentHistory.status.${payment.status}`, payment.status)}</span>
                   </div>
                 </td>
               </tr>

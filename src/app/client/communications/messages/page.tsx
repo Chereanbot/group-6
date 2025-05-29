@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { MessagesPageClient } from '@/components/communications/MessagesPageClient';
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 async function getContacts(userId: string) {
   try {

@@ -8,6 +8,7 @@ import SidebarPremiumPromo from '@/components/premium/SidebarPremiumPromo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import CommunicationPanel from './CommunicationPanel';
+import { useLanguage } from '@/providers/LanguageProvider';
 import {
   HiOutlineHome,
   HiOutlineDocumentText,
@@ -41,76 +42,76 @@ interface SidebarItem {
   subItems?: { title: string; path: string; icon: React.ReactNode; }[];
 }
 
-const sidebarItems: SidebarItem[] = [
+const createSidebarItems = (t: (key: string) => string): SidebarItem[] => [
   {
-    title: 'Dashboard',
+    title: t('sidebar.dashboard'),
     icon: <HiOutlineHome className="w-6 h-6" />,
     path: '/client/dashboard'
   },
  
   {
-    title: 'Registration',
+    title: t('sidebar.registration'),
     icon: <HiOutlineDocumentText className="w-6 h-6" />,
     path: '/client/registration',
     subItems: [
       { 
-        title: 'Service Selection', 
+        title: t('sidebar.serviceSelection'), 
         path: '/client/registration/service-selection',
         icon: <HiOutlineUserCircle className="w-5 h-5" />
       },
       {
-        title: 'Personal Information',
+        title: t('sidebar.personalInformation'),
         path: '/client/registration/',
         icon: <HiOutlineUserCircle className="w-5 h-5" />
       },
       { 
-        title: 'Payment ', 
+        title: t('sidebar.payment'), 
         path: '/client/registration/payment',
         icon: <HiOutlineCreditCard className="w-5 h-5" />
       },
       { 
-        title: 'Payment History', 
+        title: t('sidebar.paymentHistory'), 
         path: '/client/registration/payment/history',
         icon: <HiOutlineCreditCard className="w-5 h-5" />
       },
 
       { 
-        title: 'Document Upload', 
+        title: t('sidebar.documentUpload'), 
         path: '/client/registration/documents',
         icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
       }
     ]
   },
   {
-    title: 'My Cases',
+    title: t('sidebar.cases'),
     icon: <HiOutlineScale className="w-6 h-6" />,
     path: '/client/cases',
     subItems: [
       {
-         title: 'New Case',
+         title: t('sidebar.newCase'),
          path: '/client/cases/register',
          icon: <HiOutlinePlusCircle className="w-5 h-5" />
       },
       {
-        title: 'Case Progress',
+        title: t('sidebar.caseProgress'),
         path: '/client/cases/progress',
         icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
     
       { 
-        title: 'My Cases', 
+        title: t('sidebar.myCases'), 
         path: '/client/cases/my-cases',
         icon: <HiOutlineClipboardList className="w-5 h-5" />
       },
      
       { 
-        title: 'Waiting Cases', 
+        title: t('sidebar.waitingCases'), 
         path: '/client/cases/waiting',
         icon: <HiOutlineClock className="w-5 h-5" />
       },
     
       { 
-        title: 'My Cases Activities', 
+        title: t('sidebar.caseActivity'), 
         path: '/client/cases/case-activity',
         icon: <HiOutlineCalendar className="w-5 h-5" />
       },
@@ -118,12 +119,12 @@ const sidebarItems: SidebarItem[] = [
     ]
   },
   {
-    title: 'Communications',
+    title: t('sidebar.communications'),
     icon: <HiOutlineChatAlt2 className="w-6 h-6" />,
     path: '/client/communications',
     subItems: [
       { 
-        title: 'Message Lawyer', 
+        title: t('sidebar.messageLawyer'), 
         path: '/client/communications/messages',
         icon: <HiOutlineMailOpen className="w-5 h-5" />
       },
@@ -131,38 +132,38 @@ const sidebarItems: SidebarItem[] = [
     ]
   },
   {
-    title: 'Documents',
+    title: t('sidebar.documents'),
     icon: <HiOutlineDocumentDuplicate className="w-6 h-6" />,
     path: '/client/documents',
     subItems: [
       { 
-        title: 'Document List', 
+        title: t('sidebar.documentList'), 
         path: '/client/documents',
         icon: <HiOutlineScale className="w-5 h-5" />
       },
      
     
       { 
-        title: 'E-Signatures', 
+        title: t('sidebar.eSignatures'), 
         path: '/client/forms/signatures',
         icon: <HiOutlinePencilAlt className="w-5 h-5" />
       }
     ]
   },
   {
-    title: 'Appointments',
+    title: t('sidebar.appointments'),
     icon: <HiOutlineCalendar className="w-6 h-6" />,
     path: '/client/appointments',
     subItems: [
       { 
-        title: 'My Appointments', 
+        title: t('sidebar.myAppointments'), 
         path: '/client/appointments/list',
         icon: <HiOutlineClipboardList className="w-5 h-5" />,
       },
       { 
-        title: 'Calendar', 
-        path: '/client/appointments/calendar',
-        icon: <HiOutlineCalendar className="w-5 h-5" />,
+        title: t('sidebar.bookAppointment'), 
+        path: '/client/appointments/book',
+        icon: <HiOutlinePlusCircle className="w-5 h-5" />,
       },
      
     ]
@@ -171,37 +172,38 @@ const sidebarItems: SidebarItem[] = [
 
 const PaymentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const paymentOptions = [
     { 
-      title: 'Make Payment', 
+      title: t('sidebar.payment'), 
       path: '/client/payments/new',
       icon: <HiOutlineCash className="w-6 h-6" />,
-      description: 'Make a new payment'
+      description: t('sidebar.payment')
     },
     { 
-      title: 'Payment History', 
+      title: t('sidebar.paymentHistory'), 
       path: '/client/payments/history',
       icon: <HiOutlineCollection className="w-6 h-6" />,
-      description: 'View your payment history'
+      description: t('sidebar.paymentHistory')
     },
     { 
-      title: 'Invoices', 
+      title: t('sidebar.documentList'), 
       path: '/client/payments/invoices',
       icon: <HiOutlineDocument className="w-6 h-6" />,
-      description: 'View and download invoices'
+      description: t('sidebar.documentList')
     },
     { 
-      title: 'Payment Methods', 
+      title: t('sidebar.paymentMethods'), 
       path: '/client/payments/methods',
       icon: <HiOutlineCreditCard className="w-6 h-6" />,
-      description: 'Manage payment methods'
+      description: t('sidebar.paymentMethods')
     },
     { 
-      title: 'Subscriptions', 
+      title: t('sidebar.subscriptions'), 
       path: '/client/payments/subscriptions',
       icon: <HiOutlineRefresh className="w-6 h-6" />,
-      description: 'Manage your subscriptions'
+      description: t('sidebar.subscriptions')
     }
   ];
 
@@ -211,7 +213,7 @@ const PaymentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     <div className="fixed inset-0 bg-black/50 z-50">
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl p-4 animate-slide-up">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Payment Options</h2>
+          <h2 className="text-xl font-bold">{t('sidebar.payment')}</h2>
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
@@ -249,31 +251,32 @@ const PaymentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
 const AppointmentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const appointmentOptions = [
     { 
-      title: 'My Appointments', 
+      title: t('sidebar.myAppointments'), 
       path: '/client/appointments/list',
       icon: <HiOutlineClipboardList className="w-6 h-6" />,
-      description: 'View your scheduled appointments'
+      description: t('appointments.history.description')
     },
     { 
-      title: 'Book Appointment', 
+      title: t('sidebar.bookAppointment'), 
       path: '/client/appointments/book',
       icon: <HiOutlinePlusCircle className="w-6 h-6" />,
-      description: 'Schedule a new appointment'
+      description: t('appointments.history.description')
     },
     { 
-      title: 'Consultation History', 
+      title: t('sidebar.appointmentHistory'), 
       path: '/client/appointments/history',
-      icon: <HiOutlineCollection className="w-6 h-6" />,
-      description: 'View past consultations'
+      icon: <HiOutlineClock className="w-6 h-6" />,
+      description: t('appointments.history.description')
     },
     { 
-      title: 'Available Slots', 
+      title: t('sidebar.availableSlots'), 
       path: '/client/appointments/slots',
       icon: <HiOutlineClock className="w-6 h-6" />,
-      description: 'Check available time slots'
+      description: t('appointments.availableSlots')
     }
   ];
 
@@ -283,7 +286,7 @@ const AppointmentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     <div className="fixed inset-0 bg-black/50 z-50">
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-2xl p-4 animate-slide-up">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Appointment Options</h2>
+          <h2 className="text-xl font-bold">{t('sidebar.appointments')}</h2>
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
@@ -321,43 +324,44 @@ const AppointmentPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
 const CaseManagementPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const caseOptions = [
     { 
-      title: 'Active Cases',
+      title: t('sidebar.myCases'),
       path: '/client/cases/active',
       icon: <HiOutlineClipboardList className="w-6 h-6" />,
-      description: 'View and manage ongoing cases'
+      description: t('sidebar.myCases')
     },
     { 
-      title: 'File New Case',
+      title: t('sidebar.newCase'),
       path: '/client/cases/new',
       icon: <HiOutlinePlusCircle className="w-6 h-6" />,
-      description: 'Start a new legal case'
+      description: t('sidebar.newCase')
     },
     { 
-      title: 'Case Timeline',
+      title: t('sidebar.caseProgress'),
       path: '/client/cases/timeline',
-      icon: <HiOutlineClock className="w-6 h-6" />,
-      description: 'Track case progress and events'
+      icon: <HiOutlineClipboardCheck className="w-6 h-6" />,
+      description: t('sidebar.caseProgress')
     },
     { 
-      title: 'Documents',
+      title: t('sidebar.documents'),
       path: '/client/cases/documents',
       icon: <HiOutlineDocumentDuplicate className="w-6 h-6" />,
-      description: 'Manage case-related documents'
+      description: t('sidebar.documents')
     },
     { 
-      title: 'Court Dates',
-      path: '/client/cases/court-dates',
-      icon: <HiOutlineCalendar className="w-6 h-6" />,
-      description: 'View upcoming court appearances'
+      title: t('sidebar.cases'),
+      path: '/client/cases/search',
+      icon: <HiOutlineDocumentSearch className="w-6 h-6" />,
+      description: t('sidebar.cases')
     },
     {
-      title: 'Evidence Manager',
+      title: t('sidebar.evidenceManager'),
       path: '/client/cases/evidence',
       icon: <HiOutlinePhotograph className="w-6 h-6" />,
-      description: 'Organize and submit evidence'
+      description: t('sidebar.evidenceManager')
     }
   ];
 
@@ -389,7 +393,7 @@ const CaseManagementPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: ()
         {/* Header */}
         <div className="px-6 pb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xl font-bold">Case Management</h2>
+            <h2 className="text-xl font-bold">{t('sidebar.caseManagement')}</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -398,7 +402,7 @@ const CaseManagementPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: ()
             </button>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage your legal cases and documents
+            {t('sidebar.caseManagementDescription')}
           </p>
         </div>
 
@@ -442,6 +446,7 @@ const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { t } = useLanguage();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
@@ -451,6 +456,8 @@ const Sidebar = () => {
   const [showAppointmentPanel, setShowAppointmentPanel] = useState(false);
   const [showCasePanel, setShowCasePanel] = useState(false);
   const [showCommunicationPanel, setShowCommunicationPanel] = useState(false);
+  
+  const sidebarItems = createSidebarItems(t);
 
   useEffect(() => {
     // Close expanded items on mobile when window resizes
@@ -498,29 +505,24 @@ const Sidebar = () => {
   // Update the mobile navigation items to be more concise
   const mobileNavItems = [
     {
-      title: 'Home',
+      title: t('mobile.home'),
       icon: <HiOutlineHome className="w-6 h-6" />,
       path: '/client/dashboard'
     },
     {
-      title: 'Pay',
-      icon: <HiOutlineCreditCard className="w-6 h-6" />,
-      path: '/client/payments/new'
+      title: t('mobile.cases'),
+      icon: <HiOutlineScale className="w-6 h-6" />,
+      action: () => setShowCasePanel(true)
     },
     {
-      title: 'Book',
+      title: t('mobile.book'),
       icon: <HiOutlineCalendar className="w-6 h-6" />,
       action: () => setShowAppointmentPanel(true)
     },
     {
-      title: 'Chat',
+      title: t('mobile.chat'),
       icon: <HiOutlineChatAlt2 className="w-6 h-6" />,
       action: () => setShowCommunicationPanel(true)
-    },
-    {
-      title: 'Cases',
-      icon: <HiOutlineClipboardList className="w-6 h-6" />,
-      action: () => setShowCasePanel(true)
     }
   ];
 
@@ -719,29 +721,29 @@ const Sidebar = () => {
           className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md m-4"
           onClick={e => e.stopPropagation()}
         >
-          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Welcome to Your Dashboard</h3>
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">{t('tutorial.welcome')}</h3>
           <p className="text-gray-600 dark:text-gray-300 mb-4">
-            This sidebar helps you navigate through different sections of the application. Here's a quick guide:  
+            {t('tutorial.guide')}
           </p>
           <ul className="space-y-3 mb-6">
             <li className="flex items-start space-x-2">
               <span className="text-primary-500 font-bold">•</span>
-              <span className="text-gray-600 dark:text-gray-300">Click on any menu item to navigate to that section</span>
+              <span className="text-gray-600 dark:text-gray-300">{t('tutorial.clickMenu')}</span>
             </li>
             <li className="flex items-start space-x-2">
               <span className="text-primary-500 font-bold">•</span>
-              <span className="text-gray-600 dark:text-gray-300">Items with arrows can be expanded to show sub-items</span>
+              <span className="text-gray-600 dark:text-gray-300">{t('tutorial.expandItems')}</span>
             </li>
             <li className="flex items-start space-x-2">
               <span className="text-primary-500 font-bold">•</span>
-              <span className="text-gray-600 dark:text-gray-300">You can collapse the sidebar using the arrow button at the bottom</span>
+              <span className="text-gray-600 dark:text-gray-300">{t('tutorial.collapseSidebar')}</span>
             </li>
           </ul>
           <button
             onClick={() => setShowTutorial(false)}
             className="w-full py-2 px-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors"
           >
-            Got it
+            {t('tutorial.gotIt')}
           </button>
         </motion.div>
       </motion.div>

@@ -3,8 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoordinatorType, CoordinatorStatus } from '@prisma/client';
-import { HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineCalendar, HiOutlineBriefcase, HiOutlineMail, HiOutlinePhone, HiOutlineLockClosed } from 'react-icons/hi';
+import { 
+  HiOutlineOfficeBuilding, 
+  HiOutlineUser, 
+  HiOutlineCalendar, 
+  HiOutlineBriefcase, 
+  HiOutlineMail, 
+  HiOutlinePhone, 
+  HiOutlineLockClosed,
+  HiOutlineDocumentAdd,
+  HiOutlineSave,
+  HiOutlineArrowLeft,
+  HiOutlineArrowRight,
+  HiOutlinePlus,
+  HiOutlineCheck,
+  HiOutlineX
+} from 'react-icons/hi';
 import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
+
+// Add type definitions for the enums
+type CoordinatorTypeEnum = keyof typeof CoordinatorType;
+type CoordinatorStatusEnum = keyof typeof CoordinatorStatus;
 
 interface FormData {
   // User Info
@@ -14,12 +34,12 @@ interface FormData {
   password: string;
 
   // Coordinator Info
-  type: CoordinatorType;
+  type: CoordinatorTypeEnum;
   officeId: string;
   startDate: string;
   endDate?: string;
   specialties: string[];
-  status: CoordinatorStatus;
+  status: CoordinatorStatusEnum;
 
   // Additional Fields
   qualifications: Array<{
@@ -41,38 +61,38 @@ interface Office {
   available: boolean;
 }
 
+// DULAS Color Scheme
+const dulasPalette = {
+  primaryGreen: '#00572d',    // Primary Green for headers, navbar, highlights
+  secondaryGreen: '#1f9345',  // Secondary Green for hover states, buttons
+  accentYellowGold: '#f3c300', // Accent Yellow-Gold for highlights, hover effects
+  textPrimary: '#333333',     // Text Primary
+  background: '#ffffff',      // Background
+  footerDark: '#1a1a1a'       // Footer Dark
+};
+
 const formStyles = {
   container: "max-w-4xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg",
-  header: "border-b dark:border-gray-700 pb-4",
-  sectionHeader: "flex items-center text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4",
+  header: "border-b border-[#00572d] pb-4",
+  sectionHeader: "flex items-center text-lg font-semibold text-[#00572d] dark:text-gray-100 mb-4",
   formGrid: "grid grid-cols-1 md:grid-cols-2 gap-6",
   inputGroup: "space-y-2",
-  label: "block text-sm font-medium text-gray-700 dark:text-gray-300",
-  input: `w-full rounded-lg border-gray-300 dark:border-gray-600 
-    dark:bg-gray-700 shadow-sm 
-    focus:border-primary-500 focus:ring-primary-500
-    transition-colors duration-200
-    placeholder:text-gray-400 dark:placeholder:text-gray-500`,
-  inputWithIcon: `w-full rounded-lg border-gray-300 dark:border-gray-600 
-    dark:bg-gray-700 shadow-sm pl-10
-    focus:border-primary-500 focus:ring-primary-500
-    transition-colors duration-200`,
+  label: "block text-sm font-medium text-[#333333] dark:text-gray-300",
+  input: "w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-[#1f9345] focus:ring-[#1f9345] transition-colors duration-200 placeholder:text-gray-400 dark:placeholder:text-gray-500",
+  inputWithIcon: "w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm pl-10 focus:border-[#1f9345] focus:ring-[#1f9345] transition-colors duration-200",
   inputWrapper: "relative",
-  inputIcon: `absolute left-3 top-1/2 transform -translate-y-1/2 
-    text-gray-400 dark:text-gray-500`,
-  inputError: `border-red-300 dark:border-red-600 
-    focus:border-red-500 focus:ring-red-500`,
-  inputSuccess: `border-green-300 dark:border-green-600 
-    focus:border-green-500 focus:ring-green-500`,
+  inputIcon: "absolute left-3 top-1/2 transform -translate-y-1/2 text-[#00572d] dark:text-gray-500",
+  inputError: "border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500",
+  inputSuccess: "border-[#1f9345] dark:border-green-600 focus:border-[#1f9345] focus:ring-[#1f9345]",
   helperText: "text-xs mt-1",
   errorText: "text-red-500 dark:text-red-400",
-  successText: "text-green-500 dark:text-green-400",
+  successText: "text-[#1f9345] dark:text-green-400",
   requiredStar: "text-red-500 dark:text-red-400 ml-1",
-  select: "w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-primary-500 focus:ring-primary-500",
+  select: "w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-[#1f9345] focus:ring-[#1f9345]",
   button: {
-    primary: "px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2",
-    secondary: "px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2",
-    danger: "px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+    primary: "px-4 py-2 bg-[#00572d] text-white rounded-lg hover:bg-[#1f9345] focus:outline-none focus:ring-2 focus:ring-[#1f9345] focus:ring-offset-2 transition-colors duration-200",
+    secondary: "px-4 py-2 bg-gray-100 text-[#333333] rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200",
+    danger: "px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors duration-200"
   },
   timeline: {
     container: "mb-8 relative",
@@ -80,14 +100,14 @@ const formStyles = {
     steps: "relative z-10 flex justify-between",
     step: "flex flex-col items-center",
     circle: {
-      active: "w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center",
+      active: "w-8 h-8 rounded-full bg-[#00572d] text-white flex items-center justify-center",
       inactive: "w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center",
-      completed: "w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center"
+      completed: "w-8 h-8 rounded-full bg-[#1f9345] text-white flex items-center justify-center"
     },
     label: {
-      active: "mt-2 text-sm font-medium text-primary-600",
+      active: "mt-2 text-sm font-medium text-[#00572d]",
       inactive: "mt-2 text-sm font-medium text-gray-500",
-      completed: "mt-2 text-sm font-medium text-green-500"
+      completed: "mt-2 text-sm font-medium text-[#1f9345]"
     }
   }
 };
@@ -143,6 +163,33 @@ const InputWithIcon = ({
 const AddCoordinatorPage = () => {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [officeError, setOfficeError] = useState<string | null>(null);
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    number: false,
+    special: false,
+    uppercase: false
+  });
+
+  // Animation variants for motion components
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
+  
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
@@ -156,10 +203,6 @@ const AddCoordinatorPage = () => {
     status: CoordinatorStatus.ACTIVE,
     qualifications: []
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [offices, setOffices] = useState<Office[]>([]);
-  const [officeError, setOfficeError] = useState<string | null>(null);
 
   const fetchOffices = async () => {
     try {
@@ -218,26 +261,47 @@ const AddCoordinatorPage = () => {
     { number: 3, title: "Qualifications", icon: HiOutlineCalendar }
   ];
 
+  // Define timeline steps
+  const timelineSteps = [
+    { number: 1, title: "Personal Info", icon: HiOutlineUser },
+    { number: 2, title: "Employment", icon: HiOutlineBriefcase },
+    { number: 3, title: "Qualifications", icon: HiOutlineDocumentAdd }
+  ];
+
   const Timeline = () => (
     <div className={formStyles.timeline.container}>
-      <div className={formStyles.timeline.line} />
+      <motion.div 
+        className={formStyles.timeline.line}
+        initial={{ width: '0%' }}
+        animate={{ width: '100%' }}
+        transition={{ duration: 0.8, ease: 'easeInOut' }}
+      />
       <div className={formStyles.timeline.steps}>
-        {steps.map((step, index) => {
-          const Icon = step.icon;
+        {timelineSteps.map((step, index) => {
           const isActive = step.number === currentStep;
           const isCompleted = step.number < currentStep;
+          const Icon = step.icon;
           
           return (
-            <div key={step.number} className={formStyles.timeline.step}>
-              <div 
+            <motion.div 
+              key={step.number}
+              className={formStyles.timeline.step}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 * (index + 1) }}
+            >
+              <motion.div 
                 className={
                   isCompleted ? formStyles.timeline.circle.completed :
                   isActive ? formStyles.timeline.circle.active :
                   formStyles.timeline.circle.inactive
                 }
+                whileHover={{ scale: 1.1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 10 }}
               >
-                <Icon className="w-5 h-5" />
-              </div>
+                {isCompleted ? <HiOutlineCheck className="w-4 h-4" /> : 
+                 isActive ? <Icon className="w-4 h-4" /> : step.number}
+              </motion.div>
               <span 
                 className={
                   isCompleted ? formStyles.timeline.label.completed :
@@ -247,64 +311,73 @@ const AddCoordinatorPage = () => {
               >
                 {step.title}
               </span>
-            </div>
+            </motion.div>
           );
         })}
       </div>
     </div>
   );
 
+  const validatePassword = (password: string) => {
+    setPasswordStrength({
+      length: password.length >= 8,
+      number: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      uppercase: /[A-Z]/.test(password)
+    });
+  };
+
   const validateForm = (): boolean => {
     // Required fields validation
     if (!formData.fullName || !formData.email || !formData.password) {
-      setError('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
       return false;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
+      toast.error('Please enter a valid email address');
       return false;
     }
 
     // Password validation
     if (!Object.values(passwordStrength).every(v => v)) {
-      setError('Password does not meet the requirements');
+      toast.error('Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character');
       return false;
-    }
-
-    // Phone validation (if provided)
-    if (formData.phone) {
-      const phoneRegex = /^\+\d{1,3}\s?\d{9,}$/;
-      if (!phoneRegex.test(formData.phone)) {
-        setError('Please enter a valid phone number with country code');
-        return false;
-      }
     }
 
     // Type and Office validation
     if (!formData.type || !formData.officeId) {
-      setError('Please select both Type and Office');
+      toast.error('Please select both Type and Office');
       return false;
     }
 
     // Start date validation
     if (!formData.startDate) {
-      setError('Please select a start date');
+      toast.error('Please select a start date');
       return false;
     }
 
     // End date validation for part-time coordinators
     if (formData.type === CoordinatorType.PART_TIME && !formData.endDate) {
-      setError('Please select an end date for part-time coordinator');
+      toast.error('Please select an end date for part-time coordinator');
       return false;
     }
 
     // Specialties validation
     if (formData.specialties.length === 0) {
-      setError('Please select at least one specialty');
+      toast.error('Please select at least one specialty');
       return false;
+    }
+
+    // Phone validation (if provided)
+    if (formData.phone) {
+      const phoneRegex = /^\+?[\d\s-]{10,}$/;
+      if (!phoneRegex.test(formData.phone)) {
+        toast.error('Please enter a valid phone number (minimum 10 digits)');
+        return false;
+      }
     }
 
     return true;
@@ -331,10 +404,11 @@ const AddCoordinatorPage = () => {
         startDate: formData.startDate,
         endDate: formData.endDate,
         specialties: formData.specialties,
-        status: formData.status
+        status: formData.status,
+        qualifications: formData.qualifications
       };
 
-      const result = await fetch('/api/coordinators', {
+      const result = await fetch('/api/admin/coordinators', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -342,15 +416,43 @@ const AddCoordinatorPage = () => {
         body: JSON.stringify(coordinatorData)
       });
 
+      const responseData = await result.json();
+      
       if (result.ok) {
         toast.success('Coordinator created successfully');
-        router.push('/admin/coordinators');
+        // Force a hard refresh to ensure data is reloaded
+        window.location.href = '/admin/coordinators';
       } else {
-        setError(await result.text());
+        // Handle specific Prisma errors
+        if (responseData.code === 'P2002') {
+          // Unique constraint violation
+          const field = responseData.meta?.target?.[0] || 'field';
+          if (field === 'phone') {
+            toast.error('This phone number is already registered. Please use a different phone number.');
+          } else if (field === 'email') {
+            toast.error('This email address is already registered. Please use a different email.');
+          } else {
+            toast.error(`This ${field} is already in use. Please try a different value.`);
+          }
+        } else if (responseData.error) {
+          // Handle other server errors
+          toast.error(responseData.error);
+        } else if (responseData.errors) {
+          // Handle multiple validation errors
+          Object.entries(responseData.errors).forEach(([field, message]) => {
+            toast.error(`${field}: ${message}`);
+          });
+        } else {
+          toast.error('Failed to create coordinator. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Form submission error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to create coordinator');
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -389,70 +491,23 @@ const AddCoordinatorPage = () => {
     }));
   };
 
-  const [passwordStrength, setPasswordStrength] = useState({
-    length: false,
-    number: false,
-    special: false,
-    uppercase: false
-  });
-
-  const validatePassword = (password: string) => {
-    setPasswordStrength({
-      length: password.length >= 8,
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      uppercase: /[A-Z]/.test(password)
-    });
-  };
-
-  const PasswordStrengthIndicator = ({ strength }: { strength: typeof passwordStrength }) => (
-    <div className="space-y-2 mt-2">
-      <div className="flex gap-2">
-        {Object.entries(strength).map(([key, valid]) => (
-          <div
-            key={key}
-            className={`h-1 flex-1 rounded-full ${
-              valid ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          />
-        ))}
-      </div>
-      <ul className="space-y-1 text-xs">
-        <li className={`${strength.length ? 'text-green-500' : 'text-gray-500'}`}>
-          ✓ At least 8 characters
-        </li>
-        <li className={`${strength.number ? 'text-green-500' : 'text-gray-500'}`}>
-          ✓ Contains a number
-        </li>
-        <li className={`${strength.special ? 'text-green-500' : 'text-gray-500'}`}>
-          ✓ Contains a special character
-        </li>
-        <li className={`${strength.uppercase ? 'text-green-500' : 'text-gray-500'}`}>
-          ✓ Contains an uppercase letter
-        </li>
-      </ul>
-    </div>
-  );
-
   const handleOfficeChange = async (officeId: string) => {
     try {
-      setOfficeError(null);
       const selectedOffice = offices.find(office => office.id === officeId);
-      
       if (!selectedOffice) {
-        setOfficeError('Invalid office selected');
+        toast.error('Invalid office selected');
         return;
       }
 
       if (!selectedOffice.available) {
-        setOfficeError(`This office has reached its maximum capacity of ${selectedOffice.capacity} coordinators (${selectedOffice.currentCount}/${selectedOffice.capacity})`);
+        toast.error(`This office has reached its maximum capacity of ${selectedOffice.capacity} coordinators (${selectedOffice.currentCount}/${selectedOffice.capacity})`);
         return;
       }
 
       setFormData(prev => ({ ...prev, officeId }));
     } catch (error) {
       console.error('Error checking office availability:', error);
-      setOfficeError('Failed to check office availability. Please try again.');
+      toast.error('Failed to check office availability. Please try again.');
     }
   };
 
@@ -478,9 +533,17 @@ const AddCoordinatorPage = () => {
 
         {/* Step 1: Personal Information */}
         {currentStep === 1 && (
-          <section>
+          <motion.section
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+            }}
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-[#00572d]"
+          >
             <h2 className={formStyles.sectionHeader}>
-              <HiOutlineUser className="w-5 h-5 mr-2 text-primary-500" />
+              <HiOutlineUser className="w-5 h-5 mr-2 text-[#00572d]" />
               Personal Information
             </h2>
             <div className={formStyles.formGrid}>
@@ -522,33 +585,43 @@ const AddCoordinatorPage = () => {
                   phone: e.target.value
                 }))}
                 placeholder="+251 (91) 234-5678"
-                helperText="Include country code"
+                helperText="Optional phone number"
               />
 
               <InputWithIcon
                 icon={HiOutlineLockClosed}
-                label="Initial Password"
+                label="Password"
                 required
                 type="password"
                 value={formData.password}
                 onChange={(e) => {
                   const newPassword = e.target.value;
+                  validatePassword(newPassword);
                   setFormData(prev => ({
                     ...prev,
                     password: newPassword
                   }));
-                  validatePassword(newPassword);
                 }}
-                placeholder="••••••••"
+                placeholder="Enter password"
                 helperText={
-                  <PasswordStrengthIndicator strength={passwordStrength} />
+                  <div>
+                    <p className="text-sm mb-2">Password requirements:</p>
+                    <div className="text-xs space-y-1">
+                      <div className={`flex items-center ${passwordStrength.length ? 'text-green-500' : 'text-gray-500'}`}>
+                        {passwordStrength.length ? '✓' : '○'} At least 8 characters
+                      </div>
+                      <div className={`flex items-center ${passwordStrength.uppercase ? 'text-green-500' : 'text-gray-500'}`}>
+                        {passwordStrength.uppercase ? '✓' : '○'} One uppercase letter
+                      </div>
+                      <div className={`flex items-center ${passwordStrength.number ? 'text-green-500' : 'text-gray-500'}`}>
+                        {passwordStrength.number ? '✓' : '○'} One number
+                      </div>
+                      <div className={`flex items-center ${passwordStrength.special ? 'text-green-500' : 'text-gray-500'}`}>
+                        {passwordStrength.special ? '✓' : '○'} One special character
+                      </div>
+                    </div>
+                  </div>
                 }
-                error={
-                  formData.password && 
-                  Object.values(passwordStrength).some(v => !v) ? 
-                  "Password does not meet all requirements" : undefined
-                }
-                success={formData.password && Object.values(passwordStrength).every(v => v)}
               />
             </div>
             <div className="flex justify-end mt-6">
@@ -560,14 +633,19 @@ const AddCoordinatorPage = () => {
                 Next Step
               </button>
             </div>
-          </section>
+          </motion.section>
         )}
 
         {/* Step 2: Employment Details */}
         {currentStep === 2 && (
-          <section>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-[#00572d]"
+          >
             <h2 className={formStyles.sectionHeader}>
-              <HiOutlineBriefcase className="w-5 h-5 mr-2 text-primary-500" />
+              <HiOutlineBriefcase className="w-5 h-5 mr-2 text-[#00572d]" />
               Employment Details
             </h2>
             <div className={formStyles.formGrid}>
@@ -579,7 +657,7 @@ const AddCoordinatorPage = () => {
                   value={formData.type}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    type: e.target.value as CoordinatorType
+                    type: e.target.value as CoordinatorTypeEnum
                   }))}
                 >
                   <option value="">Select Type</option>
@@ -706,15 +784,20 @@ const AddCoordinatorPage = () => {
                 Next Step
               </button>
             </div>
-          </section>
+          </motion.section>
         )}
 
         {/* Step 3: Qualifications */}
         {currentStep === 3 && (
-          <section>
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-[#00572d]"
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className={formStyles.sectionHeader}>
-                <HiOutlineCalendar className="w-5 h-5 mr-2 text-primary-500" />
+                <HiOutlineDocumentAdd className="w-5 h-5 mr-2 text-[#00572d]" />
                 Qualifications
               </h2>
               <button
@@ -822,7 +905,7 @@ const AddCoordinatorPage = () => {
                 )}
               </button>
             </div>
-          </section>
+          </motion.section>
         )}
       </form>
     </div>

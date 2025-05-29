@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useLanguage } from '@/providers/LanguageProvider';
 import {
   HiOutlineCash,
   HiOutlineScale,
@@ -34,6 +35,7 @@ import { isFirstTimeLogin, getServiceType, setServiceType as setUserServiceType 
 const ServiceSelection = () => {
   const router = useRouter();
   const { setServiceType } = useService();
+  const { t } = useLanguage();
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isFirstVisit, setIsFirstVisit] = useState(false);
@@ -42,8 +44,8 @@ const ServiceSelection = () => {
   const services = [
     {
       id: 'paid',
-      title: 'Premium Legal Service',
-      description: 'Professional legal services with dedicated support from our top-performing lawyers',
+      title: t('serviceSelection.premium.title', 'Premium Legal Service'),
+      description: t('serviceSelection.premium.description', 'Professional legal services with dedicated support from our top-performing lawyers'),
       icon: <HiOutlineCash className="w-12 h-12" />,
       imagePath: '/images/services/premium.png',
       benefits: [
@@ -56,23 +58,23 @@ const ServiceSelection = () => {
         'Extended consultation hours and emergency support'
       ],
       features: [
-        { icon: <HiOutlineBadgeCheck className="w-5 h-5" />, text: 'Best-performing lawyers assigned to your case' },
-        { icon: <HiOutlinePhone className="w-5 h-5" />, text: 'Direct communication with your lawyer' },
-        { icon: <HiOutlineCalendar className="w-5 h-5" />, text: 'Priority scheduling for appointments' },
-        { icon: <HiOutlineClock className="w-5 h-5" />, text: 'Faster case processing and resolution' }
+        { icon: <HiOutlineBadgeCheck className="w-5 h-5" />, text: t('serviceSelection.premium.feature1', 'Best-performing lawyers assigned to your case') },
+        { icon: <HiOutlinePhone className="w-5 h-5" />, text: t('serviceSelection.premium.feature2', 'Direct communication with your lawyer') },
+        { icon: <HiOutlineCalendar className="w-5 h-5" />, text: t('serviceSelection.premium.feature3', 'Priority scheduling for appointments') },
+        { icon: <HiOutlineClock className="w-5 h-5" />, text: t('serviceSelection.premium.feature4', 'Faster case processing and resolution') }
       ],
       process: [
-        { step: 1, title: 'Select Package', description: 'Choose from our tiered premium service packages' },
-        { step: 2, title: 'Complete Payment', description: 'Secure payment processing for your selected package' },
-        { step: 3, title: 'Lawyer Assignment', description: 'Get matched with our top-performing lawyers' },
-        { step: 4, title: 'Case Management', description: 'Receive premium support throughout your case' }
+        { step: 1, title: t('serviceSelection.premium.step1', 'Select Package'), description: t('serviceSelection.premium.step1Description', 'Choose from our tiered premium service packages') },
+        { step: 2, title: t('serviceSelection.premium.step2', 'Complete Payment'), description: t('serviceSelection.premium.step2Description', 'Secure payment processing for your selected package') },
+        { step: 3, title: t('serviceSelection.premium.step3', 'Lawyer Assignment'), description: t('serviceSelection.premium.step3Description', 'Get matched with our top-performing lawyers') },
+        { step: 4, title: t('serviceSelection.premium.step4', 'Case Management'), description: t('serviceSelection.premium.step4Description', 'Receive premium support throughout your case') }
       ],
       color: 'from-blue-500 to-indigo-600'
     },
     {
       id: 'aid',
-      title: 'Free Legal Aid Service',
-      description: 'Quality legal assistance at no cost for eligible clients through Dilla University Law School',
+      title: t('serviceSelection.free.title', 'Free Legal Aid Service'),
+      description: t('serviceSelection.free.description', 'Quality legal assistance at no cost for eligible clients through Dilla University Law School'),
       icon: <HiOutlineScale className="w-12 h-12" />,
       imagePath: '/images/services/free.png',
       benefits: [
@@ -85,16 +87,16 @@ const ServiceSelection = () => {
         'Access to legal resources and information'
       ],
       features: [
-        { icon: <HiOutlineAcademicCap className="w-5 h-5" />, text: 'Supervised by experienced law professors' },
-        { icon: <HiOutlineOfficeBuilding className="w-5 h-5" />, text: 'Access to university legal offices' },
-        { icon: <HiOutlineDocumentText className="w-5 h-5" />, text: 'Complete documentation assistance' },
-        { icon: <HiOutlineChat className="w-5 h-5" />, text: 'Regular communication with coordinators' }
+        { icon: <HiOutlineAcademicCap className="w-5 h-5" />, text: t('serviceSelection.free.feature1', 'Supervised by experienced law professors') },
+        { icon: <HiOutlineOfficeBuilding className="w-5 h-5" />, text: t('serviceSelection.free.feature2', 'Access to university legal offices') },
+        { icon: <HiOutlineDocumentText className="w-5 h-5" />, text: t('serviceSelection.free.feature3', 'Complete documentation assistance') },
+        { icon: <HiOutlineChat className="w-5 h-5" />, text: t('serviceSelection.free.feature4', 'Regular communication with coordinators') }
       ],
       process: [
-        { step: 1, title: 'Register Case', description: 'Submit your case details and documents' },
-        { step: 2, title: 'Coordinator Review', description: 'Case evaluation by our legal coordinators' },
-        { step: 3, title: 'Lawyer Assignment', description: 'Assignment to qualified student lawyers' },
-        { step: 4, title: 'Case Management', description: 'Ongoing support throughout your legal process' }
+        { step: 1, title: t('serviceSelection.free.step1', 'Register Case'), description: t('serviceSelection.free.step1Description', 'Submit your case details and documents') },
+        { step: 2, title: t('serviceSelection.free.step2', 'Coordinator Review'), description: t('serviceSelection.free.step2Description', 'Case evaluation by our legal coordinators') },
+        { step: 3, title: t('serviceSelection.free.step3', 'Lawyer Assignment'), description: t('serviceSelection.free.step3Description', 'Assignment to qualified student lawyers') },
+        { step: 4, title: t('serviceSelection.free.step4', 'Case Management'), description: t('serviceSelection.free.step4Description', 'Ongoing support throughout your legal process') }
       ],
       color: 'from-green-500 to-emerald-600'
     }
@@ -135,8 +137,8 @@ const ServiceSelection = () => {
     
     // Show success toast
     toast({
-      title: 'Service Selected',
-      description: `You've selected ${serviceId === 'paid' ? 'Premium Legal Service' : 'Free Legal Aid Service'}`,
+      title: t('serviceSelection.toast.title', 'Service Selected'),
+      description: t('serviceSelection.toast.description', `You've selected ${serviceId === 'paid' ? 'Premium Legal Service' : 'Free Legal Aid Service'}`),
       variant: 'default',
     });
     
@@ -164,9 +166,9 @@ const ServiceSelection = () => {
           >
             <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl text-center max-w-md w-full mx-4">
               <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-              <h3 className="text-xl font-semibold mb-2">Processing Your Selection</h3>
+              <h3 className="text-xl font-semibold mb-2">{t('serviceSelection.loading.title', 'Processing Your Selection')}</h3>
               <p className="text-gray-500 dark:text-gray-400">
-                Preparing your {selectedService === 'paid' ? 'premium' : 'free legal aid'} service experience...
+                {t('serviceSelection.loading.description', `Preparing your ${selectedService === 'paid' ? 'premium' : 'free legal aid'} service experience...`)}
               </p>
             </div>
           </motion.div>
@@ -181,25 +183,25 @@ const ServiceSelection = () => {
           className="text-center mb-12"
         >
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Choose Your Legal Service
-            Choose Your Legal Service Path
+            {t('serviceSelection.title', 'Choose Your Legal Service')}
+            {t('serviceSelection.subtitle', 'Choose Your Legal Service Path')}
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">
-            Select between our premium paid legal services or free legal aid assistance. Your selection will determine the type of support and resources available for your case.
+            {t('serviceSelection.description', 'Select between our premium paid legal services or free legal aid assistance. Your selection will determine the type of support and resources available for your case.')}
           </p>
           
           <div className="flex flex-wrap justify-center gap-6 mb-8">
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
               <HiOutlineClipboardCheck className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300 text-sm">Professional Legal Support</span>
+              <span className="text-gray-700 dark:text-gray-300 text-sm">{t('serviceSelection.feature1', 'Professional Legal Support')}</span>
             </div>
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
               <HiOutlineAcademicCap className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300 text-sm">University-Backed Services</span>
+              <span className="text-gray-700 dark:text-gray-300 text-sm">{t('serviceSelection.feature2', 'University-Backed Services')}</span>
             </div>
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
               <HiOutlineShieldCheck className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300 text-sm">Secure Case Management</span>
+              <span className="text-gray-700 dark:text-gray-300 text-sm">{t('serviceSelection.feature3', 'Secure Case Management')}</span>
             </div>
           </div>
           
@@ -258,7 +260,7 @@ const ServiceSelection = () => {
                 <div className="p-8">
                   {/* Features Section */}
                   <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Key Features</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">{t('serviceSelection.features.title', 'Key Features')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {service.features.map((feature, i) => (
                         <div key={i} className="flex items-start space-x-2">
@@ -273,7 +275,7 @@ const ServiceSelection = () => {
                   
                   {/* Benefits Section */}
                   <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Benefits</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">{t('serviceSelection.benefits.title', 'Benefits')}</h3>
                     <div className="space-y-3">
                       {service.benefits.slice(0, 4).map((benefit, i) => (
                         <motion.div
@@ -290,7 +292,7 @@ const ServiceSelection = () => {
                     </div>
                     {service.benefits.length > 4 && (
                       <button className="text-primary-500 hover:text-primary-600 dark:text-primary-400 text-sm mt-2 flex items-center">
-                        <span>View all {service.benefits.length} benefits</span>
+                        <span>{t('serviceSelection.benefits.viewAll', 'View all {count} benefits', { count: service.benefits.length })}</span>
                         <HiOutlineArrowRight className="ml-1 w-4 h-4" />
                       </button>
                     )}
@@ -298,7 +300,7 @@ const ServiceSelection = () => {
                   
                   {/* Process Steps */}
                   <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">How It Works</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">{t('serviceSelection.process.title', 'How It Works')}</h3>
                     <div className="flex flex-wrap">
                       {service.process.map((step, i) => (
                         <div key={i} className="flex items-start space-x-3 w-full md:w-1/2 mb-4 pr-4">
@@ -322,7 +324,7 @@ const ServiceSelection = () => {
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700' 
                         : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'}`}
                   >
-                    <span>Select {service.title}</span>
+                    <span>{t('serviceSelection.selectService', 'Select {service}', { service: service.title })}</span>
                     <HiOutlineArrowRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -339,42 +341,42 @@ const ServiceSelection = () => {
           className="mb-16"
         >
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-200">Service Comparison</h2>
-            <p className="text-gray-600 dark:text-gray-400">Compare our services to find the right option for your needs</p>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.comparison.title', 'Service Comparison')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.comparison.description', 'Compare our services to find the right option for your needs')}</p>
           </div>
           
           <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead>
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider">Features</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-green-600 dark:text-green-400 tracking-wider">Free Legal Aid</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wider">Premium Legal Service</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-gray-400 tracking-wider">{t('serviceSelection.comparison.features', 'Features')}</th>
+                  <th className="px-6 py-4 text-center text-sm font-medium text-green-600 dark:text-green-400 tracking-wider">{t('serviceSelection.comparison.free', 'Free Legal Aid')}</th>
+                  <th className="px-6 py-4 text-center text-sm font-medium text-blue-600 dark:text-blue-400 tracking-wider">{t('serviceSelection.comparison.premium', 'Premium Legal Service')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Cost</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Free</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Paid packages</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.cost', 'Cost')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.freeCost', 'Free')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.premiumCost', 'Paid packages')}</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Legal Representation</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Student lawyers</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Top-performing lawyers</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.legalRepresentation', 'Legal Representation')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.freeRepresentation', 'Student lawyers')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.premiumRepresentation', 'Top-performing lawyers')}</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Case Priority</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Standard</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">High priority</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.casePriority', 'Case Priority')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.freePriority', 'Standard')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.premiumPriority', 'High priority')}</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Communication</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Through coordinator</td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">Direct with lawyer</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.communication', 'Communication')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.freeCommunication', 'Through coordinator')}</td>
+                  <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.premiumCommunication', 'Direct with lawyer')}</td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Documentation Support</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.documentationSupport', 'Documentation Support')}</td>
                   <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">
                     <HiOutlineShieldCheck className="w-5 h-5 text-green-500 mx-auto" />
                   </td>
@@ -383,7 +385,7 @@ const ServiceSelection = () => {
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Appointment Scheduling</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.appointmentScheduling', 'Appointment Scheduling')}</td>
                   <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">
                     <HiOutlineShieldCheck className="w-5 h-5 text-green-500 mx-auto" />
                   </td>
@@ -392,7 +394,7 @@ const ServiceSelection = () => {
                   </td>
                 </tr>
                 <tr>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">Emergency Support</td>
+                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{t('serviceSelection.comparison.emergencySupport', 'Emergency Support')}</td>
                   <td className="px-6 py-4 text-center text-sm text-gray-700 dark:text-gray-300">
                     <HiOutlineExclamation className="w-5 h-5 text-red-500 mx-auto" />
                   </td>
@@ -413,26 +415,26 @@ const ServiceSelection = () => {
           className="mb-16"
         >
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-200">Frequently Asked Questions</h2>
-            <p className="text-gray-600 dark:text-gray-400">Common questions about our legal services</p>
+            <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.faq.title', 'Frequently Asked Questions')}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.faq.description', 'Common questions about our legal services')}</p>
           </div>
           
           <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">What is the difference between free and paid services?</h3>
-              <p className="text-gray-600 dark:text-gray-400">Free legal aid is provided by student lawyers under supervision, while paid services give you access to experienced lawyers with priority handling and direct communication.</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.faq.question1', 'What is the difference between free and paid services?')}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.faq.answer1', 'Free legal aid is provided by student lawyers under supervision, while paid services give you access to experienced lawyers with priority handling and direct communication.')}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">How do I qualify for free legal aid?</h3>
-              <p className="text-gray-600 dark:text-gray-400">Free legal aid is available to all clients who register through our system. Your case will be evaluated by coordinators and assigned to qualified student lawyers.</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.faq.question2', 'How do I qualify for free legal aid?')}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.faq.answer2', 'Free legal aid is available to all clients who register through our system. Your case will be evaluated by coordinators and assigned to qualified student lawyers.')}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">What types of cases do you handle?</h3>
-              <p className="text-gray-600 dark:text-gray-400">We handle a wide range of legal matters including civil cases, family law, property disputes, contract issues, and more. Specific specializations depend on available lawyers.</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.faq.question3', 'What types of cases do you handle?')}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.faq.answer3', 'We handle a wide range of legal matters including civil cases, family law, property disputes, contract issues, and more. Specific specializations depend on available lawyers.')}</p>
             </div>
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">How do I track my case progress?</h3>
-              <p className="text-gray-600 dark:text-gray-400">Both service types provide case tracking through our online portal. You'll receive regular updates on your case status, upcoming appointments, and important documents.</p>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">{t('serviceSelection.faq.question4', 'How do I track my case progress?')}</h3>
+              <p className="text-gray-600 dark:text-gray-400">{t('serviceSelection.faq.answer4', 'Both service types provide case tracking through our online portal. You\'ll receive regular updates on your case status, upcoming appointments, and important documents.')}</p>
             </div>
           </div>
         </motion.div>
@@ -445,7 +447,7 @@ const ServiceSelection = () => {
           className="mb-16"
         >
           <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">
-            Service Comparison
+            {t('serviceSelection.comparisonTable.title', 'Service Comparison')}
           </h2>
           
           <div className="overflow-x-auto">
@@ -456,57 +458,57 @@ const ServiceSelection = () => {
                   <th className="p-4 text-center border-b border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col items-center">
                       <HiOutlineScale className="w-8 h-8 text-green-500 mb-2" />
-                      <span className="font-bold text-gray-900 dark:text-white">Free Legal Aid</span>
+                      <span className="font-bold text-gray-900 dark:text-white">{t('serviceSelection.comparisonTable.free', 'Free Legal Aid')}</span>
                     </div>
                   </th>
                   <th className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
                     <div className="flex flex-col items-center">
                       <HiOutlineCash className="w-8 h-8 text-blue-500 mb-2" />
-                      <span className="font-bold text-gray-900 dark:text-white">Premium Service</span>
+                      <span className="font-bold text-gray-900 dark:text-white">{t('serviceSelection.comparisonTable.premium', 'Premium Service')}</span>
                     </div>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Cost</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Free</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Paid Plans</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.cost', 'Cost')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeCost', 'Free')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumCost', 'Paid Plans')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Legal Representation</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Student Lawyers</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Professional Lawyers</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.legalRepresentation', 'Legal Representation')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeRepresentation', 'Student Lawyers')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumRepresentation', 'Professional Lawyers')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Response Time</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Standard</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Priority</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.responseTime', 'Response Time')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeResponseTime', 'Standard')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumResponseTime', 'Priority')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Case Handling</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Regular Queue</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Expedited</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.caseHandling', 'Case Handling')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeCaseHandling', 'Regular Queue')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumCaseHandling', 'Expedited')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Communication</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Through Coordinator</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Direct with Lawyer</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.communication', 'Communication')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeCommunication', 'Through Coordinator')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumCommunication', 'Direct with Lawyer')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Support Hours</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Standard Office Hours</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Extended Hours</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.supportHours', 'Support Hours')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeSupportHours', 'Standard Office Hours')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumSupportHours', 'Extended Hours')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">Eligibility</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">Subject to Approval</td>
-                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">Available to All</td>
+                  <td className="p-4 border-b border-gray-200 dark:border-gray-700 font-medium">{t('serviceSelection.comparisonTable.eligibility', 'Eligibility')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700">{t('serviceSelection.comparisonTable.freeEligibility', 'Subject to Approval')}</td>
+                  <td className="p-4 text-center border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumEligibility', 'Available to All')}</td>
                 </tr>
                 <tr>
-                  <td className="p-4 font-medium">Best For</td>
-                  <td className="p-4 text-center">Basic legal needs, limited budget</td>
-                  <td className="p-4 text-center bg-blue-50 dark:bg-blue-900/20">Complex cases, priority handling</td>
+                  <td className="p-4 font-medium">{t('serviceSelection.comparisonTable.bestFor', 'Best For')}</td>
+                  <td className="p-4 text-center">{t('serviceSelection.comparisonTable.freeBestFor', 'Basic legal needs, limited budget')}</td>
+                  <td className="p-4 text-center bg-blue-50 dark:bg-blue-900/20">{t('serviceSelection.comparisonTable.premiumBestFor', 'Complex cases, priority handling')}</td>
                 </tr>
               </tbody>
             </table>
@@ -522,31 +524,29 @@ const ServiceSelection = () => {
         >
           <div className="inline-block p-1 rounded-lg bg-gradient-to-r from-primary-500 to-primary-700 mb-4">
             <div className="bg-white dark:bg-gray-800 rounded-md px-4 py-1">
-              <span className="text-sm font-medium text-primary-600 dark:text-primary-400">
-                Need Help Deciding?
-              </span>
+              <span className="text-sm font-medium text-primary-600 dark:text-primary-400">{t('serviceSelection.helpDeciding', 'Need Help Deciding?')}</span>
             </div>
           </div>
           
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Our Support Team is Ready to Assist You</h2>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{t('serviceSelection.supportTeam', 'Our Support Team is Ready to Assist You')}</h2>
           
           <div className="flex flex-wrap justify-center gap-6 mt-6">
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-sm">
               <HiOutlinePhone className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300">+251 123 456 789</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('serviceSelection.phoneNumber', '+251 123 456 789')}</span>
             </div>
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-sm">
               <HiOutlineChat className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300">Live Chat Support</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('serviceSelection.liveChat', 'Live Chat Support')}</span>
             </div>
             <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-sm">
               <HiOutlineOfficeBuilding className="w-5 h-5 text-primary-500" />
-              <span className="text-gray-700 dark:text-gray-300">Visit Our Office</span>
+              <span className="text-gray-700 dark:text-gray-300">{t('serviceSelection.visitOffice', 'Visit Our Office')}</span>
             </div>
           </div>
           
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
-            Our team is available Monday to Friday, 9:00 AM to 5:00 PM
+            {t('serviceSelection.officeHours', 'Our team is available Monday to Friday, 9:00 AM to 5:00 PM')}
           </p>
         </motion.div>
       </div>
@@ -564,9 +564,9 @@ const ServiceSelection = () => {
               <HiOutlineLightBulb className="h-8 w-8 text-primary-500" />
             </div>
             <div className="ml-3 flex-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Service Selection Guide</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">{t('serviceSelection.guide.title', 'Service Selection Guide')}</h3>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                <p>This is where you choose between paid legal services or free legal aid. Your selection will determine the next steps in your legal journey.</p>
+                <p>{t('serviceSelection.guide.description', 'This is where you choose between paid legal services or free legal aid. Your selection will determine the next steps in your legal journey.')}</p>
               </div>
               <div className="mt-4 flex justify-end">
                 <button
@@ -574,7 +574,7 @@ const ServiceSelection = () => {
                   onClick={() => setShowInfoTip(false)}
                   className="text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
                 >
-                  Got it
+                  {t('serviceSelection.guide.gotIt', 'Got it')}
                 </button>
               </div>
             </div>

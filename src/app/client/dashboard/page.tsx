@@ -35,6 +35,7 @@ import { CaseProgress } from './components/CaseProgress';
 import { CaseAnalytics } from './components/CaseAnalytics';
 import { CaseDetailsAnalytics } from './components/CaseDetailsAnalytics';
 import { IconType } from 'react-icons';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 interface HelpHint {
   category: string;
@@ -45,6 +46,7 @@ interface HelpHint {
 
 const Dashboard = () => {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const [showHelpHint, setShowHelpHint] = useState(true);
@@ -75,17 +77,17 @@ const Dashboard = () => {
   // Enhanced initial help messages
   const initialHelpMessages = [
     {
-      text: "👋 Welcome! Need help getting started?",
+      text: t('dashboard.help.welcome', '👋 Welcome! Need help getting started?'),
       color: "bg-blue-500",
       position: { x: -120, y: -80 }
     },
     {
-      text: "📱 Click here for quick assistance!",
+      text: t('dashboard.help.quickAssistance', '📱 Click here for quick assistance!'),
       color: "bg-purple-500",
       position: { x: -100, y: -40 }
     },
     {
-      text: "💡 Discover all features",
+      text: t('dashboard.help.discoverFeatures', '💡 Discover all features'),
       color: "bg-green-500",
       position: { x: -80, y: -120 }
     }
@@ -94,31 +96,31 @@ const Dashboard = () => {
   // Enhanced help hints with categories and messages
   const helpHints: HelpHint[] = [
     {
-      category: "Navigation",
+      category: t('dashboard.helpHints.navigation.category', 'Navigation'),
       messages: [
-        "👋 Need help finding your way around?",
-        "🎯 Looking for specific features?",
-        "🗺️ Want to explore all capabilities?"
+        t('dashboard.helpHints.navigation.message1', '👋 Need help finding your way around?'),
+        t('dashboard.helpHints.navigation.message2', '🎯 Looking for specific features?'),
+        t('dashboard.helpHints.navigation.message3', '🗺️ Want to explore all capabilities?')
       ],
       icon: HiOutlineLocationMarker,
       color: "text-blue-500"
     },
     {
-      category: "Case Management",
+      category: t('dashboard.helpHints.caseManagement.category', 'Case Management'),
       messages: [
-        "📊 Want to track your case progress?",
-        "📁 Need to manage documents?",
-        "⚖️ Looking for case updates?"
+        t('dashboard.helpHints.caseManagement.message1', '📊 Want to track your case progress?'),
+        t('dashboard.helpHints.caseManagement.message2', '📁 Need to manage documents?'),
+        t('dashboard.helpHints.caseManagement.message3', '⚖️ Looking for case updates?')
       ],
       icon: HiOutlineDocumentText,
       color: "text-purple-500"
     },
     {
-      category: "Support",
+      category: t('dashboard.helpHints.support.category', 'Support'),
       messages: [
-        "🤝 Need assistance with anything?",
-        "💬 Want to chat with support?",
-        "❓ Have questions about services?"
+        t('dashboard.helpHints.support.message1', '🤝 Need assistance with anything?'),
+        t('dashboard.helpHints.support.message2', '💬 Want to chat with support?'),
+        t('dashboard.helpHints.support.message3', '❓ Have questions about services?')
       ],
       icon: HiOutlineChat,
       color: "text-green-500"
@@ -365,25 +367,25 @@ const Dashboard = () => {
 
         const caseInsights = [
           {
-            title: 'New Cases',
+            title: t('dashboard.caseInsights.newCases.title', 'New Cases'),
             value: currentMonthCases,
             change: casesChange,
             trend: casesChange >= 0 ? 'up' : 'down'
           },
           {
-            title: 'Resolution Rate',
+            title: t('dashboard.caseInsights.resolutionRate.title', 'Resolution Rate'),
             value: `${Math.round((resolvedCases / totalCases) * 100)}%`,
             change: 5.2, // Example value, calculate actual change
             trend: 'up'
           },
           {
-            title: 'Avg. Time to Resolve',
+            title: t('dashboard.caseInsights.avgTimeToResolve.title', 'Avg. Time to Resolve'),
             value: `${Math.round(avgResolutionTime)} days`,
             change: -2.1, // Example value, calculate actual change
             trend: 'down'
           },
           {
-            title: 'Client Satisfaction',
+            title: t('dashboard.caseInsights.clientSatisfaction.title', 'Client Satisfaction'),
             value: '94%',
             change: 1.5,
             trend: 'up'
@@ -427,27 +429,27 @@ const Dashboard = () => {
         setDashboardData({
           stats: [
             {
-              title: 'Active Cases',
+              title: t('dashboard.stats.activeCases.title', 'Active Cases'),
               value: stats.activeCases,
               icon: HiOutlineDocumentText,
               color: 'bg-blue-100 text-blue-600',
               trend: { value: stats.casesChange, isPositive: stats.casesChange > 0 }
             },
             {
-              title: 'Appointments',
+              title: t('dashboard.stats.appointments.title', 'Appointments'),
               value: stats.upcomingAppointments,
               icon: HiOutlineCalendar,
               color: 'bg-green-100 text-green-600',
               trend: { value: stats.appointmentsChange, isPositive: true }
             },
             {
-              title: 'Pending Payments',
+              title: t('dashboard.stats.pendingPayments.title', 'Pending Payments'),
               value: stats.pendingPayments,
               icon: HiOutlineCash,
               color: 'bg-yellow-100 text-yellow-600'
             },
             {
-              title: 'Messages',
+              title: t('dashboard.stats.messages.title', 'Messages'),
               value: stats.unreadMessages,
               icon: HiOutlineChat,
               color: 'bg-purple-100 text-purple-600',
@@ -459,35 +461,35 @@ const Dashboard = () => {
           quickActions: [
             {
               id: 'book-appointment',
-              title: 'Book Appointment',
+              title: t('dashboard.quickActions.bookAppointment.title', 'Book Appointment'),
               icon: HiOutlineCalendar,
               color: 'bg-blue-100 text-blue-600',
               href: '/client/appointments/list',
-              description: 'Schedule a meeting with your lawyer'
+              description: t('dashboard.quickActions.bookAppointment.description', 'Schedule a meeting with your lawyer')
             },
             {
               id: 'make-payment',
-              title: 'Make Payment',
+              title: t('dashboard.quickActions.makePayment.title', 'Make Payment'),
               icon: HiOutlineCash,
               color: 'bg-green-100 text-green-600',
               href: '/client/registration/payment',
-              description: 'View and pay pending invoices'
+              description: t('dashboard.quickActions.makePayment.description', 'View and pay pending invoices')
             },
             {
               id: 'message-lawyer',
-              title: 'Message Lawyer',
+              title: t('dashboard.quickActions.messageLawyer.title', 'Message Lawyer'),
               icon: HiOutlineChat,
               color: 'bg-purple-100 text-purple-600',
               href: '/client/communication/messages',
-              description: 'Send a message to your lawyer'
+              description: t('dashboard.quickActions.messageLawyer.description', 'Send a message to your lawyer')
             },
             {
               id: 'submit-document',
-              title: 'Submit Document',
+              title: t('dashboard.quickActions.submitDocument.title', 'Submit Document'),
               icon: HiOutlineDocumentText,
               color: 'bg-yellow-100 text-yellow-600',
               href: '/client/documents/upload',
-              description: 'Upload documents for your case'
+              description: t('dashboard.quickActions.submitDocument.description', 'Upload documents for your case')
             }
           ]
         });
@@ -504,36 +506,36 @@ const Dashboard = () => {
             stages: [
               {
                 id: 'initial',
-                title: 'Initial Consultation',
-                description: 'Initial meeting and case evaluation',
+                title: t('dashboard.caseProgress.initial.title', 'Initial Consultation'),
+                description: t('dashboard.caseProgress.initial.description', 'Initial meeting and case evaluation'),
                 status: 'COMPLETED',
                 completedAt: activeCase.createdAt,
                 requirements: ['Valid ID', 'Case Documents']
               },
               {
                 id: 'review',
-                title: 'Case Review',
-                description: 'Legal team reviews your case details',
+                title: t('dashboard.caseProgress.review.title', 'Case Review'),
+                description: t('dashboard.caseProgress.review.description', 'Legal team reviews your case details'),
                 status: activeCase.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED',
                 estimatedCompletion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
               },
               {
                 id: 'strategy',
-                title: 'Strategy Development',
-                description: 'Developing legal strategy and action plan',
+                title: t('dashboard.caseProgress.strategy.title', 'Strategy Development'),
+                description: t('dashboard.caseProgress.strategy.description', 'Developing legal strategy and action plan'),
                 status: activeCase.status === 'ACTIVE' ? 'IN_PROGRESS' : 'PENDING',
                 requirements: ['Additional Documentation', 'Client Approval']
               },
               {
                 id: 'execution',
-                title: 'Case Execution',
-                description: 'Implementing legal strategy and representation',
+                title: t('dashboard.caseProgress.execution.title', 'Case Execution'),
+                description: t('dashboard.caseProgress.execution.description', 'Implementing legal strategy and representation'),
                 status: 'PENDING'
               },
               {
                 id: 'resolution',
-                title: 'Case Resolution',
-                description: 'Final steps and case closure',
+                title: t('dashboard.caseProgress.resolution.title', 'Case Resolution'),
+                description: t('dashboard.caseProgress.resolution.description', 'Final steps and case closure'),
                 status: 'PENDING'
               }
             ],
@@ -544,8 +546,8 @@ const Dashboard = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast({
-          title: "Error",
-          description: "Failed to load dashboard data. Please try again later.",
+          title: t('dashboard.error.title', "Error"),
+          description: t('dashboard.error.description', "Failed to load dashboard data. Please try again later."),
           variant: "destructive"
         });
       } finally {
@@ -688,7 +690,7 @@ const Dashboard = () => {
           animate={{ opacity: 1, x: 0 }}
           className="text-3xl font-bold text-gray-900 dark:text-white"
         >
-          Welcome back
+          {t('dashboard.welcome', 'Welcome back')}
         </motion.h1>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6">
@@ -715,7 +717,7 @@ const Dashboard = () => {
                 console.log('Time range changed:', range);
               }}
             />
-      </div>
+          </div>
 
           <div className="xl:col-span-8 space-y-6">
             {activeCase && (
@@ -753,8 +755,8 @@ const Dashboard = () => {
                 transition={{ delay: 0.6 }}
               >
                 <AppointmentCountdown
-                  title="Next Appointment"
-                  description={`with ${dashboardData.nextAppointment.lawyerName}`}
+                  title={t('dashboard.nextAppointment.title', 'Next Appointment')}
+                  description={t('dashboard.nextAppointment.description', `with ${dashboardData.nextAppointment.lawyerName}`)}
                   targetDate={new Date(dashboardData.nextAppointment.datetime).toISOString()}
                 />
               </motion.div>
@@ -901,35 +903,35 @@ const Dashboard = () => {
               >
                 <div className="space-y-4">
                   <div className="text-lg font-semibold text-gray-900 dark:text-white mb-3 border-b pb-2 dark:border-gray-700">
-                    How can we help you?
+                    {t('dashboard.helpMenu.title', 'How can we help you?')}
                   </div>
                   
                   {[
                     {
                       id: 'tutorial',
-                      title: 'Take a Tour',
-                      description: 'Get started with a guided tour',
+                      title: t('dashboard.helpMenu.tutorial.title', 'Take a Tour'),
+                      description: t('dashboard.helpMenu.tutorial.description', 'Get started with a guided tour'),
                       icon: HiOutlineClipboardCheck,
                       color: 'text-blue-600'
                     },
                     {
                       id: 'faq',
-                      title: 'FAQ',
-                      description: 'Find answers to common questions',
+                      title: t('dashboard.helpMenu.faq.title', 'FAQ'),
+                      description: t('dashboard.helpMenu.faq.description', 'Find answers to common questions'),
                       icon: HiOutlineDocumentText,
                       color: 'text-green-600'
                     },
                     {
                       id: 'support',
-                      title: 'Contact Support',
-                      description: 'Get help from our team',
+                      title: t('dashboard.helpMenu.support.title', 'Contact Support'),
+                      description: t('dashboard.helpMenu.support.description', 'Get help from our team'),
                       icon: HiOutlineChat,
                       color: 'text-purple-600'
                     },
                     {
                       id: 'documentation',
-                      title: 'Documentation',
-                      description: 'Browse detailed guides',
+                      title: t('dashboard.helpMenu.documentation.title', 'Documentation'),
+                      description: t('dashboard.helpMenu.documentation.description', 'Browse detailed guides'),
                       icon: HiOutlineDocumentDuplicate,
                       color: 'text-orange-600'
                     }

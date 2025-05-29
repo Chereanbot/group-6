@@ -45,8 +45,8 @@ const CoordinatorsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    status: [] as CoordinatorStatus[],
-    type: [] as CoordinatorType[],
+    status: '' as CoordinatorStatus | '',
+    type: '' as CoordinatorType | '',
     office: '',
     dateRange: {
       start: '',
@@ -100,9 +100,11 @@ const CoordinatorsPage = () => {
       });
 
       if (searchTerm) queryParams.append('search', searchTerm);
-      filters.status.forEach(status => queryParams.append('status', status));
-      filters.type.forEach(type => queryParams.append('type', type));
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.type) queryParams.append('type', filters.type);
       if (filters.office) queryParams.append('office', filters.office);
+      if (filters.dateRange.start) queryParams.append('startDate', filters.dateRange.start);
+      if (filters.dateRange.end) queryParams.append('endDate', filters.dateRange.end);
 
       const response = await fetch(`/api/admin/coordinators?${queryParams}`);
       const result = await response.json();
@@ -327,41 +329,67 @@ const CoordinatorsPage = () => {
             </tr>
           </thead>
           <tbody className={adminStyles.table.body}>
-            {coordinators.map((coordinator) => (
-              <tr key={coordinator.id} className={adminStyles.table.row}>
-                <td className={adminStyles.table.cell}>{coordinator.user.fullName}</td>
-                <td className={adminStyles.table.cell}>{coordinator.user.email}</td>
-                <td className={adminStyles.table.cell}>{coordinator.type}</td>
-                <td className={adminStyles.table.cell}>{coordinator.office.name}</td>
-                <td className={adminStyles.table.cell}>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium
-                    ${coordinator.status === CoordinatorStatus.ACTIVE ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                    coordinator.status === CoordinatorStatus.INACTIVE ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
-                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
-                    {coordinator.status}
-                  </span>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8">
+                  <div className="flex justify-center items-center space-x-2">
+                    <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading coordinators...</span>
+                  </div>
                 </td>
-                <td className={adminStyles.table.cell}>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => router.push(`/admin/coordinators/${coordinator.id}/edit`)}
-                      className={adminStyles.button.icon}
+              </tr>
+            ) : coordinators.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center space-y-3">
+                    <HiOutlineExclamation className="w-10 h-10 text-gray-400" />
+                    <p>No coordinators found</p>
+                    <button 
+                      onClick={() => router.push('/admin/coordinators/new')} 
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
                     >
-                      <HiOutlinePencil className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCoordinatorToDelete(coordinator);
-                        setShowDeleteModal(true);
-                      }}
-                      className={adminStyles.button.icon}
-                    >
-                      <HiOutlineTrash className="w-5 h-5" />
+                      Create New Coordinator
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              coordinators.map((coordinator) => (
+                <tr key={coordinator.id} className={adminStyles.table.row}>
+                  <td className={adminStyles.table.cell}>{coordinator.user?.fullName || 'N/A'}</td>
+                  <td className={adminStyles.table.cell}>{coordinator.user?.email || 'N/A'}</td>
+                  <td className={adminStyles.table.cell}>{coordinator.type || 'N/A'}</td>
+                  <td className={adminStyles.table.cell}>{coordinator.office?.name || 'No office assigned'}</td>
+                  <td className={adminStyles.table.cell}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium
+                      ${coordinator.status === CoordinatorStatus.ACTIVE ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      coordinator.status === CoordinatorStatus.INACTIVE ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}>
+                      {coordinator.status || 'Unknown'}
+                    </span>
+                  </td>
+                  <td className={adminStyles.table.cell}>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => router.push(`/admin/coordinators/${coordinator.id}/edit`)}
+                        className={adminStyles.button.icon}
+                      >
+                        <HiOutlinePencil className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCoordinatorToDelete(coordinator);
+                          setShowDeleteModal(true);
+                        }}
+                        className={adminStyles.button.icon}
+                      >
+                        <HiOutlineTrash className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

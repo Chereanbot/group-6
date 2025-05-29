@@ -35,7 +35,24 @@ export function EditCoordinatorForm({ id }: { id: string }) {
 
   const loadOffices = async () => {
     try {
-      const response = await fetch('/api/admin/offices');
+      setLoading(true);
+      const response = await fetch('/api/offices', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('Please log in to continue');
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error('Failed to load offices');
+      }
+
       const result = await response.json();
 
       if (!result.success) {
@@ -44,35 +61,63 @@ export function EditCoordinatorForm({ id }: { id: string }) {
 
       setOffices(result.data.offices);
     } catch (error) {
-      console.error('Failed to load offices:', error);
-      toast.error('Failed to load offices');
+      console.error('Error loading offices:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to load offices. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadCoordinator = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/coordinators/${id}`);
+      const response = await fetch(`/api/admin/coordinators/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          toast.error('You do not have permission to access this page');
+          router.push('/auth/login');
+          return;
+        }
+        throw new Error('Failed to load coordinator details');
+      }
+
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to load coordinator');
+        throw new Error(result.error || 'Failed to load coordinator details');
       }
 
-      const coordinator = result.data;
-      if (!coordinator || !coordinator.user) {
-        throw new Error('Invalid coordinator data received');
+      const coordinator = result.data.coordinator;
+      
+      if (!coordinator) {
+        throw new Error('Coordinator not found');
+      }
+
+      if (!coordinator.user) {
+        throw new Error('User data not found for this coordinator');
       }
 
       setUserId(coordinator.user.id);
+
       setFormData({
         fullName: coordinator.user.fullName || '',
         email: coordinator.user.email || '',
         phone: coordinator.user.phone || '',
         type: coordinator.type || CoordinatorType.FULL_TIME,
         officeId: coordinator.officeId || '',
-        startDate: coordinator.startDate ? new Date(coordinator.startDate).toISOString().split('T')[0] : '',
-        endDate: coordinator.endDate ? new Date(coordinator.endDate).toISOString().split('T')[0] : undefined,
+        startDate: coordinator.startDate ? new Date(coordinator.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        endDate: coordinator.endDate ? new Date(coordinator.endDate).toISOString().split('T')[0] : '',
         specialties: coordinator.specialties || [],
         status: coordinator.status || CoordinatorStatus.ACTIVE,
         qualifications: (coordinator.qualifications || []).map((q: any) => ({
@@ -80,13 +125,17 @@ export function EditCoordinatorForm({ id }: { id: string }) {
           title: q.title || '',
           institution: q.institution || '',
           dateObtained: q.dateObtained ? new Date(q.dateObtained).toISOString().split('T')[0] : '',
-          expiryDate: q.expiryDate ? new Date(q.expiryDate).toISOString().split('T')[0] : undefined,
+          expiryDate: q.expiryDate ? new Date(q.expiryDate).toISOString().split('T')[0] : '',
           score: q.score || undefined
         }))
       });
     } catch (error) {
-      console.error('Failed to load coordinator:', error);
-      toast.error('Failed to load coordinator');
+      console.error('Error loading coordinator:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to load coordinator details. Please try again.');
+      }
       router.push('/admin/coordinators');
     } finally {
       setLoading(false);
@@ -101,13 +150,23 @@ export function EditCoordinatorForm({ id }: { id: string }) {
       const response = await fetch(`/api/admin/coordinators/${id}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           ...formData,
           userId
         })
       });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          toast.error('You do not have permission to update this coordinator');
+          return;
+        }
+        throw new Error('Failed to update coordinator');
+      }
 
       const result = await response.json();
 

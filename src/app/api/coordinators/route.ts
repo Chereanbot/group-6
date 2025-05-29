@@ -170,28 +170,76 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function verifyAdmin() {
   try {
-    // Verify admin authorization
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
     
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No auth token found');
+      return { error: 'Unauthorized - Please log in', status: 401 };
     }
 
     const authResult = await verifyAuth(token);
-    if (!authResult.isAuthenticated || authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+    console.log('Auth result:', {
+      isAuthenticated: authResult.isAuthenticated,
+      userRole: authResult.user?.userRole,
+      userId: authResult.user?.id
+    });
+
+    if (!authResult.isAuthenticated) {
+      console.log('User not authenticated');
+      return { error: 'Unauthorized - Please log in', status: 401 };
+    }
+
+    // Check if user is a SUPER_ADMIN
+    if (authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+      console.log('User is not a super admin:', {
+        userRole: authResult.user?.userRole,
+        expectedRole: UserRoleEnum.SUPER_ADMIN
+      });
+      return { error: 'Unauthorized - Super Admin access required', status: 403 };
+    }
+
+    return { authResult };
+  } catch (error) {
+    console.error('Error verifying admin:', error);
+    return { error: 'Authentication error', status: 500 };
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    console.log('=== Coordinator Creation Request ===');
+    
+    // Verify admin authorization
+    const adminCheck = await verifyAdmin();
+    if (adminCheck.error) {
+      console.log('Admin verification failed:', adminCheck.error);
       return NextResponse.json(
-        { error: 'Unauthorized access' },
-        { status: 403 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
     const body = await request.json();
+    console.log('Request body:', {
+      email: body.email,
+      fullName: body.fullName,
+      officeId: body.officeId,
+      type: body.type,
+      hasPassword: !!body.password,
+      specialties: body.specialties
+    });
     
     // Validate required fields
     if (!body.email || !body.password || !body.fullName || !body.officeId) {
+      console.log('Missing required fields:', { 
+        email: !!body.email, 
+        password: !!body.password, 
+        fullName: !!body.fullName, 
+        officeId: !!body.officeId 
+      });
       return NextResponse.json(
         { 
           success: false,
@@ -273,7 +321,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user and coordinator in a transaction
+    console.log('Starting database transaction...');
     const result = await prisma.$transaction(async (prisma) => {
+      console.log('Creating user...');
       // Create user
       const user = await prisma.user.create({
         data: {
@@ -285,7 +335,9 @@ export async function POST(request: NextRequest) {
           phone
         }
       });
+      console.log('User created:', { id: user.id, email: user.email });
 
+      console.log('Creating coordinator profile...');
       // Create coordinator profile
       const coordinator = await prisma.coordinator.create({
         data: {
@@ -328,11 +380,13 @@ export async function POST(request: NextRequest) {
           qualifications: true
         }
       });
+      console.log('Coordinator created:', { id: coordinator.id });
 
       // Create activity log
+      console.log('Creating activity log...');
       await prisma.activity.create({
         data: {
-          userId: authResult.user.id,
+          userId: adminCheck.authResult.user.id,
           action: 'COORDINATOR_CREATED',
           details: {
             coordinatorId: coordinator.id,
@@ -341,9 +395,11 @@ export async function POST(request: NextRequest) {
           }
         }
       });
+      console.log('Activity log created');
 
       return coordinator;
     });
+    console.log('Transaction completed successfully');
 
     return NextResponse.json({
       success: true,

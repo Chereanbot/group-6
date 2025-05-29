@@ -40,20 +40,12 @@ export async function GET(
         user: {
           select: {
             id: true,
-            email: true,
             fullName: true,
-            phone: true,
-            status: true,
-            userRole: true
+            email: true,
+            phone: true
           }
         },
-        office: {
-          select: {
-            id: true,
-            name: true,
-            location: true
-          }
-        },
+        office: true,
         qualifications: true
       }
     });
@@ -67,13 +59,12 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: coordinator
+      data: { coordinator }
     });
-
   } catch (error) {
     console.error('Error fetching coordinator:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Failed to fetch coordinator' },
       { status: 500 }
     );
   }
@@ -93,85 +84,83 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const { fullName, email, phone, type, officeId, startDate, endDate, specialties, status, qualifications } = body;
 
-    // Validate required fields
-    const requiredFields = ['fullName', 'email', 'type', 'officeId', 'status'];
-    const missingFields = requiredFields.filter(field => !body[field]);
-    
-    if (missingFields.length > 0) {
-      return NextResponse.json(
-        { success: false, error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Update coordinator in transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Update user
-      await tx.user.update({
-        where: { id: body.userId },
-        data: {
-          fullName: body.fullName,
-          phone: body.phone
-        }
-      });
-
-      // Update coordinator
-      const coordinator = await tx.coordinator.update({
-        where: { id: params.id },
-        data: {
-          type: body.type,
-          officeId: body.officeId,
-          startDate: new Date(body.startDate),
-          endDate: body.endDate ? new Date(body.endDate) : null,
-          specialties: body.specialties,
-          status: body.status,
-          qualifications: {
-            deleteMany: {},
-            create: body.qualifications.map((q: any) => ({
-              type: q.type,
-              title: q.title,
-              institution: q.institution,
-              dateObtained: new Date(q.dateObtained),
-              expiryDate: q.expiryDate ? new Date(q.expiryDate) : null,
-              score: q.score
-            }))
+    const coordinator = await prisma.coordinator.update({
+      where: { id: params.id },
+      data: {
+        type,
+        office: {
+          connect: { id: officeId }
+        },
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        specialties,
+        status,
+        user: {
+          update: {
+            fullName,
+            email,
+            phone
           }
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-              phone: true,
-              status: true,
-              userRole: true
-            }
-          },
-          office: {
-            select: {
-              id: true,
-              name: true,
-              location: true
-            }
-          },
-          qualifications: true
+        qualifications: {
+          deleteMany: {},
+          create: qualifications.map((q: any) => ({
+            type: q.type,
+            title: q.title,
+            institution: q.institution,
+            dateObtained: new Date(q.dateObtained),
+            expiryDate: q.expiryDate ? new Date(q.expiryDate) : null,
+            score: q.score
+          }))
         }
-      });
-
-      return coordinator;
+      },
+      include: {
+        user: true,
+        office: true,
+        qualifications: true
+      }
     });
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: { coordinator }
     });
-
   } catch (error) {
     console.error('Error updating coordinator:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Failed to update coordinator' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const adminCheck = await verifyAdmin();
+    if (adminCheck.error) {
+      return NextResponse.json(
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
+    await prisma.coordinator.delete({
+      where: { id: params.id }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Coordinator deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting coordinator:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete coordinator' },
       { status: 500 }
     );
   }

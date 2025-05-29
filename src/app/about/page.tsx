@@ -20,6 +20,9 @@ import {
   HiOutlineMail,
   HiOutlinePhone
 } from 'react-icons/hi';
+
+
+
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';

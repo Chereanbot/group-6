@@ -201,8 +201,14 @@ export async function POST(request: Request) {
       officeId
     } = body;
 
+    // Fetch the user's phone from the database
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { phone: true }
+    });
+
     // Get user's profile for location details
-    const userProfile = await prisma.clientProfile.findUnique({
+    let userProfile = await prisma.clientProfile.findUnique({
       where: { userId: user.id },
       select: {
         region: true,
@@ -215,10 +221,36 @@ export async function POST(request: Request) {
     });
 
     if (!userProfile) {
-      return NextResponse.json(
-        { success: false, message: "User profile not found" },
-        { status: 400 }
-      );
+      // Find the first available office to assign as default
+      const defaultOffice = await prisma.office.findFirst();
+      userProfile = await prisma.clientProfile.create({
+        data: {
+          user: { connect: { id: user.id } },
+          region: "Unknown",
+          zone: "Unknown",
+          wereda: "Unknown",
+          kebele: "Unknown",
+          houseNumber: "",
+          phone: dbUser?.phone ?? "",
+          age: 18,
+          sex: "OTHER",
+          numberOfFamily: 1,
+          healthStatus: "HEALTHY",
+          caseType: "OTHER",
+          caseCategory: "OTHER",
+          assignedOffice: defaultOffice ? { connect: { id: defaultOffice.id } } : undefined,
+          guidelines: [],
+          notes: ""
+        },
+        select: {
+          region: true,
+          zone: true,
+          wereda: true,
+          kebele: true,
+          houseNumber: true,
+          phone: true
+        }
+      });
     }
 
     // Create the case with basic info
@@ -229,14 +261,14 @@ export async function POST(request: Request) {
         priority: priority as Priority,
         description,
         status: CaseStatus.PENDING,
-        clientId: user.id,
+        client: { connect: { id: user.id } },
         clientName: user.fullName,
         clientPhone: userProfile.phone,
         region: userProfile.region,
-        zone: userProfile.zone,
-        wereda: userProfile.wereda,
-        kebele: userProfile.kebele,
-        houseNumber: userProfile.houseNumber || '',
+        zone: userProfile.zone ?? "Unknown",
+        wereda: userProfile.wereda ?? "Unknown",
+        kebele: userProfile.kebele ?? "Unknown",
+        houseNumber: userProfile.houseNumber ?? "",
         clientRequest: description,
         requestDetails: {
           incidentDate: new Date(incidentDate),
@@ -245,7 +277,7 @@ export async function POST(request: Request) {
           urgencyReason,
           additionalNotes
         },
-        officeId // Assign to specified office
+        assignedOffice: { connect: { id: officeId } }
       }
     });
 

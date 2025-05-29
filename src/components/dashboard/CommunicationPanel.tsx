@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/providers/LanguageProvider';
 import {
   HiOutlineChatAlt2,
   HiOutlineMailOpen,
@@ -20,41 +21,42 @@ interface CommunicationPanelProps {
 
 const CommunicationPanel = ({ isOpen, onClose }: CommunicationPanelProps) => {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const communicationOptions = [
     {
-      title: 'Message Lawyer',
+      title: t('communication.messageLawyer'),
       path: '/client/communication/messages',
       icon: <HiOutlineMailOpen className="w-6 h-6" />,
-      description: 'Send messages to your legal team',
+      description: t('communication.messageLawyerDesc'),
       color: 'bg-blue-500'
     },
     {
-      title: 'Submit Documents',
+      title: t('communication.submitDocuments'),
       path: '/client/communication/documents',
       icon: <HiOutlineDocumentDuplicate className="w-6 h-6" />,
-      description: 'Upload and share case documents',
+      description: t('communication.submitDocumentsDesc'),
       color: 'bg-green-500'
     },
     {
-      title: 'Request Appointment',
+      title: t('communication.requestAppointment'),
       path: '/client/communication/appointments',
       icon: <HiOutlineCalendar className="w-6 h-6" />,
-      description: 'Schedule meetings with your lawyer',
+      description: t('communication.requestAppointmentDesc'),
       color: 'bg-purple-500'
     },
     {
-      title: 'Voice Call',
+      title: t('communication.voiceCall'),
       path: '/client/communication/call',
       icon: <HiOutlinePhone className="w-6 h-6" />,
-      description: 'Start a voice call',
+      description: t('communication.voiceCallDesc'),
       color: 'bg-orange-500'
     },
     {
-      title: 'Video Call',
+      title: t('communication.videoCall'),
       path: '/client/communication/video-call',
       icon: <HiOutlineVideoCamera className="w-6 h-6" />,
-      description: 'Start a video conference',
+      description: t('communication.videoCallDesc'),
       color: 'bg-pink-500'
     }
   ];
@@ -91,7 +93,7 @@ const CommunicationPanel = ({ isOpen, onClose }: CommunicationPanelProps) => {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-3">
                   <HiOutlineChatAlt2 className="w-8 h-8 text-primary-500" />
-                  <h2 className="text-xl font-bold">Communication</h2>
+                  <h2 className="text-xl font-bold">{t('communication.title')}</h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -101,7 +103,7 @@ const CommunicationPanel = ({ isOpen, onClose }: CommunicationPanelProps) => {
                 </button>
               </div>
               <p className="text-gray-600 dark:text-gray-400">
-                Connect with your legal team
+                {t('communication.connect')}
               </p>
             </div>
 
@@ -150,7 +152,7 @@ const CommunicationPanel = ({ isOpen, onClose }: CommunicationPanelProps) => {
                   className="px-6 py-2 text-gray-600 dark:text-gray-400
                     hover:text-gray-800 dark:hover:text-gray-200"
                 >
-                  Cancel
+                  {t('communication.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -160,7 +162,7 @@ const CommunicationPanel = ({ isOpen, onClose }: CommunicationPanelProps) => {
                   className="px-6 py-2 bg-primary-500 text-white rounded-lg
                     hover:bg-primary-600 transition-colors"
                 >
-                  Start Chat
+                  {t('communication.startChat')}
                 </button>
               </div>
             </div>

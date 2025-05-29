@@ -25,6 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HiOutlineBell } from "react-icons/hi";
 import NotificationSettings from '@/components/NotificationSettings';
+import { useLanguage } from "@/providers/LanguageProvider";
 
 interface Appointment {
   id: string;
@@ -59,6 +60,7 @@ export default function ClientAppointmentList() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [clientId, setClientId] = useState<string>(''); // You'll need to get this from your auth context
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const fetchAppointments = async () => {
     try {
@@ -81,7 +83,7 @@ export default function ClientAppointmentList() {
       setError(err.message);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: t('appointments.error.title', 'Error'),
         description: err.message,
       });
     } finally {
@@ -133,7 +135,7 @@ export default function ClientAppointmentList() {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-600">Error</h3>
+          <h3 className="text-lg font-semibold text-red-600">{t('appointments.error.title', 'Error')}</h3>
           <p className="text-gray-600">{error}</p>
         </div>
       </div>
@@ -144,38 +146,35 @@ export default function ClientAppointmentList() {
     <div className="container mx-auto py-8">
       <Tabs defaultValue="list" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list">Appointments</TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <HiOutlineBell className="h-5 w-5" />
-            Notifications
-          </TabsTrigger>
+          <TabsTrigger value="list">{t('appointments.tabs.list', 'Appointments List')}</TabsTrigger>
+          <TabsTrigger value="notifications">{t('appointments.tabs.notifications', 'Notification Settings')}</TabsTrigger>
         </TabsList>
         <TabsContent value="list">
           <Card>
             <CardHeader>
-              <CardTitle>My Appointments</CardTitle>
+              <CardTitle>{t('appointments.list.title', 'My Appointments')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Case Type</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Venue</TableHead>
-                      <TableHead>Coordinator</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>{t('appointments.list.dateTime', 'Date & Time')}</TableHead>
+                      <TableHead>{t('appointments.list.duration', 'Duration')}</TableHead>
+                      <TableHead>{t('appointments.list.purpose', 'Purpose')}</TableHead>
+                      <TableHead>{t('appointments.list.caseType', 'Case Type')}</TableHead>
+                      <TableHead>{t('appointments.list.priority', 'Priority')}</TableHead>
+                      <TableHead>{t('appointments.list.status', 'Status')}</TableHead>
+                      <TableHead>{t('appointments.list.venue', 'Venue')}</TableHead>
+                      <TableHead>{t('appointments.list.coordinator', 'Coordinator')}</TableHead>
+                      <TableHead>{t('appointments.list.actions', 'Actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {appointments.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="text-center py-8">
-                          No appointments found
+                          {t('appointments.list.noAppointments', 'No appointments found')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -184,7 +183,7 @@ export default function ClientAppointmentList() {
                           <TableCell>
                             {format(new Date(appointment.scheduledTime), 'PPp')}
                           </TableCell>
-                          <TableCell>{appointment.duration} minutes</TableCell>
+                          <TableCell>{appointment.duration} {t('appointments.list.minutes', 'minutes')}</TableCell>
                           <TableCell>{appointment.purpose}</TableCell>
                           <TableCell>{appointment.caseType}</TableCell>
                           <TableCell>
@@ -197,12 +196,12 @@ export default function ClientAppointmentList() {
                               {appointment.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{appointment.venue || 'N/A'}</TableCell>
+                          <TableCell>{appointment.venue || t('appointments.list.na', 'N/A')}</TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium">{appointment.coordinator.name}</p>
                               <p className="text-sm text-gray-500">
-                                {appointment.coordinator.office?.name || 'No office assigned'}
+                                {appointment.coordinator.office?.name || t('appointments.list.noOffice', 'No office assigned')}
                                 {appointment.coordinator.office?.location && 
                                   ` - ${appointment.coordinator.office.location}`
                                 }
@@ -215,7 +214,7 @@ export default function ClientAppointmentList() {
                               size="sm"
                               onClick={() => setSelectedAppointment(appointment)}
                             >
-                              View Details
+                              {t('appointments.actions.viewDetails', 'View Details')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -237,42 +236,42 @@ export default function ClientAppointmentList() {
       <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Appointment Details</DialogTitle>
+            <DialogTitle>{t('appointments.details.title', 'Appointment Details')}</DialogTitle>
           </DialogHeader>
           {selectedAppointment && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <h3 className="font-semibold mb-2">Appointment Information</h3>
-                <p><span className="font-medium">Date & Time:</span> {format(new Date(selectedAppointment.scheduledTime), 'PPp')}</p>
-                <p><span className="font-medium">Duration:</span> {selectedAppointment.duration} minutes</p>
-                <p><span className="font-medium">Purpose:</span> {selectedAppointment.purpose}</p>
-                <p><span className="font-medium">Case Type:</span> {selectedAppointment.caseType}</p>
-                <p><span className="font-medium">Status:</span> {selectedAppointment.status}</p>
-                <p><span className="font-medium">Priority:</span> {selectedAppointment.priority}</p>
-                <p><span className="font-medium">Venue:</span> {selectedAppointment.venue || 'N/A'}</p>
+                <h3 className="font-semibold mb-2">{t('appointments.details.info', 'Appointment Information')}</h3>
+                <p><span className="font-medium">{t('appointments.details.dateTime', 'Date & Time')}:</span> {format(new Date(selectedAppointment.scheduledTime), 'PPp')}</p>
+                <p><span className="font-medium">{t('appointments.details.duration', 'Duration')}:</span> {selectedAppointment.duration} {t('appointments.details.minutes', 'minutes')}</p>
+                <p><span className="font-medium">{t('appointments.details.purpose', 'Purpose')}:</span> {selectedAppointment.purpose}</p>
+                <p><span className="font-medium">{t('appointments.details.caseType', 'Case Type')}:</span> {selectedAppointment.caseType}</p>
+                <p><span className="font-medium">{t('appointments.details.status', 'Status')}:</span> {selectedAppointment.status}</p>
+                <p><span className="font-medium">{t('appointments.details.priority', 'Priority')}:</span> {selectedAppointment.priority}</p>
+                <p><span className="font-medium">{t('appointments.details.venue', 'Venue')}:</span> {selectedAppointment.venue || t('appointments.details.na', 'N/A')}</p>
                 {selectedAppointment.notes && (
-                  <p><span className="font-medium">Notes:</span> {selectedAppointment.notes}</p>
+                  <p><span className="font-medium">{t('appointments.details.notes', 'Notes')}:</span> {selectedAppointment.notes}</p>
                 )}
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Coordinator Information</h3>
-                <p><span className="font-medium">Name:</span> {selectedAppointment.coordinator.name}</p>
-                <p><span className="font-medium">Email:</span> {selectedAppointment.coordinator.email}</p>
-                <p><span className="font-medium">Phone:</span> {selectedAppointment.coordinator.phone}</p>
+                <h3 className="font-semibold mb-2">{t('appointments.details.coordinator', 'Coordinator Information')}</h3>
+                <p><span className="font-medium">{t('appointments.details.name', 'Name')}:</span> {selectedAppointment.coordinator.name}</p>
+                <p><span className="font-medium">{t('appointments.details.email', 'Email')}:</span> {selectedAppointment.coordinator.email}</p>
+                <p><span className="font-medium">{t('appointments.details.phone', 'Phone')}:</span> {selectedAppointment.coordinator.phone}</p>
                 {selectedAppointment.coordinator.office && (
                   <div className="mt-4">
-                    <h4 className="font-semibold mb-2">Office Details</h4>
-                    <p><span className="font-medium">Name:</span> {selectedAppointment.coordinator.office.name}</p>
-                    <p><span className="font-medium">Location:</span> {selectedAppointment.coordinator.office.location}</p>
-                    <p><span className="font-medium">Address:</span> {selectedAppointment.coordinator.office.address}</p>
-                    <p><span className="font-medium">Phone:</span> {selectedAppointment.coordinator.office.phone}</p>
-                    <p><span className="font-medium">Email:</span> {selectedAppointment.coordinator.office.email}</p>
+                    <h4 className="font-semibold mb-2">{t('appointments.details.office', 'Office Details')}</h4>
+                    <p><span className="font-medium">{t('appointments.details.name', 'Name')}:</span> {selectedAppointment.coordinator.office.name}</p>
+                    <p><span className="font-medium">{t('appointments.details.location', 'Location')}:</span> {selectedAppointment.coordinator.office.location}</p>
+                    <p><span className="font-medium">{t('appointments.details.address', 'Address')}:</span> {selectedAppointment.coordinator.office.address}</p>
+                    <p><span className="font-medium">{t('appointments.details.phone', 'Phone')}:</span> {selectedAppointment.coordinator.office.phone}</p>
+                    <p><span className="font-medium">{t('appointments.details.email', 'Email')}:</span> {selectedAppointment.coordinator.office.email}</p>
                   </div>
                 )}
               </div>
               {selectedAppointment.requiredDocuments.length > 0 && (
                 <div className="col-span-2">
-                  <h3 className="font-semibold mb-2">Required Documents</h3>
+                  <h3 className="font-semibold mb-2">{t('appointments.details.documents', 'Required Documents')}</h3>
                   <ul className="list-disc list-inside">
                     {selectedAppointment.requiredDocuments.map((doc, index) => (
                       <li key={index}>{doc}</li>

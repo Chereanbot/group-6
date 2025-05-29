@@ -26,102 +26,137 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/providers/LanguageProvider';
 
-const formSchema = z.object({
-  // Personal Information
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().min(10, 'Phone number must be at least 10 characters'),
-  email: z.string().email().optional(),
-  age: z.number().min(18, 'Must be at least 18 years old'),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
-  familyMembers: z.number().min(0, 'Must be 0 or greater'),
-  healthStatus: z.enum(['HEALTHY', 'DISABLED', 'CHRONIC_ILLNESS', 'OTHER']),
-
-  // Location Information
-  region: z.string().min(1, 'Region is required'),
-  zone: z.string().min(1, 'Zone is required'),
-  wereda: z.string().min(1, 'Wereda is required'),
-  kebele: z.string().min(1, 'Kebele is required'),
-  houseNumber: z.string().optional(),
-
-  // Case Information
-  caseType: z.string().min(1, 'Case type is required'),
-  caseCategory: z.enum(['FAMILY', 'CRIMINAL', 'CIVIL', 'PROPERTY', 'LABOR', 'COMMERCIAL', 'CONSTITUTIONAL', 'ADMINISTRATIVE', 'OTHER']),
-  caseDescription: z.string().min(10, 'Case description must be at least 10 characters'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
-
-  // Office Information
-  officeId: z.string().min(1, 'Office selection is required'),
+// Create a function to get localized validation messages
+const getValidationMessages = (t) => ({
+  nameMin: t('registration.validation.nameMin', 'Name must be at least 2 characters'),
+  phoneMin: t('registration.validation.phoneMin', 'Phone number must be at least 10 characters'),
+  emailInvalid: t('registration.validation.emailInvalid', 'Invalid email address'),
+  ageMin: t('registration.validation.ageMin', 'Must be at least 18 years old'),
+  familyMembersMin: t('registration.validation.familyMembersMin', 'Must be 0 or greater'),
+  regionRequired: t('registration.validation.regionRequired', 'Region is required'),
+  zoneRequired: t('registration.validation.zoneRequired', 'Zone is required'),
+  weredaRequired: t('registration.validation.weredaRequired', 'Wereda is required'),
+  kebeleRequired: t('registration.validation.kebeleRequired', 'Kebele is required'),
+  caseTypeRequired: t('registration.validation.caseTypeRequired', 'Case type is required'),
+  caseDescriptionMin: t('registration.validation.caseDescriptionMin', 'Case description must be at least 10 characters'),
+  officeRequired: t('registration.validation.officeRequired', 'Office selection is required'),
 });
 
-const steps = [
+// Create the form schema with dynamic validation messages
+const createFormSchema = (t) => {
+  const messages = getValidationMessages(t);
+  
+  return z.object({
+    // Personal Information
+    fullName: z.string().min(2, messages.nameMin),
+    phone: z.string().min(10, messages.phoneMin),
+    email: z.string().email(messages.emailInvalid).optional(),
+    age: z.number().min(18, messages.ageMin),
+    gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
+    familyMembers: z.number().min(0, messages.familyMembersMin),
+    healthStatus: z.enum(['HEALTHY', 'DISABLED', 'CHRONIC_ILLNESS', 'OTHER']),
+
+    // Location Information
+    region: z.string().min(1, messages.regionRequired),
+    zone: z.string().min(1, messages.zoneRequired),
+    wereda: z.string().min(1, messages.weredaRequired),
+    kebele: z.string().min(1, messages.kebeleRequired),
+    houseNumber: z.string().optional(),
+
+    // Case Information
+    caseType: z.string().min(1, messages.caseTypeRequired),
+    caseCategory: z.enum(['FAMILY', 'CRIMINAL', 'CIVIL', 'PROPERTY', 'LABOR', 'COMMERCIAL', 'CONSTITUTIONAL', 'ADMINISTRATIVE', 'OTHER']),
+    caseDescription: z.string().min(10, messages.caseDescriptionMin),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+
+    // Office Information
+    officeId: z.string().min(1, messages.officeRequired),
+  });
+};
+
+const getSteps = (t) => [
   {
     id: 'personal',
-    title: 'Personal Information',
+    title: t('registration.steps.personal.title', 'Personal Information'),
     icon: HiOutlineUser,
-    description: 'Basic personal details'
+    description: t('registration.steps.personal.description', 'Basic personal details')
   },
   {
     id: 'location',
-    title: 'Location',
+    title: t('registration.steps.location.title', 'Location'),
     icon: HiOutlineLocationMarker,
-    description: 'Your current address'
+    description: t('registration.steps.location.description', 'Your current address')
   },
   {
     id: 'case',
-    title: 'Case Details',
+    title: t('registration.steps.case.title', 'Case Details'),
     icon: HiOutlineDocumentText,
-    description: 'Information about your case'
+    description: t('registration.steps.case.description', 'Information about your case')
   },
   {
     id: 'office',
-    title: 'Office Selection',
+    title: t('registration.steps.office.title', 'Office Selection'),
     icon: HiOutlineOfficeBuilding,
-    description: 'Choose legal aid office'
+    description: t('registration.steps.office.description', 'Choose legal aid office')
   },
   {
     id: 'documents',
-    title: 'Documents',
+    title: t('registration.steps.documents.title', 'Documents'),
     icon: HiOutlineUpload,
-    description: 'Upload required documents'
+    description: t('registration.steps.documents.description', 'Upload required documents')
   }
 ];
 
-const caseTypes = [
-  { value: 'CIVIL', label: 'Civil Case' },
-  { value: 'CRIMINAL', label: 'Criminal Case' },
-  { value: 'FAMILY', label: 'Family Law' },
-  { value: 'PROPERTY', label: 'Property Dispute' },
-  { value: 'LABOR', label: 'Labor Law' },
-  { value: 'DIVORCE', label: 'Divorce' },
-  { value: 'INHERITANCE', label: 'Inheritance' },
-  { value: 'DOMESTIC_VIOLENCE', label: 'Domestic Violence' },
-  { value: 'LAND_DISPUTE', label: 'Land Dispute' },
-  { value: 'CONTRACT', label: 'Contract Related' },
-  { value: 'HUMAN_RIGHTS', label: 'Human Rights' },
-  { value: 'CONSTITUTIONAL', label: 'Constitutional Law' },
-  { value: 'OTHER', label: 'Other' }
+const getCaseTypes = (t) => [
+  { value: 'CIVIL', label: t('registration.caseTypes.civil', 'Civil Case') },
+  { value: 'CRIMINAL', label: t('registration.caseTypes.criminal', 'Criminal Case') },
+  { value: 'FAMILY', label: t('registration.caseTypes.family', 'Family Law') },
+  { value: 'PROPERTY', label: t('registration.caseTypes.property', 'Property Dispute') },
+  { value: 'LABOR', label: t('registration.caseTypes.labor', 'Labor Law') },
+  { value: 'DIVORCE', label: t('registration.caseTypes.divorce', 'Divorce') },
+  { value: 'INHERITANCE', label: t('registration.caseTypes.inheritance', 'Inheritance') },
+  { value: 'DOMESTIC_VIOLENCE', label: t('registration.caseTypes.domesticViolence', 'Domestic Violence') },
+  { value: 'LAND_DISPUTE', label: t('registration.caseTypes.landDispute', 'Land Dispute') },
+  { value: 'CONTRACT', label: t('registration.caseTypes.contract', 'Contract Related') },
+  { value: 'HUMAN_RIGHTS', label: t('registration.caseTypes.humanRights', 'Human Rights') },
+  { value: 'CONSTITUTIONAL', label: t('registration.caseTypes.constitutional', 'Constitutional Law') },
+  { value: 'OTHER', label: t('registration.caseTypes.other', 'Other') }
 ];
 
-const healthStatusOptions = [
-  { value: 'HEALTHY', label: 'Healthy' },
-  { value: 'DISABLED', label: 'Disabled' },
-  { value: 'CHRONIC_ILLNESS', label: 'Chronic Illness' },
-  { value: 'OTHER', label: 'Other' }
+const getHealthStatusOptions = (t) => [
+  { value: 'HEALTHY', label: t('registration.healthStatus.healthy', 'Healthy') },
+  { value: 'DISABLED', label: t('registration.healthStatus.disabled', 'Disabled') },
+  { value: 'CHRONIC_ILLNESS', label: t('registration.healthStatus.chronicIllness', 'Chronic Illness') },
+  { value: 'OTHER', label: t('registration.healthStatus.other', 'Other') }
 ];
 
-const genderOptions = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' }
+const getGenderOptions = (t) => [
+  { value: 'MALE', label: t('registration.gender.male', 'Male') },
+  { value: 'FEMALE', label: t('registration.gender.female', 'Female') },
+  { value: 'OTHER', label: t('registration.gender.other', 'Other') }
 ];
 
 export default function RegistrationPage() {
+  const { t, locale, setLocale } = useLanguage();
+  const steps = getSteps(t);
+  const caseTypes = getCaseTypes(t);
+  const healthStatusOptions = getHealthStatusOptions(t);
+  const genderOptions = getGenderOptions(t);
   const router = useRouter();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [documents, setDocuments] = useState<File[]>([]);
   const [offices, setOffices] = useState([]);
+  
+  // Create form schema with localized validation messages
+  const formSchema = createFormSchema(t);
+  
+  // Function to toggle language
+  const toggleLanguage = () => {
+    setLocale(locale === 'en' ? 'am' : 'en');
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [hasActiveCase, setHasActiveCase] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -218,6 +253,7 @@ export default function RegistrationPage() {
     }
   }, [profile]);
 
+  // Create form with dynamic schema
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -234,11 +270,17 @@ export default function RegistrationPage() {
       kebele: '',
       houseNumber: '',
       caseType: '',
+      caseCategory: 'CIVIL',
       caseDescription: '',
       priority: 'MEDIUM',
-      officeId: ''
-    }
+      officeId: '',
+    },
   });
+  
+  // Update form validation when language changes
+  useEffect(() => {
+    form.clearErrors();
+  }, [locale, form]);
 
   const handleNext = async () => {
     const fields = getFieldsForStep(currentStep);
@@ -339,14 +381,14 @@ export default function RegistrationPage() {
       <Card className="max-w-2xl mx-auto mt-8">
         <CardContent className="p-6">
           <Alert>
-            <AlertTitle>Active Case Found</AlertTitle>
+            <AlertTitle>{t('registration.activeCase.title', 'Active Case Found')}</AlertTitle>
             <AlertDescription>
-              You already have an active case. You cannot register a new case until the current one is closed.
+              {t('registration.activeCase.description', 'You already have an active case. You cannot register a new case until the current one is closed.')}
               <Button
                 className="mt-4"
                 onClick={() => router.push('/client/cases/waiting')}
               >
-                View Active Case
+                {t('registration.activeCase.viewButton', 'View Active Case')}
               </Button>
             </AlertDescription>
           </Alert>
@@ -422,6 +464,17 @@ export default function RegistrationPage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4">
+      {/* Language Toggle */}
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          onClick={toggleLanguage} 
+          className="flex items-center space-x-2"
+        >
+          <span>{locale === 'en' ? 'አማርኛ' : 'English'}</span>
+        </Button>
+      </div>
+      
       {/* Timeline Progress */}
       <div className="mb-8">
         <div className="relative">

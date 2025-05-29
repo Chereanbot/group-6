@@ -12,6 +12,8 @@ module.exports = {
     extend: {
       colors: {
         primary: {
+          DEFAULT: '#00572d', // Primary Green
+          light: '#1f9345', // Secondary Green
           100: 'hsl(var(--primary) / 0.1)',
           200: 'hsl(var(--primary) / 0.2)',
           300: 'hsl(var(--primary) / 0.3)',
@@ -23,15 +25,19 @@ module.exports = {
           900: 'hsl(var(--primary) / 0.9)',
           950: 'hsl(var(--primary) / 0.95)',
         },
+        secondary: {
+          DEFAULT: '#1f9345', // Secondary Green
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        accent: {
+          DEFAULT: '#f3c300', // Accent Yellow-Gold
+          foreground: "hsl(var(--accent-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -39,10 +45,6 @@ module.exports = {
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -52,6 +54,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        footer: '#1a1a1a', // Footer Dark
       },
       borderRadius: {
         lg: "var(--radius)",

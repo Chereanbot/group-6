@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const officeId = params.id;
+    const { id: officeId } = await params;
 
     // Get office details with active coordinators count
     const office = await prisma.office.findUnique({

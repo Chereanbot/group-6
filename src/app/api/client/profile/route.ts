@@ -141,7 +141,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
     const data = await request.json();
 
-    // Update client profile
+    // Update client profile, now including address fields
     const profile = await prisma.clientProfile.update({
       where: {
         userId: payload.id
@@ -150,7 +150,11 @@ export async function PATCH(request: Request): Promise<NextResponse> {
         phone: data.phone,
         healthStatus: data.healthStatus,
         houseNumber: data.houseNumber,
-        notes: data.notes
+        notes: data.notes,
+        region: data.region,
+        zone: data.zone,
+        wereda: data.wereda,
+        kebele: data.kebele
       },
       include: profileInclude
     });

@@ -9,11 +9,22 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const validatedData = loginSchema.parse(body);
-    const { email, password } = validatedData;
+    const { identifier, password } = validatedData;
 
-    // Find user with coordinator profile if exists
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Determine if identifier is email, phone, or username
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isPhone = /^\+?[0-9]{10,15}$/.test(identifier);
+    // If not email or phone, assume it's a username
+
+    // Find user based on identifier type
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: isEmail ? identifier : undefined },
+          { phone: isPhone ? identifier : undefined },
+          { username: !isEmail && !isPhone ? identifier : undefined }
+        ]
+      },
       select: {
         id: true,
         email: true,

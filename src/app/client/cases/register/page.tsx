@@ -61,7 +61,6 @@ const caseSchema = z.object({
   fullName: z.string(),
   email: z.string().email(),
   phone: z.string(),
-  address: z.string(),
 
   // Step 4: Case Details
   incidentDate: z.string(),
@@ -95,7 +94,7 @@ const steps = [
     id: 'personal-info',
     name: 'Personal Information',
     icon: HiOutlineUserGroup,
-    fields: ['fullName', 'email', 'phone', 'address']
+    fields: ['fullName', 'email', 'phone']
   },
   {
     id: 'case-details',
@@ -135,7 +134,6 @@ export default function CaseRegistrationPage() {
       fullName: '',
       email: '',
       phone: '',
-      address: '',
       incidentDate: '',
       location: '',
       witnesses: [],
@@ -162,18 +160,13 @@ export default function CaseRegistrationPage() {
       }
 
       if (data.data) {
-        // Create profile data object
+        // Debug: log the address object
+        console.log('Fetched address from profile:', data.data.address);
+        // Create profile data object with individual address components
         const profileData = {
           fullName: data.data.fullName || '',
           email: data.data.email || '',
           phone: data.data.phone || '',
-          address: [
-            data.data.address?.region,
-            data.data.address?.zone,
-            data.data.address?.wereda,
-            data.data.address?.kebele,
-            data.data.address?.houseNumber
-          ].filter(Boolean).join(', ') || ''
         };
 
         // Set form values and validate immediately
@@ -188,7 +181,7 @@ export default function CaseRegistrationPage() {
         );
 
         // Force validation of all fields
-        await form.trigger(['fullName', 'email', 'phone', 'address']);
+        await form.trigger(['fullName', 'email', 'phone']);
 
         // Set preferred language if available
         if (data.data.preferredLanguage) {
@@ -355,8 +348,8 @@ export default function CaseRegistrationPage() {
         console.log('Personal info values:', values); // Debug log
         
         // Check if all required fields are filled
-        const requiredFields = ['fullName', 'email', 'phone', 'address'];
-        const missingFields = requiredFields.filter(field => !values[field]?.trim());
+        const missingFields = ['fullName', 'email', 'phone']
+          .filter(field => !values[field]?.trim());
         
         if (missingFields.length > 0) {
           toast({
@@ -807,17 +800,6 @@ export default function CaseRegistrationPage() {
                           {...form.register('phone')}
                           className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
                           readOnly
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="address">Address</Label>
-                        <Textarea
-                          id="address"
-                          {...form.register('address')}
-                          className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100"
-                          readOnly
-                          rows={3}
                         />
                       </div>
 

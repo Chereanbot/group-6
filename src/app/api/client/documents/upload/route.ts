@@ -49,23 +49,6 @@ export async function POST(request: Request) {
 
     const documentIds: string[] = [];
 
-    // Get user's kebele from their profile
-    const userProfile = await prisma.clientProfile.findUnique({
-      where: {
-        userId: user.id
-      },
-      select: {
-        kebele: true
-      }
-    });
-
-    if (!userProfile?.kebele) {
-      return NextResponse.json(
-        { error: 'User kebele information not found' },
-        { status: 400 }
-      );
-    }
-
     // Process each file
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -84,8 +67,7 @@ export async function POST(request: Request) {
           path: `/uploads/${fileName}`,
           size: file.size,
           mimeType: file.type,
-          uploadedBy: user.id,
-          kebeleId: userProfile.kebele
+          user: { connect: { id: user.id } }
         }
       });
 

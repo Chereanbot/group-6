@@ -77,7 +77,7 @@ const Login = () => {
     en: {
       welcome: 'Welcome Back',
       subtitle: 'Sign in to Dilla University Legal Aid Service',
-      emailLabel: 'Email or Phone',
+      emailLabel: 'Email, Phone or Username',
       passwordLabel: 'Password',
       rememberMe: 'Remember me',
       forgotPassword: 'Forgot password?',
@@ -89,7 +89,7 @@ const Login = () => {
     am: {
       welcome: 'እንኳን ደህና መጡ',
       subtitle: 'ወደ ዲላ ዩኒቨርሲቲ የሕግ ድጋፍ አገልግሎት ይግቡ',
-      emailLabel: 'ኢሜይል ወይም ስልክ',
+      emailLabel: 'ኢሜይል፣ ስልክ ወይም የተጠቃሚ ስም',
       passwordLabel: 'የይለፍ ቃል',
       rememberMe: 'አስታውሰኝ',
       forgotPassword: 'የይለፍ ቃል ረሳህ?',
@@ -104,16 +104,20 @@ const Login = () => {
     const errors: ValidationErrors = {};
     
     if (!formData.identifier) {
-      errors.identifier = 'Email or phone is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.identifier) && 
-               !/^\+?[1-9]\d{9,11}$/.test(formData.identifier)) {
-      errors.identifier = 'Please enter a valid email or phone number';
+      errors.identifier = 'Email, phone, or username is required';
+    } else {
+      // Check if it's a valid email, phone, or username
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.identifier);
+      const isPhone = /^\+?[0-9]{10,15}$/.test(formData.identifier);
+      const isUsername = formData.identifier.length >= 3;
+      
+      if (!isEmail && !isPhone && !isUsername) {
+        errors.identifier = 'Please enter a valid email, phone number, or username';
+      }
     }
     
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
     }
 
     setValidationErrors(errors);
@@ -132,11 +136,16 @@ const Login = () => {
     setLoginAttempts(prev => prev + 1);
 
     try {
+      // Determine login method (for UI feedback)
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.identifier);
+      const isPhone = /^\+?[0-9]{10,15}$/.test(formData.identifier);
+      const loginMethod = isEmail ? 'email' : (isPhone ? 'phone' : 'username');
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: formData.identifier,
+          identifier: formData.identifier,
           password: formData.password
         })
       });
@@ -151,8 +160,15 @@ const Login = () => {
         // Animated success feedback
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        const callbackUrl = getRoleBasedRedirect(data.user.userRole);
-        router.push(callbackUrl);
+        // Check if user data exists and has a userRole
+        if (data.user && data.user.userRole) {
+          const callbackUrl = getRoleBasedRedirect(data.user.userRole);
+          router.push(callbackUrl);
+        } else {
+          // Default to client dashboard if role is missing
+          console.warn('User role not found in response, using default redirect');
+          router.push('/client/dashboard');
+        }
       } else {
         throw new Error(data.error || 'Login failed');
       }
