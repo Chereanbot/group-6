@@ -31,8 +31,7 @@ class NotificationService {
           user: {
             select: {
               email: true,
-              phone: true,
-              pushSubscription: true
+              phone: true
             }
           }
         }
@@ -79,16 +78,28 @@ class NotificationService {
           });
         }
 
-        // Send push notification
-        if (preferences.push && user.pushSubscription) {
-          await webPush.sendNotification(
-            JSON.parse(user.pushSubscription),
-            JSON.stringify({
-              title: options.title,
-              body: options.message,
-              link: options.link
-            })
-          );
+        // Send push notification if enabled
+        if (preferences.push) {
+          try {
+            // Get push subscription from PushSubscription model
+            const pushSubscription = await prisma.pushSubscription.findFirst({
+              where: { userId: options.userId }
+            });
+
+            if (pushSubscription) {
+              await webPush.sendNotification(
+                JSON.parse(pushSubscription.subscription),
+                JSON.stringify({
+                  title: options.title,
+                  body: options.message,
+                  link: options.link
+                })
+              );
+            }
+          } catch (error) {
+            console.error('Push notification error:', error);
+            // Don't fail the request if push notification fails
+          }
         }
       }
 

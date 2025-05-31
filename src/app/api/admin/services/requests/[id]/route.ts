@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
-import { UserRoleEnum } from '@/types';
+import { UserRoleEnum } from '@prisma/client';
 import prisma from '@/lib/prisma';
 
 async function verifyAdmin() {

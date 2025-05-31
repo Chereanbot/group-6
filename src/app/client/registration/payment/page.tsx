@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ServiceType } from '@prisma/client';
 import { useSession } from 'next-auth/react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 const CHAPA_PUBLIC_KEY = process.env.NEXT_PUBLIC_CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-BD18YWueJ7CDzcKw9n9YMfn55l1WeM8c';
 
@@ -161,6 +162,7 @@ interface PaymentStatus {
 function PaymentPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useLanguage();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'chapa' | 'mpesa'>('chapa');
@@ -434,10 +436,10 @@ function PaymentPage() {
       {/* Header */}
       <div className="text-center mb-12">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Choose Your Legal Service Plan
+          {t('payment.title', 'Payment')}
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-          Select the plan that best fits your legal needs and budget
+          {t('payment.subtitle', 'Choose your payment method')}
         </p>
       </div>
 
@@ -452,42 +454,41 @@ function PaymentPage() {
           >
             {plan.recommended && (
               <div className="bg-primary-500 text-white text-center py-1 font-medium text-sm">
-                Recommended
+                {t('payment.plans.recommended', 'Recommended')}
               </div>
             )}
             <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-lg ${plan.color} text-white`}>
-                  {plan.icon}
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {plan.price.toLocaleString()} ETB
-                  </span>
-                  <span className="text-gray-500 dark:text-gray-400 block text-sm">
-                    /{plan.billingPeriod}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {t(`payment.plans.${plan.id}.title`, plan.name)}
+                </h3>
+                {plan.icon}
               </div>
-              
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">{plan.description}</p>
-              
-              <div className="space-y-3 mb-6">
-                {plan.features.map((feature, i) => (
-                  <div key={i} className="flex items-start space-x-3">
-                    <HiOutlineCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600 dark:text-gray-400 text-sm">{feature}</span>
-                  </div>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {t(`payment.plans.${plan.id}.description`, plan.description)}
+              </p>
+              <div className="mb-6">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {t(`payment.plans.${plan.id}.price`, `${plan.price} Birr`)}
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  {t(`payment.plans.${plan.id}.duration`, '/month')}
+                </span>
+              </div>
+              <ul className="space-y-3 mb-6">
+                {plan.features.map((feature, index) => (
+                  <li key={index} className="flex items-center text-gray-600 dark:text-gray-400">
+                    <HiOutlineCheck className="w-5 h-5 text-green-500 mr-2" />
+                    {t(`payment.plans.${plan.id}.features.${index + 1}`, feature)}
+                  </li>
                 ))}
-              </div>
-              
+              </ul>
               <Button 
                 onClick={() => handlePlanSelect(plan)}
                 className="w-full"
                 variant={plan.recommended ? "default" : "outline"}
               >
-                Select Plan
+                {t('payment.plans.select', 'Select Plan')}
               </Button>
             </div>
           </div>
@@ -498,107 +499,99 @@ function PaymentPage() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogTitle>{t('payment.confirm.title', 'Confirm Payment')}</DialogTitle>
             <DialogDescription>
-              Please review your subscription details before proceeding with the payment.
+              {t('payment.confirm.description', 'Please review your subscription details before proceeding with the payment.')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             {selectedPlan && (
               <>
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Subscription Details</h4>
-                  <div className="space-y-2 text-sm">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    {t('payment.confirm.subscription', 'Subscription Details')}
+                  </h4>
+                  <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Plan:</span>
-                      <span className="font-medium">{selectedPlan.name}</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {t('payment.confirm.plan', 'Plan Type')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {t(`payment.plans.${selectedPlan.id}.title`, selectedPlan.name)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Price:</span>
-                      <span className="font-medium">{selectedPlan.price.toLocaleString()} ETB/{selectedPlan.billingPeriod}</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {t('payment.confirm.price', 'Price')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {t(`payment.plans.${selectedPlan.id}.price`, `${selectedPlan.price} Birr`)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Initial Payment:</span>
-                      <span className="font-medium">{selectedPlan.initialPayment.toLocaleString()} ETB</span>
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {t('payment.confirm.duration', 'Duration')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {t(`payment.plans.${selectedPlan.id}.duration`, '/month')}
+                      </span>
                     </div>
                   </div>
                 </div>
+
                 <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Payment Method</h4>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    {t('payment.methods.title', 'Payment Methods')}
+                  </h4>
                   <div className="space-y-3 mt-3">
+                    {paymentMethods.map((method) => (
                       <div 
+                        key={method.id}
                         className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedPaymentMethod === 'chapa' 
+                          selectedPaymentMethod === method.id 
                             ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' 
                             : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
                         }`}
-                      onClick={() => handlePaymentMethodSelect('chapa')}
+                        onClick={() => handlePaymentMethodSelect(method.id)}
                       >
                         <div className="flex-shrink-0">
-                        <HiOutlineCreditCard className="w-5 h-5 text-blue-500" />
+                          {method.icon}
                         </div>
                         <div className="flex-1">
-                        <h5 className="font-medium text-gray-900 dark:text-white">Chapa</h5>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Pay securely with your card or mobile money</p>
-                      </div>
-                      {selectedPaymentMethod === 'chapa' && (
-                        <div className="text-primary-500">
-                          <HiOutlineCheck className="w-5 h-5" />
+                          <h5 className="font-medium text-gray-900 dark:text-white">
+                            {t(`payment.methods.${method.id}`, method.name)}
+                          </h5>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {t(`payment.methods.${method.id}.description`, method.description)}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                    <div 
-                      className={`flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedPaymentMethod === 'mpesa' 
-                          ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800' 
-                          : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                      }`}
-                      onClick={() => handlePaymentMethodSelect('mpesa')}
-                    >
-                      <div className="flex-shrink-0">
-                        <HiOutlineCash className="w-5 h-5 text-green-500" />
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900 dark:text-white">M-Pesa</h5>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Pay with M-Pesa</p>
-                      </div>
-                      {selectedPaymentMethod === 'mpesa' && (
+                        {selectedPaymentMethod === method.id && (
                           <div className="text-primary-500">
                             <HiOutlineCheck className="w-5 h-5" />
                           </div>
                         )}
                       </div>
+                    ))}
                   </div>
                 </div>
-                {selectedPaymentMethod === 'mpesa' && (
-                  <div className="mb-8">
-                    <label className="block text-sm font-medium mb-2">
-                      M-Pesa Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="e.g., 254712345678"
-                      className="w-full px-4 py-2 border rounded"
-                      required
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Enter your M-Pesa registered phone number
-                    </p>
-                  </div>
-                )}
               </>
             )}
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-                Back
+                {t('payment.confirm.cancel', 'Cancel')}
               </Button>
               <Button 
                 onClick={handlePaymentConfirm}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Processing...' : 'Proceed to Payment'}
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('payment.confirm.processing', 'Processing...')}
+                  </>
+                ) : (
+                  t('payment.confirm.pay', 'Pay Now')
+                )}
               </Button>
             </div>
           </div>
@@ -610,9 +603,11 @@ function PaymentPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl text-center max-w-md w-full mx-4">
             <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-            <h3 className="text-xl font-semibold mb-2">Initializing Payment</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              {t('payment.loading.title', 'Initializing Payment')}
+            </h3>
             <p className="text-gray-500 dark:text-gray-400">
-              Please wait while we redirect you to our secure payment gateway
+              {t('payment.loading.description', 'Please wait while we redirect you to our secure payment gateway')}
             </p>
           </div>
         </div>
@@ -629,8 +624,8 @@ function PaymentPage() {
 const PaymentStatus = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const verifyPayment = async () => {
@@ -688,125 +683,100 @@ const PaymentStatus = () => {
           description: error.message || "Failed to verify payment status",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
     };
 
     verifyPayment();
   }, [searchParams]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="mx-auto mb-4"
-          >
-            <Loader2 className="w-12 h-12 text-blue-500 dark:text-blue-400" />
-          </motion.div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Verifying Payment Status
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Please wait while we verify your payment...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (!paymentStatus) {
     return null;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full ${
-            paymentStatus.status === 'success' 
-              ? 'bg-green-100 dark:bg-green-900/30' 
-              : 'bg-red-100 dark:bg-red-900/30'
-          }`}>
-            {paymentStatus.status === 'success' ? (
-              <CheckCircle className="h-10 w-10 text-green-500 dark:text-green-400" />
-            ) : (
-              <XCircle className="h-10 w-10 text-red-500 dark:text-red-400" />
-            )}
-          </div>
-          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
-            {paymentStatus.status === 'success' ? 'Payment Successful' : 'Payment Failed'}
-          </h2>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
-            {paymentStatus.message}
-          </p>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl text-center max-w-md w-full mx-4"
+      >
+        {paymentStatus.status === 'success' ? (
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-6" />
+        ) : (
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+        )}
+        <h3 className="text-xl font-semibold mb-2">
+          {t(`payment.status.${paymentStatus.status}.title`, paymentStatus.status === 'success' ? 'Payment Successful!' : 'Payment Failed')}
+        </h3>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">
+          {t(`payment.status.${paymentStatus.status}.description`, paymentStatus.message)}
+        </p>
 
-          {paymentStatus.status === 'success' && (
-            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="space-y-4">
-                {paymentStatus.transactionId && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-300">Transaction ID</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{paymentStatus.transactionId}</span>
-                  </div>
-                )}
-                {paymentStatus.amount && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-300">Amount</span>
-                    <span className="font-medium text-gray-900 dark:text-white">ETB {paymentStatus.amount.toLocaleString()}</span>
-                  </div>
-                )}
-                {paymentStatus.date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-300">Date</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{paymentStatus.date}</span>
-                  </div>
-                )}
-              </div>
+        {paymentStatus.status === 'success' && (
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="space-y-4">
+              {paymentStatus.transactionId && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-300">
+                    {t('payment.success.transactionId', 'Transaction ID')}
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">{paymentStatus.transactionId}</span>
+                </div>
+              )}
+              {paymentStatus.amount && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-300">
+                    {t('payment.success.amount', 'Amount')}
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {t('payment.success.currency', 'ETB')} {paymentStatus.amount.toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {paymentStatus.date && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-300">
+                    {t('payment.success.date', 'Date')}
+                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white">{paymentStatus.date}</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          <div className="mt-6 space-y-4">
-            {paymentStatus.status === 'success' ? (
-              <>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => router.push('/client/dashboard')}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
-                >
-                  Go to Dashboard
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => router.push('/client/services')}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  View Services
-                </motion.button>
-              </>
-            ) : (
+        <div className="mt-6 space-y-4">
+          {paymentStatus.status === 'success' ? (
+            <>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/client/registration/payment')}
+                onClick={() => router.push('/client/dashboard')}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
               >
-                Try Again
+                {t('payment.success.goToDashboard', 'Go to Dashboard')}
               </motion.button>
-            )}
-          </div>
-        </motion.div>
-      </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/client/services')}
+                className="w-full px-4 py-2 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                {t('payment.success.viewServices', 'View Services')}
+              </motion.button>
+            </>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/client/registration/payment')}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
+            >
+              {t('payment.error.tryAgain', 'Try Again')}
+            </motion.button>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };

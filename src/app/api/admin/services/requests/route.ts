@@ -44,7 +44,16 @@ export async function GET(request: Request) {
     const [requests, total] = await Promise.all([
       prisma.serviceRequest.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          status: true,
+          paymentStatus: true,
+          quotedPrice: true,
+          finalPrice: true,
+          submittedAt: true,
+          updatedAt: true,
           client: {
             select: {
               id: true,
@@ -53,7 +62,15 @@ export async function GET(request: Request) {
               phone: true,
             },
           },
-          package: true,
+          package: {
+            select: {
+              id: true,
+              name: true,
+              serviceType: true,
+              description: true,
+              price: true
+            }
+          },
           assignedLawyer: {
             select: {
               id: true,

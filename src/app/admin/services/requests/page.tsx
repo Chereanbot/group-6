@@ -43,7 +43,8 @@ interface ServiceRequest {
   assignedLawyer: {
     fullName: string;
   } | null;
-  createdAt: string;
+  submittedAt: string;
+  updatedAt: string;
 }
 
 export default function ServiceRequestsPage() {
@@ -53,8 +54,8 @@ export default function ServiceRequestsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState({
-    status: '',
-    paymentStatus: '',
+    status: 'ALL',
+    paymentStatus: 'ALL',
   });
 
   const fetchRequests = async () => {
@@ -62,7 +63,8 @@ export default function ServiceRequestsPage() {
       setLoading(true);
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        ...filters,
+        ...(filters.status !== 'ALL' && { status: filters.status }),
+        ...(filters.paymentStatus !== 'ALL' && { paymentStatus: filters.paymentStatus }),
       });
 
       const response = await fetch(`/api/admin/services/requests?${queryParams}`);
@@ -129,7 +131,7 @@ export default function ServiceRequestsPage() {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="ALL">All Statuses</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="APPROVED">Approved</SelectItem>
                 <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -144,7 +146,7 @@ export default function ServiceRequestsPage() {
                 <SelectValue placeholder="Filter by payment" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Payments</SelectItem>
+                <SelectItem value="ALL">All Payments</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="PROCESSING">Processing</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -216,7 +218,7 @@ export default function ServiceRequestsPage() {
                       <TableCell>
                         {request.assignedLawyer?.fullName || 'Unassigned'}
                       </TableCell>
-                      <TableCell>{formatDate(request.createdAt)}</TableCell>
+                      <TableCell>{formatDate(request.submittedAt)}</TableCell>
                       <TableCell>
                         <Button
                           variant="outline"

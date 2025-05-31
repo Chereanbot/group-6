@@ -18,7 +18,8 @@ import {
   AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Receipt
+  Receipt,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { PaymentStatus } from '@prisma/client';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/providers/LanguageProvider';
 
 interface Payment {
   id: string;
@@ -76,6 +78,7 @@ interface PaginationData {
 
 export default function PaymentHistory() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<PaginationData>({
@@ -174,15 +177,28 @@ export default function PaymentHistory() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary-500" />
+          <p className="text-gray-600 dark:text-gray-400">
+            {t('payment.history.loading', 'Loading payment history...')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Payment History
+            {t('payment.history.title', 'Payment History')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            View and manage your payment transactions
+            {t('payment.history.description', 'View and manage your payment transactions')}
           </p>
         </div>
         <Button
@@ -306,7 +322,7 @@ export default function PaymentHistory() {
                               getStatusColor(payment.status)
                             )}>
                               {getStatusIcon(payment.status)}
-                              {payment.status}
+                              {t(`payment.status.${payment.status}`, payment.status)}
                             </span>
                             <span className="text-sm text-gray-500 dark:text-gray-400">
                               {format(new Date(payment.createdAt), 'MMM d, yyyy')}
@@ -426,7 +442,7 @@ export default function PaymentHistory() {
                 onClick={() => router.push('/client/registration/payment')}
                 className="bg-primary hover:bg-primary/90"
               >
-                Make a Payment
+                {t('payment.history.makePayment', 'Make a Payment')}
               </Button>
               <Button
                 variant="outline"
