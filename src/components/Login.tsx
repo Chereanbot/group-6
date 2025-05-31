@@ -152,7 +152,12 @@ const Login = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
+      // Check if the response contains a success flag
+      if (response.ok && data.success) {
+        if (!data.token) {
+          throw new Error('No token received from server');
+        }
+        
         showToast('Login successful!', 'success');
         localStorage.setItem('token', data.token);
         document.cookie = `auth-token=${data.token}; path=/;`;
@@ -170,11 +175,22 @@ const Login = () => {
           router.push('/client/dashboard');
         }
       } else {
-        throw new Error(data.error || 'Login failed');
+        // Handle unsuccessful login with more detailed error messages
+        throw new Error(data.message || data.error || 'Login failed');
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      showToast(error.message || 'Login failed. Please try again.', 'error');
+      
+      // Provide more specific error messages based on the error
+      if (error.message.includes('No token received')) {
+        showToast('Authentication error: No token received from server', 'error');
+      } else if (error.message.includes('Invalid JWT format')) {
+        showToast('Authentication error: Invalid token format', 'error');
+      } else if (error.message.includes('Server selection timeout')) {
+        showToast('Database connection error. Please try again later.', 'error');
+      } else {
+        showToast(error.message || 'Login failed. Please try again.', 'error');
+      }
       
       if (loginAttempts >= 3) {
         showToast('Too many failed attempts. Please try again later or reset your password.', 'warning');

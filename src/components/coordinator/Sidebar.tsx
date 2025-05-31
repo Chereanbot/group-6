@@ -49,7 +49,7 @@ const menuItems = [
     subItems: [
       { 
         title: 'All Cases', 
-        path: '/coordinator/cases/lists',
+        path: '/coordinator/cases',
         badge: 'all' 
       },
       { 

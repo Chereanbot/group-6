@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { verifyAuth } from '@/lib/auth';
+import { UserRoleEnum } from '@prisma/client';
 
 // Define enums locally
 enum ServiceStatus {
@@ -19,14 +20,30 @@ enum ServiceType {
   CONSULTATION = 'CONSULTATION'
 }
 
+// Helper function to verify admin authorization
+async function verifyAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth-token')?.value;
+  
+  if (!token) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  const authResult = await verifyAuth(token);
+  if (!authResult.isAuthenticated || authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+    return { error: 'Unauthorized access', status: 403 };
+  }
+
+  return { authResult };
+}
+
 export async function GET(request: Request) {
   try {
-    // Check authentication with auth options
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const adminCheck = await verifyAdmin();
+    if (adminCheck.error) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
@@ -59,7 +76,7 @@ export async function GET(request: Request) {
             email: true,
           },
         },
-        lawyer: {
+        assignedLawyer: {
           select: {
             fullName: true,
             email: true,
@@ -71,7 +88,7 @@ export async function GET(request: Request) {
             price: true,
           },
         },
-        payment: {
+        payments: {
           select: {
             status: true,
             amount: true,
@@ -79,16 +96,23 @@ export async function GET(request: Request) {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        submittedAt: 'desc',
       },
     });
 
-    return NextResponse.json({ data: requests });
+    return NextResponse.json({ 
+      success: true,
+      data: requests 
+    });
 
   } catch (error) {
     console.error('Error fetching service requests:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch service requests' },
+      { 
+        success: false,
+        error: 'Failed to fetch service requests',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -96,6 +120,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const adminCheck = await verifyAdmin();
+    if (adminCheck.error) {
+      return NextResponse.json(
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
+      );
+    }
+
     const data = await request.json();
 
     const serviceRequest = await prisma.serviceRequest.create({
@@ -122,21 +154,36 @@ export async function POST(request: Request) {
             email: true,
           },
         },
-        documents: true,
-        incomeProof: {
+        serviceDocuments: {
           include: {
-            documents: true,
+            document: true,
           },
         },
-        payment: true,
+        IncomeProof: {
+          include: {
+            documents: {
+              include: {
+                document: true,
+              },
+            },
+          },
+        },
+        payments: true,
       },
     });
 
-    return NextResponse.json(serviceRequest);
+    return NextResponse.json({
+      success: true,
+      data: serviceRequest
+    });
   } catch (error) {
     console.error('Error creating service request:', error);
     return NextResponse.json(
-      { error: 'Failed to create service request' },
+      { 
+        success: false,
+        error: 'Failed to create service request',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

@@ -68,19 +68,29 @@ export async function POST(request: Request) {
    
 
     // Generate JWT token using jose
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key');
-    const token = await new SignJWT({
-      id: user.id,
-      email: user.email,
-      role: user.userRole,
-      isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN,
-      coordinatorId: user.coordinatorProfile?.id,
-      officeId: user.coordinatorProfile?.office?.id
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('24h')
-      .sign(secret);
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not defined in environment variables');
+      return NextResponse.json(
+        { success: false, message: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    
+    try {
+      const token = await new SignJWT({
+        id: user.id,
+        email: user.email,
+        role: user.userRole,
+        isAdmin: user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN,
+        coordinatorId: user.coordinatorProfile?.id,
+        officeId: user.coordinatorProfile?.office?.id
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(secret);
 
     // Create session
     await prisma.session.create({
@@ -129,10 +139,17 @@ export async function POST(request: Request) {
 
     return response;
 
+    } catch (jwtError) {
+      console.error('JWT signing error:', jwtError);
+      return NextResponse.json(
+        { success: false, message: 'Authentication error' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
-      { success: false, message: 'Login failed' },
+      { success: false, message: 'Login failed: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 200 }
     );
   }

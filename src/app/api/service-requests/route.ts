@@ -161,7 +161,7 @@ export async function GET(req: Request) {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          submittedAt: 'desc',
         },
         skip,
         take: limit,

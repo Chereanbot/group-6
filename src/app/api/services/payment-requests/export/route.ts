@@ -1,30 +1,47 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import { UserRoleEnum, PaymentStatus } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { Parser } from 'json2csv';
 import { format as formatDate } from 'date-fns';
 
-export async function GET(req: Request) {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
+// Helper function to verify admin authorization
+async function verifyAdmin(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { error: 'Unauthorized', status: 401 };
+  }
 
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  try {
+    const authResult = await verifyAuth(token);
+    if (!authResult.isAuthenticated) {
+      return { error: 'Unauthorized', status: 401 };
     }
 
-    const { isAuthenticated, user } = await verifyAuth(token);
+    if (authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+      return { error: 'Unauthorized access', status: 403 };
+    }
 
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
+    return { authResult };
+  } catch (error) {
+    console.error('Auth verification error:', error);
+    return { error: 'Unauthorized', status: 401 };
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const adminCheck = await verifyAdmin(req);
+    if (adminCheck.error) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
@@ -36,9 +53,19 @@ export async function GET(req: Request) {
       where: {
         paymentStatus: { not: null }
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        submittedAt: true,
+        completedAt: true,
+        paymentStatus: true,
+        metadata: true,
+        quotedPrice: true,
         client: {
-          include: {
+          select: {
+            fullName: true,
+            email: true,
+            phone: true,
             clientProfile: {
               select: {
                 region: true,

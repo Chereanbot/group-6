@@ -331,7 +331,9 @@ export default function NewCase() {
       }
     }
   ]);
-  const [offices, setOffices] = useState([]);
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [officesLoading, setOfficesLoading] = useState(true);
+  const [currentOfficeId, setCurrentOfficeId] = useState<string>('');
   const [clients, setClients] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'name' | 'phone'>('name');
@@ -339,6 +341,21 @@ export default function NewCase() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [debouncedSearchQuery] = useState('');
+
+  // Add debounce effect for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length > 0) {
+        handleClientSearch();
+      } else {
+        setSearchResults([]);
+        setSearchError(null);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, searchType]);
 
   useEffect(() => {
     setMounted(true);
@@ -393,17 +410,35 @@ export default function NewCase() {
 
   const fetchOffices = async () => {
     try {
+      setOfficesLoading(true);
       const response = await fetch('/api/coordinator/offices');
       const data = await response.json();
+      
       if (data.success) {
-        setOffices(data.offices);
+        setOffices(data.data.offices || []);
+        setCurrentOfficeId(data.data.currentOfficeId);
+        
+        // Pre-select the coordinator's office
+        setFormData(prev => ({
+          ...prev,
+          officeId: data.data.currentOfficeId
+        }));
+      } else {
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to fetch offices',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
+      console.error('Error fetching offices:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch offices',
         variant: 'destructive',
       });
+    } finally {
+      setOfficesLoading(false);
     }
   };
 
@@ -500,7 +535,6 @@ export default function NewCase() {
 
     setSearching(true);
     setSearchError(null);
-    setSearchResults([]);
 
     try {
       const response = await fetch(`/api/coordinator/clients/search?query=${encodeURIComponent(searchQuery)}&type=${searchType}`);
@@ -840,43 +874,20 @@ export default function NewCase() {
                         </SelectContent>
                       </Select>
 
-                      <div className="flex-1">
+                      <div className="flex-1 relative">
                         <Input
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           placeholder={searchType === 'name' ? "Enter client name..." : "Enter phone number..."}
-                          onKeyDown={(e) => e.key === 'Enter' && handleClientSearch()}
+                          className="w-full"
                         />
-                      </div>
-
-                      <Button 
-                        onClick={handleClientSearch}
-                        disabled={searching || !searchQuery.trim()}
-                      >
-                        {searching ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Search'
+                        {searching && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                          </div>
                         )}
-                      </Button>
+                      </div>
                     </div>
-
-                    {searchError && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>No Results Found</AlertTitle>
-                        <AlertDescription className="flex items-center justify-between">
-                          <span>{searchError}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleNewClientRegistration}
-                          >
-                            Register New Client
-                          </Button>
-                        </AlertDescription>
-                      </Alert>
-                    )}
 
                     {searchResults.length > 0 && (
                       <div className="space-y-4">
@@ -891,44 +902,69 @@ export default function NewCase() {
                               <Card
                                 key={client.id}
                                 className={`cursor-pointer transition-colors ${
-                                  hasActiveCases ? 'opacity-50' : 'hover:border-primary'
+                                  hasActiveCases 
+                                    ? 'opacity-50 cursor-not-allowed' 
+                                    : 'hover:border-primary'
                                 }`}
                                 onClick={() => !hasActiveCases && handleClientSelect(client)}
                               >
                                 <CardContent className="flex items-center justify-between p-4">
-                                  <div>
+                                  <div className="space-y-1">
                                     <p className="font-medium">{client.fullName}</p>
-                                    <p className="text-sm text-gray-500">{client.phone}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {client.phone}
+                                    </p>
                                     {client.email && (
-                                      <p className="text-sm text-gray-500">{client.email}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {client.email}
+                                      </p>
                                     )}
                                   </div>
-                                  {hasActiveCases ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <AlertCircle className="h-5 w-5 text-red-500" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Client has active cases</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <Check 
-                                      className={`h-5 w-5 ${
-                                        selectedClient?.id === client.id 
-                                          ? 'text-green-500' 
-                                          : 'text-gray-300'
-                                      }`} 
-                                    />
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {hasActiveCases ? (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <AlertCircle className="h-5 w-5 text-destructive" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Client has active cases</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    ) : (
+                                      <Check 
+                                        className={`h-5 w-5 ${
+                                          selectedClient?.id === client.id 
+                                            ? 'text-primary' 
+                                            : 'text-muted-foreground'
+                                        }`} 
+                                      />
+                                    )}
+                                  </div>
                                 </CardContent>
                               </Card>
                             );
                           })}
                         </div>
                       </div>
+                    )}
+
+                    {searchError && searchQuery.trim() !== '' && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>No Results Found</AlertTitle>
+                        <AlertDescription className="flex items-center justify-between">
+                          <span>{searchError}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleNewClientRegistration}
+                          >
+                            Register New Client
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
                     )}
 
                     {selectedClient && (
@@ -957,25 +993,39 @@ export default function NewCase() {
                 return (
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="office" className="text-base font-semibold">Select Office *</Label>
+                      <Label htmlFor="office" className="text-base font-semibold">Office Assignment *</Label>
                       <Select
                         value={formData.officeId}
                         onValueChange={(value) => handleInputChange('officeId', value)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an office" />
+                          <SelectValue placeholder={officesLoading ? "Loading offices..." : "Select an office"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {offices.map((office: any) => (
-                            <SelectItem key={office.id} value={office.id}>
-                              {office.name}
-                            </SelectItem>
-                          ))}
+                          {officesLoading ? (
+                            <SelectItem value="loading" disabled>Loading offices...</SelectItem>
+                          ) : offices && offices.length > 0 ? (
+                            offices.map((office) => (
+                              <SelectItem 
+                                key={office.id} 
+                                value={office.id}
+                              >
+                                {office.name} {office.id === currentOfficeId ? '(Current Office)' : ''}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-offices" disabled>No offices available</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
+                      {currentOfficeId && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Your current office will be pre-selected
+                        </p>
+                      )}
                     </div>
 
-                    {!formData.officeId && (
+                    {!formData.officeId && !officesLoading && (
                       <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Required Field</AlertTitle>

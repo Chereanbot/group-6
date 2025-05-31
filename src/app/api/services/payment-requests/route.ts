@@ -1,8 +1,36 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import { UserRoleEnum, RequestStatus } from '@prisma/client';
+
+// Helper function to verify admin authorization
+async function verifyAdmin(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  try {
+    const authResult = await verifyAuth(token);
+    if (!authResult.isAuthenticated) {
+      return { error: 'Unauthorized', status: 401 };
+    }
+
+    if (authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+      return { error: 'Unauthorized access', status: 403 };
+    }
+
+    return { authResult };
+  } catch (error) {
+    console.error('Auth verification error:', error);
+    return { error: 'Unauthorized', status: 401 };
+  }
+}
 
 interface ServiceRequest {
   id: string;
@@ -25,22 +53,11 @@ interface ServiceRequest {
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
-
-    if (!token) {
+    const adminCheck = await verifyAdmin(req);
+    if (adminCheck.error) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { isAuthenticated, user } = await verifyAuth(token);
-
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
@@ -50,59 +67,85 @@ export async function GET(req: Request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const requests = await prisma.serviceRequest.findMany({
-      where: {
-        paymentStatus: { not: null },
-        ...(status && status !== 'all' ? { status: status as RequestStatus } : {}),
-        ...(search ? {
-          OR: [
-            { client: { fullName: { contains: search, mode: 'insensitive' } } },
-            { client: { email: { contains: search, mode: 'insensitive' } } },
-            { id: { contains: search, mode: 'insensitive' } }
-          ]
-        } : {}),
-        ...(startDate && endDate ? {
-          submittedAt: {
-            gte: new Date(startDate),
-            lte: new Date(endDate)
+    // Build the where clause
+    const whereClause: any = {
+      paymentStatus: { not: null }
+    };
+
+    if (status && status !== 'all') {
+      whereClause.status = status as RequestStatus;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { client: { fullName: { contains: search, mode: 'insensitive' } } },
+        { client: { email: { contains: search, mode: 'insensitive' } } },
+        { id: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    if (startDate && endDate) {
+      whereClause.submittedAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      };
+    }
+
+    // Fetch requests with optimized query
+    const [requests, totalCount] = await Promise.all([
+      prisma.serviceRequest.findMany({
+        where: whereClause,
+        include: {
+          client: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              clientProfile: {
+                select: {
+                  region: true,
+                  zone: true,
+                  wereda: true,
+                  kebele: true
+                }
+              }
+            }
           }
-        } : {})
-      },
-      include: {
-        client: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            phone: true
-          }
-        }
-      },
-      orderBy: {
-        submittedAt: 'desc'
-      }
-    }) as unknown as ServiceRequest[];
+        },
+        orderBy: {
+          submittedAt: 'desc'
+        },
+        take: 50 // Limit results for better performance
+      }),
+      prisma.serviceRequest.count({
+        where: whereClause
+      })
+    ]);
 
     // Calculate summary statistics
     const summary = {
-      total: requests.length,
-      totalAmount: requests.reduce((sum, req) => sum + (req.metadata?.price || 0), 0),
+      total: totalCount,
+      totalAmount: requests.reduce((sum, req) => sum + ((req.metadata as any)?.price || 0), 0),
       pending: requests.filter(req => req.status === RequestStatus.PENDING).length,
       completed: requests.filter(req => req.status === RequestStatus.COMPLETED).length,
       failed: requests.filter(req => req.status === RequestStatus.REJECTED).length
     };
 
+    // Transform the response
+    const transformedRequests = requests.map(req => ({
+      ...req,
+      amount: (req.metadata as any)?.price || 0,
+      service: {
+        name: req.title,
+        description: req.description
+      }
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
-        requests: requests.map(req => ({
-          ...req,
-          amount: req.metadata?.price || 0,
-          service: {
-            name: req.title,
-            description: req.description
-          }
-        })),
+        requests: transformedRequests,
         summary
       }
     });
@@ -122,22 +165,11 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
-
-    if (!token) {
+    const adminCheck = await verifyAdmin(req);
+    if (adminCheck.error) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { isAuthenticated, user } = await verifyAuth(token);
-
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
@@ -166,20 +198,17 @@ export async function PUT(req: Request) {
           }
         }
       }
-    }) as unknown as ServiceRequest;
+    });
 
-    // Transform the response to match the expected format
+    // Transform the response
     const transformedRequest = {
       ...updatedRequest,
-      amount: updatedRequest.metadata?.price || 0,
+      amount: (updatedRequest.metadata as any)?.price || 0,
       service: {
         name: updatedRequest.title,
         description: updatedRequest.description
       }
     };
-
-    // Here you would typically send an email notification to the client
-    // about their payment request status update
 
     return NextResponse.json({
       success: true,

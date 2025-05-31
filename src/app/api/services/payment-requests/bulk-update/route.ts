@@ -1,27 +1,63 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
-import { UserRoleEnum, PaymentStatus } from '@prisma/client';
+import { UserRoleEnum, RequestStatus } from '@prisma/client';
+
+// Helper function to verify admin authorization
+async function verifyAdmin(request: Request) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return { error: 'Unauthorized', status: 401 };
+  }
+
+  try {
+    const authResult = await verifyAuth(token);
+    if (!authResult.isAuthenticated) {
+      return { error: 'Unauthorized', status: 401 };
+    }
+
+    if (authResult.user?.userRole !== UserRoleEnum.SUPER_ADMIN) {
+      return { error: 'Unauthorized access', status: 403 };
+    }
+
+    return { authResult };
+  } catch (error) {
+    console.error('Auth verification error:', error);
+    return { error: 'Unauthorized', status: 401 };
+  }
+}
+
+interface ServiceRequest {
+  id: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  metadata: {
+    price?: number;
+    [key: string]: any;
+  };
+  submittedAt: Date;
+  updatedAt: Date;
+  client: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+  };
+}
 
 export async function PUT(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
-
-    if (!token) {
+    const adminCheck = await verifyAdmin(req);
+    if (adminCheck.error) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const { isAuthenticated, user } = await verifyAuth(token);
-
-    if (!isAuthenticated || user.userRole !== UserRoleEnum.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, error: adminCheck.error },
+        { status: adminCheck.status }
       );
     }
 
@@ -35,33 +71,39 @@ export async function PUT(req: Request) {
       );
     }
 
-    // Update all selected requests
+    // Limit the number of requests that can be updated at once
+    if (ids.length > 50) {
+      return NextResponse.json(
+        { success: false, message: "Cannot update more than 50 requests at once" },
+        { status: 400 }
+      );
+    }
+
+    // Update all selected requests in a transaction
     const updatedRequests = await prisma.$transaction(
       ids.map(id =>
         prisma.serviceRequest.update({
           where: { id },
           data: {
-            status: status as PaymentStatus,
+            status: status as RequestStatus,
             ...(notes && {
               notes: {
                 create: {
                   content: notes.content,
                   type: 'STATUS_UPDATE',
-                  user: {
-                    connect: {
-                      id: notes.userId
-                    }
-                  }
+                  userId: adminCheck.authResult.user.id,
+                  isPrivate: false
                 }
               }
-            }),
-            processedAt: status === PaymentStatus.COMPLETED ? new Date() : undefined
+            })
           },
           include: {
             client: {
               select: {
+                id: true,
+                fullName: true,
                 email: true,
-                fullName: true
+                phone: true
               }
             }
           }
@@ -72,7 +114,7 @@ export async function PUT(req: Request) {
     // Transform the response
     const transformedRequests = updatedRequests.map(request => ({
       ...request,
-      amount: request.metadata?.price || 0,
+      amount: (request.metadata as any)?.price || 0,
       service: {
         name: request.title,
         description: request.description

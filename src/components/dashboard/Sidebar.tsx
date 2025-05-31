@@ -81,7 +81,19 @@ const createSidebarItems = (t: (key: string) => string): SidebarItem[] => [
         icon: <HiOutlineDocumentDuplicate className="w-5 h-5" />
       }
     ]
-  },
+    },
+    {
+      title: 'My Info',
+      icon: <HiOutlineUserCircle className="w-6 h-6" />,
+      path: '/client/myinfo',
+      subItems: [
+        { 
+          title: 'My Info', 
+          path: '/client/myinfo',
+          icon: <HiOutlineUserCircle className="w-5 h-5" />
+        }
+      ]
+    },
   {
     title: t('sidebar.cases'),
     icon: <HiOutlineScale className="w-6 h-6" />,
@@ -92,6 +104,7 @@ const createSidebarItems = (t: (key: string) => string): SidebarItem[] => [
          path: '/client/cases/register',
          icon: <HiOutlinePlusCircle className="w-5 h-5" />
       },
+
       {
         title: t('sidebar.caseProgress'),
         path: '/client/cases/progress',

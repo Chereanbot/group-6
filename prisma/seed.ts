@@ -18,7 +18,7 @@ import { messageSeeds } from './seeds/messages';
 import { defaultTemplates } from './seeds/templateSeeds';
 
 const prisma = new PrismaClient();
-const DEFAULT_PASSWORD = 'cherean123';
+const DEFAULT_PASSWORD = 'cherinet';
 
 async function seedOffices() {
   const offices = [
@@ -71,7 +71,7 @@ async function seedCoordinators() {
   // First create coordinator users
   const coordinatorUsers = [
     {
-      email: 'coordinator1@dula.edu.et',
+      email: 'cherinet@gmail.com',
       password: await bcrypt.hash('cherinet', 10),
       fullName: 'Coordinator One',
       userRole: UserRoleEnum.COORDINATOR,
@@ -81,7 +81,7 @@ async function seedCoordinators() {
       phone: '+251988111222'
     },
     {
-      email: 'coordinator2@dula.edu.et',
+      email: 'cherinetcoordinator@gmail.com',
       password: await bcrypt.hash('cherinet', 10),
       fullName: 'Coordinator Two',
       userRole: UserRoleEnum.COORDINATOR,

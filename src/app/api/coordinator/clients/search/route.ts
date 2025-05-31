@@ -4,7 +4,13 @@ import { cookies } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import { UserRoleEnum } from '@prisma/client';
 
-export async function GET(request: Request) {
+type SearchResponse = {
+  success: boolean;
+  message?: string;
+  data?: any[];
+};
+
+export async function GET(request: Request): Promise<NextResponse<SearchResponse>> {
   try {
     // Get auth token from cookies
     const cookieStore = await cookies();
@@ -50,33 +56,33 @@ export async function GET(request: Request) {
 
     // Get search params
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
-    const type = searchParams.get('type'); // 'name' or 'phone'
+    const query = searchParams.get('query') || '';
+    const searchType = searchParams.get('type') || 'name';
 
-    if (!query || !type) {
+    if (!query.trim()) {
       return NextResponse.json(
-        { success: false, message: 'Search query and type are required' },
+        { success: false, message: 'Search query is required' },
         { status: 400 }
       );
     }
 
-    // Search clients based on name or phone
+    // Search clients based on name or phone with partial matching
     const clients = await prisma.user.findMany({
       where: {
         AND: [
+          { userRole: UserRoleEnum.CLIENT },
           {
-            userRole: UserRoleEnum.CLIENT,
-            clientCases: {
-              some: {
-                OR: [
-                  { officeId: coordinator.officeId },
-                  { officeId: null }
-                ]
-              }
+            clientProfile: {
+              officeId: coordinator.officeId
             }
           },
-          type === 'name' 
-            ? { fullName: { contains: query, mode: 'insensitive' } }
+          searchType === 'name'
+            ? {
+                OR: [
+                  { fullName: { contains: query, mode: 'insensitive' } },
+                  { email: { contains: query, mode: 'insensitive' } }
+                ]
+              }
             : { phone: { contains: query } }
         ]
       },
@@ -85,6 +91,15 @@ export async function GET(request: Request) {
         fullName: true,
         email: true,
         phone: true,
+        clientProfile: {
+          select: {
+            caseType: true,
+            region: true,
+            zone: true,
+            wereda: true,
+            kebele: true
+          }
+        },
         clientCases: {
           where: {
             status: {
@@ -98,12 +113,19 @@ export async function GET(request: Request) {
             createdAt: true
           }
         }
+      },
+      orderBy: {
+        fullName: 'asc'
       }
     });
 
     // Transform the response to match the expected Client interface
     const transformedClients = clients.map(client => ({
-      ...client,
+      id: client.id,
+      fullName: client.fullName,
+      email: client.email,
+      phone: client.phone,
+      profile: client.clientProfile,
       cases: client.clientCases
     }));
 
@@ -115,7 +137,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error searching clients:', error);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Failed to search clients'
+      },
       { status: 500 }
     );
   }

@@ -1,25 +1,37 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { verifyAuth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
 export async function GET(request: Request) {
   try {
-    // Get session using next-auth
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Not authenticated' 
-      }, { status: 403 });
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 200 }
+      );
     }
+
+    const { isAuthenticated, user } = await verifyAuth(token);
+
+    if (!isAuthenticated || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 200 }
+      );
+    }   
 
     // Get coordinator's office ID
     const coordinator = await prisma.coordinator.findFirst({
       where: {
         user: {
-          email: session.user.email
+          email: user.email
         },
         status: 'ACTIVE'
       },
@@ -114,4 +126,4 @@ export async function GET(request: Request) {
       error: 'Failed to fetch offices'
     }, { status: 500 });
   }
-} 
+}

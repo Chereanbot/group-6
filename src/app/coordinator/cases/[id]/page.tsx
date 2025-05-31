@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ArrowLeft, Clock, User, MapPin, Phone, Mail, FileText, Activity, AlertCircle, Info, Check } from 'lucide-react';
+import { 
+  Loader2, ArrowLeft, Clock, User, MapPin, Phone, Mail, 
+  FileText, Activity, AlertCircle, Info, Check, 
+  Calendar, Building2, Briefcase, FileSpreadsheet
+} from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -31,6 +35,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { format } from 'date-fns';
+import { CaseStatus, Priority, CaseCategory } from '@prisma/client';
 
 interface Case {
   id: string;
@@ -327,356 +333,195 @@ export default function CaseDetails() {
     );
   }
 
-  if (error || !caseData) {
+  if (error) {
     return (
-      <div className="container mx-auto py-8">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-10">
-            <div className="text-red-500 mb-4">
-              <svg
-                className="h-12 w-12"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Error Loading Case Details</h3>
-            <p className="text-gray-500 text-center mb-4">{error}</p>
-            <div className="flex gap-4">
-              <Button onClick={() => router.back()} variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Go Back
-              </Button>
-              <Button onClick={fetchCaseDetails}>Try Again</Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!caseData) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Not Found</AlertTitle>
+          <AlertDescription>Case not found</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={fadeIn}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex items-center gap-4 mb-6">
-          <Button onClick={() => router.back()} variant="outline" size="icon">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-8 w-8"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{caseData?.title}</h1>
-            <p className="text-sm text-gray-500">
-              Created on {caseData ? new Date(caseData.createdAt).toLocaleDateString() : ''}
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight">{caseData.title}</h1>
+            <p className="text-muted-foreground">Case ID: {caseData.id}</p>
           </div>
         </div>
-
-        <div className="grid gap-6">
-          {/* Case Overview Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Case Overview</h2>
-                <p className="text-sm text-gray-500">
-                  Comprehensive case information and status
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge className={getStatusColor(caseData?.status || '')}>
-                        {caseData?.status}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Current case status</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge className={getPriorityColor(caseData?.priority || '')}>
-                        {caseData?.priority}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Case priority level</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Badge>{caseData?.category}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                {/* Description */}
-                {caseData?.description && (
-                  <motion.div
-                    variants={slideIn}
-                    initial="hidden"
-                    animate="visible"
-                    transition={{ delay: 0.1 }}
-                  >
-                    <h3 className="font-medium mb-2 flex items-center gap-2">
-                      <Info className="h-4 w-4 text-gray-400" />
-                      Description
-                    </h3>
-                    <p className="text-gray-600 bg-gray-50 p-4 rounded-lg">
-                      {caseData.description}
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* Client Information */}
-                <motion.div
-                  variants={slideIn}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.2 }}
-                >
-                  <h3 className="font-medium mb-4 flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    Client Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-500" />
-                      <span>{caseData?.clientName}</span>
-                    </div>
-                    {caseData?.clientPhone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span>{caseData.clientPhone}</span>
-                      </div>
-                    )}
-                    {caseData?.clientAddress && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <span>{caseData.clientAddress}</span>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-
-                {/* Location Details */}
-                <motion.div
-                  variants={slideIn}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.3 }}
-                >
-                  <h3 className="font-medium mb-4 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    Location Details
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
-                    {caseData?.region && (
-                      <div>
-                        <span className="text-gray-500">Region:</span>
-                        <span className="ml-2 font-medium">{caseData.region}</span>
-                      </div>
-                    )}
-                    {caseData?.zone && (
-                      <div>
-                        <span className="text-gray-500">Zone:</span>
-                        <span className="ml-2 font-medium">{caseData.zone}</span>
-                      </div>
-                    )}
-                    <div>
-                      <span className="text-gray-500">Wereda:</span>
-                      <span className="ml-2 font-medium">{caseData?.wereda}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Kebele:</span>
-                      <span className="ml-2 font-medium">{caseData?.kebele}</span>
-                    </div>
-                    {caseData?.houseNumber && (
-                      <div>
-                        <span className="text-gray-500">House Number:</span>
-                        <span className="ml-2 font-medium">{caseData.houseNumber}</span>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-
-                {/* Assignment Information */}
-                <motion.div
-                  variants={slideIn}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.4 }}
-                >
-                  <h3 className="font-medium mb-4 flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" />
-                    Assignment Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                    <div>
-                      <span className="text-gray-500">Assigned Lawyer:</span>
-                      <span className="ml-2 font-medium">
-                        {caseData?.assignedLawyer?.fullName || 'Not Assigned'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Office:</span>
-                      <span className="ml-2 font-medium">{caseData?.assignedOffice?.name || 'N/A'}</span>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Action Buttons */}
-                <motion.div
-                  variants={slideIn}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: 0.5 }}
-                  className="flex flex-wrap gap-4 mt-4"
-                >
-                  <Button onClick={handleAssignLawyer} className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Assign Lawyer
-                  </Button>
-                  <Button onClick={handleUpdateStatus} className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    Update Status
-                  </Button>
-                  <Button onClick={handleUpdatePriority} className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Change Priority
-                  </Button>
-                  <Button onClick={handleAddNote} className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Add Note
-                  </Button>
-                  {caseData?.status === 'PENDING' && (
-                    <>
-                      <Button 
-                        onClick={handleApproveCase}
-                        disabled={submitting}
-                        className="flex items-center gap-2"
-                      >
-                        {submitting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Check className="h-4 w-4" />
-                        )}
-                        Approve Case
-                      </Button>
-                      <Button 
-                        onClick={handleRejectCase}
-                        variant="destructive"
-                        disabled={submitting}
-                        className="flex items-center gap-2"
-                      >
-                        {submitting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4" />
-                        )}
-                        Reject Case
-                      </Button>
-                    </>
-                  )}
-                </motion.div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tabs for Notes and Activities */}
-          <Card>
-            <CardContent className="pt-6">
-              <Tabs defaultValue="notes" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="notes" className="flex-1">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Notes
-                  </TabsTrigger>
-                  <TabsTrigger value="activities" className="flex-1">
-                    <Activity className="h-4 w-4 mr-2" />
-                    Activities
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="notes">
-                  <div className="pt-4">
-                    {caseData?.notes && caseData.notes.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.notes.map((note) => (
-                          <motion.div
-                            key={note.id}
-                            variants={fadeIn}
-                            initial="hidden"
-                            animate="visible"
-                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="font-medium">{note.creator.fullName}</div>
-                              <div className="text-sm text-gray-500">
-                                {new Date(note.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-                            <p className="text-gray-600">{note.content}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        No notes have been added yet
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-                <TabsContent value="activities">
-                  <div className="pt-4">
-                    {caseData?.activities && caseData.activities.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.activities.map((activity) => (
-                          <motion.div
-                            key={activity.id}
-                            variants={fadeIn}
-                            initial="hidden"
-                            animate="visible"
-                            className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <div className="font-medium">{activity.title}</div>
-                                <div className="text-sm text-gray-500">
-                                  by {activity.user.fullName}
-                                </div>
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {new Date(activity.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-                            <p className="text-gray-600">{activity.description}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        No activities recorded yet
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push(`/coordinator/cases/${caseData.id}/documents`)}>
+            <FileText className="w-4 h-4 mr-2" />
+            Documents
+          </Button>
+          <Button variant="outline" onClick={() => router.push(`/coordinator/cases/${caseData.id}/activities`)}>
+            <Activity className="w-4 h-4 mr-2" />
+            Activities
+          </Button>
+          <Button onClick={handleAssignLawyer}>
+            <User className="w-4 h-4 mr-2" />
+            Assign Lawyer
+          </Button>
         </div>
-      </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Case Information</CardTitle>
+            <CardDescription>Details about this legal case</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Status</div>
+                <Badge className={getStatusColor(caseData.status)}>
+                  {caseData.status}
+                </Badge>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Priority</div>
+                <Badge className={getPriorityColor(caseData.priority)}>
+                  {caseData.priority}
+                </Badge>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Category</div>
+                <div className="font-medium">{caseData.category}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Created</div>
+                <div className="font-medium">
+                  {format(new Date(caseData.createdAt), 'MMM dd, yyyy')}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-muted-foreground mb-2">Description</div>
+              <p className="text-sm">{caseData.description || 'No description provided'}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Assigned Lawyer</div>
+                {caseData.assignedLawyer ? (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">{caseData.assignedLawyer.fullName}</div>
+                      <div className="text-sm text-muted-foreground">{caseData.assignedLawyer.email}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No lawyer assigned</div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground mb-2">Assigned Office</div>
+                {caseData.assignedOffice ? (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <div className="font-medium">{caseData.assignedOffice.name}</div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No office assigned</div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Client Information</CardTitle>
+            <CardDescription>Details about the client</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="font-medium">{caseData.clientName}</div>
+                <div className="text-sm text-muted-foreground">Client</div>
+              </div>
+            </div>
+            {caseData.clientPhone && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div className="text-sm">{caseData.clientPhone}</div>
+              </div>
+            )}
+            {caseData.clientAddress && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div className="text-sm">{caseData.clientAddress}</div>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <div className="text-sm">
+                {[caseData.region, caseData.zone, caseData.wereda, caseData.kebele, caseData.houseNumber]
+                  .filter(Boolean)
+                  .join(', ')}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Case Timeline</CardTitle>
+          <CardDescription>Recent activities and updates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {caseData.activities.map((activity) => (
+              <div key={activity.id} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <div className="w-0.5 h-full bg-border" />
+                </div>
+                <div>
+                  <div className="font-medium">{activity.title}</div>
+                  <div className="text-sm text-muted-foreground">{activity.description}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(activity.createdAt), 'MMM dd, yyyy HH:mm')} by {activity.user.fullName}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {caseData.activities.length === 0 && (
+              <div className="text-sm text-muted-foreground">No activities recorded yet</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Action Modals */}
       <Dialog open={actionModal.open} onOpenChange={(open) => !open && handleCloseModal()}>
