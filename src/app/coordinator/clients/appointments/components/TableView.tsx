@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Search, MoreVertical, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Filter, Download, Trash2, Mail, Calendar, AlertCircle } from 'lucide-react';
+import { Search, MoreVertical, CheckCircle, XCircle, Clock, ChevronLeft, ChevronRight, Filter, Download, Trash2, Mail, Calendar, AlertCircle, ArrowUpDown, ArrowDownUp } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,

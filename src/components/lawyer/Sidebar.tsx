@@ -25,9 +25,7 @@ const menuItems = [
     dataTour: 'My cases',
     subItems: [
       { title: 'Active Cases', path: '/lawyer/cases/active' },
-      { title: 'Cases Progress', path: '/lawyer/cases/progress' },
       { title: 'Case Activities', path: '/lawyer/cases/case-activity' },
-      { title: 'Case Appeals', path: '/lawyer/cases/appeals' },
       { title: 'Case Activities', path: '/lawyer/cases/activities' }
     ]
   },

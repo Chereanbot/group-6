@@ -35,7 +35,7 @@ import {
   MoreVertical, Edit, Eye, RefreshCw,
   FileSpreadsheet, CheckCircle, XCircle
 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -155,6 +155,31 @@ export default function CoordinatorCasesPage() {
   const handleEditCase = (case_: Case) => {
     setSelectedCase(case_);
     setShowEditModal(true);
+  };
+
+  const handleStatusUpdate = async (caseId: string, newStatus: CaseStatus) => {
+    try {
+      const response = await fetch(`/api/coordinator/cases/${caseId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update status');
+      }
+
+      toast.success('Case status updated successfully');
+
+      // Refresh the cases list
+      fetchCases();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update status');
+    }
   };
 
   const getPriorityBadgeColor = (priority: Priority) => {
@@ -339,6 +364,29 @@ export default function CoordinatorCasesPage() {
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Case
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Update Status
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {Object.values(CaseStatus).map((status) => (
+                              <DropdownMenuItem
+                                key={status}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusUpdate(case_.id, status);
+                                }}
+                                className="flex items-center"
+                              >
+                                <div className={`w-2 h-2 rounded-full mr-2 ${getStatusBadgeColor(status)}`} />
+                                {status}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/coordinator/cases/${case_.id}/documents`);

@@ -25,47 +25,69 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const {
-      clientId,
-      coordinatorId,
-      scheduledTime,
-      duration,
-      purpose,
-      priority,
-      venue,
-      notes,
-      reminderType,
-      reminderTiming
-    } = body;
+    const { scheduledTime, clientId, purpose, venue, duration, priority, notes } = body;
 
-    // Create the appointment
+    // First get the client details
+    const client = await prisma.user.findUnique({
+      where: { id: clientId },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+      },
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { error: 'Client not found' },
+        { status: 404 }
+      );
+    }
+
     const appointment = await prisma.appointment.create({
       data: {
+        scheduledTime: new Date(scheduledTime),
+        status: 'SCHEDULED',
+        purpose,
+        venue,
+        duration,
+        priority,
+        notes,
+        caseType: 'GENERAL',
+        caseDetails: purpose,
+        requiredDocuments: [],
+        reminderType: ['EMAIL', 'SMS'],
+        reminderTiming: [24, 1],
         client: {
           connect: { id: clientId }
         },
         coordinator: {
-          connect: { id: coordinatorId }
-        },
-        scheduledTime: new Date(scheduledTime),
-        duration,
-        purpose,
-        priority: priority || 'MEDIUM',
-        caseType: 'GENERAL',
-        venue,
-        notes,
-        reminderType: reminderType || ['EMAIL'],
-        reminderTiming: reminderTiming || [24, 1],
-        status: 'SCHEDULED'
+          connect: { id: userId }
+        }
       },
       include: {
-        client: true,
-        coordinator: true
-      }
+        client: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+          },
+        },
+        coordinator: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
     });
 
     // Send SMS notification if SMS is selected as reminder type
-    if (reminderType.includes('SMS')) {
+    if (appointment.reminderType.includes('SMS')) {
       const formattedDate = format(new Date(scheduledTime), 'PPP p');
       const message = `Your appointment has been scheduled for ${formattedDate}.\n` +
         `Purpose: ${purpose}\n` +
@@ -100,7 +122,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(appointment);
   } catch (error) {
-    console.error('Error creating appointment:', error);
+    console.error('Failed to create appointment:', error);
     return NextResponse.json(
       { error: 'Failed to create appointment' },
       { status: 500 }

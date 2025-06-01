@@ -229,24 +229,26 @@ export async function POST(request: Request): Promise<NextResponse<CaseResponse>
 
 export async function GET(request: Request): Promise<NextResponse<CaseResponse>> {
   try {
-    // Get auth token from cookies
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth-token')?.value;
+    // Get auth token from headers or cookies
+    const headersList = await headers();
+    const token = headersList.get('authorization')?.split(' ')[1] || 
+                 request.headers.get('cookie')?.split('; ')
+                 .find(row => row.startsWith('auth-token='))
+                 ?.split('=')[1];
 
     if (!token) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized: Please login first" },
-        { status: 401 }
+        { success: false, message: 'Authentication required' },
+        { status: 200 }
       );
     }
 
-    // Verify authentication and check coordinator role
     const { isAuthenticated, user } = await verifyAuth(token);
 
     if (!isAuthenticated || !user) {
       return NextResponse.json(
-        { success: false, message: "Invalid or expired token" },
-        { status: 401 }
+        { success: false, message: 'Invalid or expired token' },
+        { status: 200 }
       );
     }
 
@@ -254,7 +256,7 @@ export async function GET(request: Request): Promise<NextResponse<CaseResponse>>
     if (user.userRole !== UserRoleEnum.COORDINATOR) {
       return NextResponse.json(
         { success: false, message: "Unauthorized: Only coordinators can view cases" },
-        { status: 403 }
+        { status: 200 }
       );
     }
 

@@ -231,12 +231,6 @@ const STEPS = [
     icon: AlertCircle
   },
   {
-    id: 'case-details',
-    title: 'Case Details',
-    description: 'Provide comprehensive case information',
-    icon: AlertCircle
-  },
-  {
     id: 'client',
     title: 'Client Information',
     description: 'Enter client contact details',
@@ -490,21 +484,25 @@ export default function NewCase() {
     try {
       setLoading(true);
       
-      // Create FormData for file upload
-      const submitData = new FormData();
+      // Create FormData object
+      const formDataToSend = new FormData();
+      
+      // Add all form fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (key !== 'documents') {
-          submitData.append(key, value);
+        if (key === 'documents') {
+          // Handle files separately
+          (value as File[]).forEach(file => {
+            formDataToSend.append('documents', file);
+          });
+        } else {
+          formDataToSend.append(key, value as string);
         }
       });
-      
-      formData.documents.forEach((file) => {
-        submitData.append('documents', file);
-      });
 
+      // Send the request
       const response = await fetch('/api/coordinator/cases', {
         method: 'POST',
-        body: submitData,
+        body: formDataToSend
       });
 
       const data = await response.json();
@@ -811,55 +809,6 @@ export default function NewCase() {
               case 2:
                 return (
                   <div className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="caseType" className="text-base font-semibold">Case Type *</Label>
-                      <Input
-                        id="caseType"
-                        value={formData.caseType}
-                        onChange={(e) => handleInputChange('caseType', e.target.value)}
-                        placeholder="Enter case type"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="caseDescription" className="text-base font-semibold">Case Description *</Label>
-                      <Textarea
-                        id="caseDescription"
-                        value={formData.caseDescription}
-                        onChange={(e) => handleInputChange('caseDescription', e.target.value)}
-                        placeholder="Enter detailed case description"
-                        className="min-h-[150px]"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="evidenceDescription" className="text-base font-semibold">Evidence Description</Label>
-                      <Textarea
-                        id="evidenceDescription"
-                        value={formData.evidenceDescription}
-                        onChange={(e) => handleInputChange('evidenceDescription', e.target.value)}
-                        placeholder="Describe available evidence"
-                        className="min-h-[100px]"
-                      />
-                    </div>
-
-                    {(!formData.caseType || !formData.caseDescription) && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Required Fields</AlertTitle>
-                        <AlertDescription>
-                          Case type and description are required fields.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                );
-
-              case 3:
-                return (
-                  <div className="space-y-6">
                     <div className="flex items-center gap-4 mb-6">
                       <Select
                         value={searchType}
@@ -989,7 +938,7 @@ export default function NewCase() {
                   </div>
                 );
 
-              case 4:
+              case 3:
                 return (
                   <div className="space-y-6">
                     <div className="space-y-2">
@@ -1037,7 +986,7 @@ export default function NewCase() {
                   </div>
                 );
 
-              case 5:
+              case 4:
                 return (
                   <div className="space-y-6">
                     <div className="space-y-2">

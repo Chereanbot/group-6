@@ -23,7 +23,7 @@ const slides = [
     subtitle: "Accessible Legal Services",
     description: "Providing legal aid to vulnerable communities regardless of financial status",
     image: "/images/hero/consultation.jpg",
-    overlayImage: "/images/hero/consultation_overlay.png",
+    overlayImage: "/images/hero/image.png",
     cta: "Our Services",
     color: "from-primary-600/20 via-transparent to-transparent",
     icon: <HiOutlineUserGroup className="w-8 h-8" />,

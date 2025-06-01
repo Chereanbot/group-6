@@ -10,7 +10,7 @@ const steps = [
   {
     selector: '[data-tour="welcome"]',
     content: () => (
-      <div className="p-4">
+      <div key="welcome" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Welcome to Your Legal Dashboard!</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Let's take a quick tour to help you get started with managing your legal practice.
@@ -21,15 +21,15 @@ const steps = [
   {
     selector: '[data-tour="cases"]',
     content: () => (
-      <div className="p-4">
+      <div key="cases" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Case Management</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Track and manage all your legal cases in one place. Monitor deadlines, documents, and case progress.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>View case details and history</li>
-          <li>Track deadlines and appointments</li>
-          <li>Manage case documents</li>
+          <li key="cases-1">View case details and history</li>
+          <li key="cases-2">Track deadlines and appointments</li>
+          <li key="cases-3">Manage case documents</li>
         </ul>
       </div>
     ),
@@ -37,15 +37,15 @@ const steps = [
   {
     selector: '[data-tour="calendar"]',
     content: () => (
-      <div className="p-4">
+      <div key="calendar" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Calendar & Scheduling</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Keep track of all your important dates, court appearances, and client meetings.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Schedule appointments</li>
-          <li>Set reminders</li>
-          <li>Manage court dates</li>
+          <li key="calendar-1">Schedule appointments</li>
+          <li key="calendar-2">Set reminders</li>
+          <li key="calendar-3">Manage court dates</li>
         </ul>
       </div>
     ),
@@ -53,15 +53,15 @@ const steps = [
   {
     selector: '[data-tour="documents"]',
     content: () => (
-      <div className="p-4">
+      <div key="documents" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Document Management</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Access and manage all your legal documents and templates efficiently.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Upload and organize documents</li>
-          <li>Use document templates</li>
-          <li>Share files securely</li>
+          <li key="documents-1">Upload and organize documents</li>
+          <li key="documents-2">Use document templates</li>
+          <li key="documents-3">Share files securely</li>
         </ul>
       </div>
     ),
@@ -69,15 +69,15 @@ const steps = [
   {
     selector: '[data-tour="communications"]',
     content: () => (
-      <div className="p-4">
+      <div key="communications" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Client Communications</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Stay connected with your clients through secure messaging and updates.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Send secure messages</li>
-          <li>Schedule appointments</li>
-          <li>Share case updates</li>
+          <li key="communications-1">Send secure messages</li>
+          <li key="communications-2">Schedule appointments</li>
+          <li key="communications-3">Share case updates</li>
         </ul>
       </div>
     ),
@@ -85,15 +85,15 @@ const steps = [
   {
     selector: '[data-tour="time-tracking"]',
     content: () => (
-      <div className="p-4">
+      <div key="time-tracking" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Time & Billing</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Track your billable hours and manage invoices efficiently.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Track billable hours</li>
-          <li>Generate invoices</li>
-          <li>Monitor payments</li>
+          <li key="time-tracking-1">Track billable hours</li>
+          <li key="time-tracking-2">Generate invoices</li>
+          <li key="time-tracking-3">Monitor payments</li>
         </ul>
       </div>
     ),
@@ -101,15 +101,15 @@ const steps = [
   {
     selector: '[data-tour="research"]',
     content: () => (
-      <div className="p-4">
+      <div key="research" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Legal Research</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Access comprehensive legal research tools and resources.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Search case law</li>
-          <li>Access legal databases</li>
-          <li>Save research materials</li>
+          <li key="research-1">Search case law</li>
+          <li key="research-2">Access legal databases</li>
+          <li key="research-3">Save research materials</li>
         </ul>
       </div>
     ),
@@ -117,15 +117,15 @@ const steps = [
   {
     selector: '[data-tour="compliance"]',
     content: () => (
-      <div className="p-4">
+      <div key="compliance" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Compliance & Ethics</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Stay compliant with legal requirements and ethical guidelines.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Track compliance requirements</li>
-          <li>Monitor ethical guidelines</li>
-          <li>Generate compliance reports</li>
+          <li key="compliance-1">Track compliance requirements</li>
+          <li key="compliance-2">Monitor ethical guidelines</li>
+          <li key="compliance-3">Generate compliance reports</li>
         </ul>
       </div>
     ),
@@ -133,15 +133,15 @@ const steps = [
   {
     selector: '[data-tour="header-search"]',
     content: () => (
-      <div className="p-4">
+      <div key="header-search" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Quick Search</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Quickly find cases, documents, and other resources using the global search.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Search across all content</li>
-          <li>Use filters to refine results</li>
-          <li>Access recent searches</li>
+          <li key="header-search-1">Search across all content</li>
+          <li key="header-search-2">Use filters to refine results</li>
+          <li key="header-search-3">Access recent searches</li>
         </ul>
       </div>
     ),
@@ -149,15 +149,15 @@ const steps = [
   {
     selector: '[data-tour="header-notifications"]',
     content: () => (
-      <div className="p-4">
+      <div key="header-notifications" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Notifications</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Stay updated with important alerts and notifications.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Case updates and deadlines</li>
-          <li>New messages and appointments</li>
-          <li>System notifications</li>
+          <li key="header-notifications-1">Case updates and deadlines</li>
+          <li key="header-notifications-2">New messages and appointments</li>
+          <li key="header-notifications-3">System notifications</li>
         </ul>
       </div>
     ),
@@ -165,15 +165,15 @@ const steps = [
   {
     selector: '[data-tour="header-messages"]',
     content: () => (
-      <div className="p-4">
+      <div key="header-messages" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Quick Messages</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Access your messages and chat with clients directly.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>View recent messages</li>
-          <li>Start new conversations</li>
-          <li>Access chat history</li>
+          <li key="header-messages-1">View recent messages</li>
+          <li key="header-messages-2">Start new conversations</li>
+          <li key="header-messages-3">Access chat history</li>
         </ul>
       </div>
     ),
@@ -181,15 +181,15 @@ const steps = [
   {
     selector: '[data-tour="header-theme"]',
     content: () => (
-      <div className="p-4">
+      <div key="header-theme" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Theme Switcher</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Customize your viewing experience with light and dark modes.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Toggle between light and dark themes</li>
-          <li>Automatically matches system preferences</li>
-          <li>Reduces eye strain in low light</li>
+          <li key="header-theme-1">Toggle between light and dark themes</li>
+          <li key="header-theme-2">Automatically matches system preferences</li>
+          <li key="header-theme-3">Reduces eye strain in low light</li>
         </ul>
       </div>
     ),
@@ -197,15 +197,15 @@ const steps = [
   {
     selector: '[data-tour="header-profile"]',
     content: () => (
-      <div className="p-4">
+      <div key="header-profile" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Profile & Settings</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Access your profile, settings, and account options.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Update profile information</li>
-          <li>Manage account settings</li>
-          <li>Sign out securely</li>
+          <li key="header-profile-1">Update profile information</li>
+          <li key="header-profile-2">Manage account settings</li>
+          <li key="header-profile-3">Sign out securely</li>
         </ul>
       </div>
     ),
@@ -213,15 +213,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-stats"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-stats" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Quick Statistics</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Get an overview of your practice with key metrics and statistics.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Active cases and deadlines</li>
-          <li>Performance metrics</li>
-          <li>Upcoming appointments</li>
+          <li key="dashboard-stats-1">Active cases and deadlines</li>
+          <li key="dashboard-stats-2">Performance metrics</li>
+          <li key="dashboard-stats-3">Upcoming appointments</li>
         </ul>
       </div>
     ),
@@ -229,15 +229,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-activities"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-activities" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Recent Activities</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Track all recent actions and updates across your cases.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Case updates and changes</li>
-          <li>Document activities</li>
-          <li>Client interactions</li>
+          <li key="dashboard-activities-1">Case updates and changes</li>
+          <li key="dashboard-activities-2">Document activities</li>
+          <li key="dashboard-activities-3">Client interactions</li>
         </ul>
       </div>
     ),
@@ -245,15 +245,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-calendar"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-calendar" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Calendar Overview</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           View and manage your upcoming schedule.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Court appearances</li>
-          <li>Client meetings</li>
-          <li>Important deadlines</li>
+          <li key="dashboard-calendar-1">Court appearances</li>
+          <li key="dashboard-calendar-2">Client meetings</li>
+          <li key="dashboard-calendar-3">Important deadlines</li>
         </ul>
       </div>
     ),
@@ -261,15 +261,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-cases"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-cases" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Active Cases</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Monitor your current caseload and priorities.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Case status updates</li>
-          <li>Priority indicators</li>
-          <li>Quick case access</li>
+          <li key="dashboard-cases-1">Case status updates</li>
+          <li key="dashboard-cases-2">Priority indicators</li>
+          <li key="dashboard-cases-3">Quick case access</li>
         </ul>
       </div>
     ),
@@ -277,15 +277,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-performance"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-performance" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Track your productivity and efficiency metrics.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Billable hours</li>
-          <li>Case resolution rates</li>
-          <li>Client satisfaction</li>
+          <li key="dashboard-performance-1">Billable hours</li>
+          <li key="dashboard-performance-2">Case resolution rates</li>
+          <li key="dashboard-performance-3">Client satisfaction</li>
         </ul>
       </div>
     ),
@@ -293,15 +293,15 @@ const steps = [
   {
     selector: '[data-tour="dashboard-documents"]',
     content: () => (
-      <div className="p-4">
+      <div key="dashboard-documents" className="p-4">
         <h3 className="text-lg font-semibold mb-2">Recent Documents</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">
           Quick access to your recently accessed documents.
         </p>
         <ul className="mt-2 text-sm list-disc list-inside text-gray-600 dark:text-gray-300">
-          <li>Latest uploads</li>
-          <li>Modified documents</li>
-          <li>Shared files</li>
+          <li key="dashboard-documents-1">Latest uploads</li>
+          <li key="dashboard-documents-2">Modified documents</li>
+          <li key="dashboard-documents-3">Shared files</li>
         </ul>
       </div>
     ),
@@ -336,7 +336,12 @@ function TourContent() {
   return null;
 }
 
-export function WelcomeTour() {
+interface WelcomeTourProps {
+  onClose?: () => void;
+  locale?: 'en' | 'am';
+}
+
+export function WelcomeTour({ onClose, locale = 'en' }: WelcomeTourProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [isReady, setIsReady] = useState(false);
@@ -408,15 +413,7 @@ export function WelcomeTour() {
       onClickMask={() => {
         // Do nothing to prevent closing on mask click
       }}
-      onNext={() => {
-        handleStepChange(currentStep + 1);
-      }}
-      onPrev={() => {
-        handleStepChange(currentStep - 1);
-      }}
-      onClickDot={(step: number) => {
-        handleStepChange(step);
-      }}
+      setCurrentStep={handleStepChange}
     >
       <TourContent />
     </TourProvider>

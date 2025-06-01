@@ -192,10 +192,17 @@ export async function GET() {
       }
     });
 
-    // If no settings exist, create default settings
+    // If no settings exist, create default settings using upsert
     if (!settings) {
-      settings = await prisma.notificationSettings.create({
-        data: {
+      settings = await prisma.notificationSettings.upsert({
+        where: {
+          userId_userType: {
+            userId: authResult.user.id,
+            userType: 'COORDINATOR'
+          }
+        },
+        update: {},
+        create: {
           userId: authResult.user.id,
           userType: 'COORDINATOR',
           automaticNotifications: true,

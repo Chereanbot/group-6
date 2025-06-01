@@ -52,7 +52,7 @@ export function LawyerFilters({ filters, onFilterChange }: LawyerFiltersProps) {
 
         if (officesRes.ok) {
           const officeData = await officesRes.json();
-          setOffices(officeData.data.map((o: any) => o.name));
+          setOffices(officeData.data.offices.map((o: any) => o.name));
         }
       } catch (error) {
         console.error('Error fetching filter options:', error);

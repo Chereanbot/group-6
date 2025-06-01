@@ -123,7 +123,6 @@ export default function SmsPage() {
     console.log('Setting initial templates:', initialTemplates);
     fetchContacts();
     setTemplates([...initialTemplates, ...newTemplates]); // Set all templates immediately
-    fetchTemplates(); // Try to fetch from API as backup
     fetchRecentMessages();
   }, []);
 
@@ -152,22 +151,6 @@ export default function SmsPage() {
       setError('Failed to load contacts');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchTemplates = async () => {
-    try {
-      const response = await fetch('/api/coordinator/communications/sms/templates');
-      if (!response.ok) throw new Error('Failed to fetch templates');
-      
-      const data = await response.json();
-      console.log('Fetched templates from API:', data.templates);
-      if (data.templates && data.templates.length > 0) {
-        setTemplates(data.templates);
-      }
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-      // Keep using initialTemplates if API fails
     }
   };
 
@@ -285,7 +268,6 @@ export default function SmsPage() {
       if (!response.ok) throw new Error('Failed to save template');
 
       toast.success('Template saved successfully!');
-      fetchTemplates(); // Refresh templates
     } catch (error) {
       console.error('Error saving template:', error);
       toast.error('Failed to save template');

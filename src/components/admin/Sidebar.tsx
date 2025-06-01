@@ -88,12 +88,7 @@ const menuItems: MenuItem[] = [
         icon: HiOutlineDocumentDuplicate,
         description: 'User uploaded documents and files'
       },
-      { 
-        title: 'Security', 
-        path: '/admin/users/security',
-        icon: HiOutlineLockClosed,
-        description: 'Security settings and policies'
-      }
+    
     ]
   },
   {

@@ -15,9 +15,8 @@ import { motion } from 'framer-motion';
 import { 
   UserPlus, Search, Phone, MapPin, Calendar, FileText, 
   MoreVertical, Edit, Trash, Eye, Mail, Filter, Download,
-  UserCog, FileSpreadsheet, RefreshCw, CheckCircle, XCircle
+  UserCog, FileSpreadsheet, RefreshCw, CheckCircle, XCircle, Lock
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -42,6 +41,17 @@ interface Client {
   };
 }
 
+const formatDate = (date: Date | string) => {
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
 export default function ClientsPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
@@ -55,6 +65,10 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [editForm, setEditForm] = useState({
     fullName: '',
     email: '',
@@ -229,7 +243,16 @@ export default function ClientsPage() {
         email: client.email,
         phone: client.phone,
         status: client.status,
-        clientProfile: { ...client.clientProfile }
+        clientProfile: {
+          age: client.clientProfile.age || 0,
+          sex: client.clientProfile.sex || '',
+          region: client.clientProfile.region || '',
+          zone: client.clientProfile.zone || '',
+          wereda: client.clientProfile.wereda || '',
+          kebele: client.clientProfile.kebele || '',
+          caseType: client.clientProfile.caseType || '',
+          caseCategory: client.clientProfile.caseCategory || ''
+        }
       });
       setShowEditModal(true);
     }
@@ -239,21 +262,52 @@ export default function ClientsPage() {
     if (!selectedClient) return;
 
     try {
+      // Validate required fields
+      if (!editForm.fullName || !editForm.email || !editForm.phone) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const response = await fetch(`/api/coordinator/clients/${selectedClient.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         credentials: 'include',
-        body: JSON.stringify(editForm)
+        body: JSON.stringify({
+          fullName: editForm.fullName,
+          email: editForm.email,
+          phone: editForm.phone,
+          status: editForm.status,
+          clientProfile: {
+            age: editForm.clientProfile.age,
+            sex: editForm.clientProfile.sex,
+            region: editForm.clientProfile.region,
+            zone: editForm.clientProfile.zone,
+            wereda: editForm.clientProfile.wereda,
+            kebele: editForm.clientProfile.kebele,
+            caseType: editForm.clientProfile.caseType,
+            caseCategory: editForm.clientProfile.caseCategory
+          }
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update client');
+      }
 
       const data = await response.json();
 
       if (data.success) {
+        // Update the clients list with the new data
         setClients(prevClients =>
           prevClients.map(client =>
-            client.id === selectedClient.id ? { ...client, ...editForm } : client
+            client.id === selectedClient.id ? data.data : client
           )
         );
         
@@ -270,7 +324,7 @@ export default function ClientsPage() {
       console.error('Error updating client:', error);
       toast({
         title: "Error",
-        description: "Failed to update client information. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update client information. Please try again.",
         variant: "destructive"
       });
     }
@@ -278,6 +332,54 @@ export default function ClientsPage() {
 
   const handleAddClient = () => {
     router.push('/coordinator/clients/register');
+  };
+
+  const handlePasswordReset = async () => {
+    if (!selectedClient) return;
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/coordinator/clients/${selectedClient.id}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ newPassword })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: "Password has been reset successfully",
+          variant: "default"
+        });
+        setShowPasswordResetModal(false);
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordError('');
+      } else {
+        throw new Error(data.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredClients = clients
@@ -528,6 +630,13 @@ export default function ClientsPage() {
                               </>
                             )}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedClient(client);
+                            setShowPasswordResetModal(true);
+                          }}>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Reset Password
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteClient(client.id)}
                             className="text-red-600 dark:text-red-400"
@@ -565,7 +674,11 @@ export default function ClientsPage() {
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
+                  <TableRow 
+                    key={client.id}
+                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200"
+                    onClick={() => handleViewClient(client.id)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -616,20 +729,30 @@ export default function ClientsPage() {
                           <Button
                             variant="ghost"
                             className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <MoreVertical size={20} className="text-slate-600 dark:text-slate-400" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[160px]">
-                            <DropdownMenuItem onClick={() => handleViewClient(client.id)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewClient(client.id);
+                          }}>
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditClient(client.id)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClient(client.id);
+                          }}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleUpdateStatus(client.id, client.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateStatus(client.id, client.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+                          }}>
                             {client.status === 'ACTIVE' ? (
                               <>
                                 <XCircle className="mr-2 h-4 w-4" />
@@ -642,8 +765,19 @@ export default function ClientsPage() {
                               </>
                             )}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedClient(client);
+                            setShowPasswordResetModal(true);
+                          }}>
+                            <Lock className="mr-2 h-4 w-4" />
+                            Reset Password
+                          </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteClient(client.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClient(client.id);
+                            }}
                             className="text-red-600 dark:text-red-400"
                           >
                             <Trash className="mr-2 h-4 w-4" />
@@ -768,8 +902,58 @@ export default function ClientsPage() {
                   className="border-slate-200 dark:border-slate-700"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) => setEditForm({ ...editForm, status: value })}
+                >
+                  <SelectTrigger id="status" className="border-slate-200 dark:border-slate-700">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    value={editForm.clientProfile.age}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, age: parseInt(e.target.value) }
+                    })}
+                    className="border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sex">Sex</Label>
+                  <Select
+                    value={editForm.clientProfile.sex}
+                    onValueChange={(value) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, sex: value }
+                    })}
+                  >
+                    <SelectTrigger id="sex" className="border-slate-200 dark:border-slate-700">
+                      <SelectValue placeholder="Select sex" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">Male</SelectItem>
+                      <SelectItem value="FEMALE">Female</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="region">Region</Label>
                 <Input
@@ -794,24 +978,64 @@ export default function ClientsPage() {
                   className="border-slate-200 dark:border-slate-700"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="caseType">Case Type</Label>
-                <Select
-                  value={editForm.clientProfile.caseType}
-                  onValueChange={(value) => setEditForm({
-                    ...editForm,
-                    clientProfile: { ...editForm.clientProfile, caseType: value }
-                  })}
-                >
-                  <SelectTrigger id="caseType" className="border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Select case type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CIVIL">Civil</SelectItem>
-                    <SelectItem value="CRIMINAL">Criminal</SelectItem>
-                    <SelectItem value="FAMILY">Family</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="wereda">Wereda</Label>
+                  <Input
+                    id="wereda"
+                    value={editForm.clientProfile.wereda}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, wereda: e.target.value }
+                    })}
+                    className="border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="kebele">Kebele</Label>
+                  <Input
+                    id="kebele"
+                    value={editForm.clientProfile.kebele}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, kebele: e.target.value }
+                    })}
+                    className="border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="caseType">Case Type</Label>
+                  <Select
+                    value={editForm.clientProfile.caseType}
+                    onValueChange={(value) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, caseType: value }
+                    })}
+                  >
+                    <SelectTrigger id="caseType" className="border-slate-200 dark:border-slate-700">
+                      <SelectValue placeholder="Select case type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CIVIL">Civil</SelectItem>
+                      <SelectItem value="CRIMINAL">Criminal</SelectItem>
+                      <SelectItem value="FAMILY">Family</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="caseCategory">Case Category</Label>
+                  <Input
+                    id="caseCategory"
+                    value={editForm.clientProfile.caseCategory}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      clientProfile: { ...editForm.clientProfile, caseCategory: e.target.value }
+                    })}
+                    className="border-slate-200 dark:border-slate-700"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -819,6 +1043,51 @@ export default function ClientsPage() {
             <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancel</Button>
             <Button onClick={handleSaveEdit} className="bg-gradient-to-r from-indigo-600 to-violet-600">
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Modal */}
+      <Dialog open={showPasswordResetModal} onOpenChange={setShowPasswordResetModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Reset password for {selectedClient?.fullName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-red-500">{passwordError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordResetModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePasswordReset}>
+              Reset Password
             </Button>
           </DialogFooter>
         </DialogContent>

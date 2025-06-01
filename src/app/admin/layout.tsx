@@ -5,9 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { UserRoleEnum } from '@prisma/client';
 import { authOptions, verifyAuth } from '@/lib/auth';
 import AdminLayoutClient from './AdminLayoutClient';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard | Du las',
+  title: 'Las School Dashboard | Du las',
   description: 'Admin dashboard for managing legal services',
 };
 
@@ -17,46 +18,55 @@ interface AdminLayoutProps {
 
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   try {
+    // Get session and token
     const session = await getServerSession(authOptions);
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
 
-    // Check both session and token
+    // If no authentication found, redirect to login
     if (!session?.user?.email && !token) {
-      throw new Error('No authentication found');
+      redirect('/auth/login?callbackUrl=/admin');
     }
+
+    let user = null;
 
     // Try session first
     if (session?.user?.email) {
-      const user = await prisma.user.findUnique({
+      user = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: { 
+          id: true,
+          email: true,
           userRole: true,
-          status: true
+          status: true,
+          fullName: true
         }
       });
-
-      if (user?.status === 'ACTIVE' && 
-          (user.userRole === UserRoleEnum.ADMIN || user.userRole === UserRoleEnum.SUPER_ADMIN)) {
-        return <AdminLayoutClient>{children}</AdminLayoutClient>;
-      }
     }
 
-    // Try token if no valid session
-    if (token) {
+    // If no valid session, try token
+    if (!user && token) {
       const verifiedUser = await verifyAuth(token);
-
-      if (verifiedUser.isAuthenticated && 
-          verifiedUser.user?.status === 'ACTIVE' &&
-          (verifiedUser.user.userRole === UserRoleEnum.ADMIN || verifiedUser.user.userRole === UserRoleEnum.SUPER_ADMIN)) {
-        return <AdminLayoutClient>{children}</AdminLayoutClient>;
+      if (verifiedUser.isAuthenticated && verifiedUser.user) {
+        user = verifiedUser.user;
       }
     }
 
-    throw new Error('Authentication failed');
+    // Check if user exists and has proper role
+    if (!user || user.status !== 'ACTIVE' || 
+        (user.userRole !== UserRoleEnum.ADMIN && user.userRole !== UserRoleEnum.SUPER_ADMIN)) {
+      redirect('/auth/login?callbackUrl=/admin&error=unauthorized');
+    }
+
+    // If we get here, user is authenticated and authorized
+    return (
+      <AdminLayoutClient user={user}>
+        {children}
+      </AdminLayoutClient>
+    );
 
   } catch (error) {
     console.error('Admin layout error:', error);
-    throw error; // Let the error boundary handle it
+    redirect('/auth/login?callbackUrl=/admin&error=server_error');
   }
 }

@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 import { UserRoleEnum } from '@prisma/client';
 import LawyerSidebar from '@/components/lawyer/Sidebar';
 import LawyerHeader from '@/components/lawyer/Header';
-import { TawkChatWidget } from '@/components/lawyer/TawkChatWidget';
 import { WelcomeWrapper } from '@/components/lawyer/WelcomeWrapper';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 
@@ -82,21 +81,6 @@ export default async function LawyerLayout({
         <main className="main-content p-6 pt-24 ml-64">
           {children}
         </main>
-
-        <TawkChatWidget 
-          lawyer={{
-            id: lawyer.id,
-            fullName: lawyer.fullName,
-            email: lawyer.email
-          }}
-        />
-
-        {/* Debug Info - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="fixed bottom-4 right-4 p-4 bg-black/80 text-white text-xs rounded-lg">
-         
-          </div>
-        )}
       </div>
     </NotificationProvider>
   );
